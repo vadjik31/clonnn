@@ -14,6 +14,7 @@ import SettingsPage from "./pages/SettingsPage";
 import MyBrandsPage from "./pages/MyBrandsPage";
 import ProblematicPage from "./pages/ProblematicPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
+import SuperAdminPage from "./pages/SuperAdminPage";
 
 // Components
 import Sidebar from "./components/Sidebar";
