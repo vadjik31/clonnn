@@ -223,12 +223,6 @@ EVENT_LABELS_RU = {
     "contact_added": "Добавил контакт",
     "note_added": "Добавил заметку"
 }
-    INFO_UPDATED = "info_updated"
-    UNDO_ACTION = "undo_action"
-    REVIEW_TIMEOUT = "review_timeout"  # Закрывает дыру #10
-    INACTIVITY_TIMEOUT = "inactivity_timeout"  # Закрывает дыру #7
-    SETTINGS_UPDATED = "settings_updated"  # Обновление настроек
-    USER_ACTIVITY = "user_activity"  # Активность пользователя (клики)
 
 # Лимиты (закрывает дыру #9)
 MAX_ACTIVE_BRANDS_PER_SEARCHER = 300
