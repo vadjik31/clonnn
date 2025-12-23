@@ -55,9 +55,23 @@ class BrandStatus:
     OUTCOME_APPROVED = "OUTCOME_APPROVED"
     OUTCOME_DECLINED = "OUTCOME_DECLINED"
     OUTCOME_REPLIED = "OUTCOME_REPLIED"
+    # Подстатусы для "Ответил"
+    REPLIED_NEED_ACTION = "REPLIED_NEED_ACTION"  # Ответил, нужно действие с нашей стороны
+    REPLIED_WAITING = "REPLIED_WAITING"  # Ответил, ожидаем от них
+    REPLIED_APPROVED = "REPLIED_APPROVED"  # Ответил и одобрил
+    REPLIED_DECLINED = "REPLIED_DECLINED"  # Ответил и отказал
     PROBLEMATIC = "PROBLEMATIC"
     ARCHIVED = "ARCHIVED"  # Новый статус для архива
     BLACKLISTED = "BLACKLISTED"  # Новый статус для чёрного списка
+
+class ContactType:
+    EMAIL = "email"
+    PHONE = "phone"
+    LINKEDIN = "linkedin"
+    WEBSITE_FORM = "website_form"
+    INSTAGRAM = "instagram"
+    FACEBOOK = "facebook"
+    OTHER = "other"
 
 class PipelineStage:
     REVIEW = "REVIEW"
