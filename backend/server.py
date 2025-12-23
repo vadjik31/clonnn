@@ -3771,15 +3771,31 @@ async def upload_bash_file(
                     title = str(row.get(col))
                     break
             
-            # Цена Buy Box
+            # Цена Buy Box (сначала текущая, потом 90-day avg)
             buy_box_price = 0.0
-            for col in ["Buy Box 🚚: 90 days avg.", "Buy Box: 90 days avg.", "Buy Box 🚚: Current"]:
+            buy_box_90d = 0.0
+            
+            # Сначала пробуем текущую цену
+            for col in ["Buy Box 🚚: Current", "Buy Box: Current"]:
                 if col in df.columns and pd.notna(row.get(col)):
                     try:
                         buy_box_price = float(row.get(col))
                         break
                     except (ValueError, TypeError):
                         pass
+            
+            # Получаем 90-day avg
+            for col in ["Buy Box 🚚: 90 days avg.", "Buy Box: 90 days avg."]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    try:
+                        buy_box_90d = float(row.get(col))
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Если нет текущей цены, берём 90-day avg
+            if buy_box_price <= 0 and buy_box_90d > 0:
+                buy_box_price = buy_box_90d
             
             # Referral Fee
             referral_fee = 0.0
