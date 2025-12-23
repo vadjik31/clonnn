@@ -1,0 +1,150 @@
+{
+  "project_name": "PROCTO 13 LLC - Brand Management System",
+  "design_philosophy": {
+    "identity": "E1 - The Anti-AI Designer",
+    "core_concept": "Tactile Command Center",
+    "vibe": "Industrial, High-Frequency Trading, Dark Logistics",
+    "principles": [
+      "Density is King: Data must be scannable instantly.",
+      "Tracing Beams: Active states glow like laser scanners.",
+      "No rounded corners > 4px: This is a tool, not a toy.",
+      "The 'Control Room' Grid: Asymmetrical, functional, locked-in."
+    ]
+  },
+  "typography": {
+    "font_family": {
+      "headings": "JetBrains Mono, monospace",
+      "body": "IBM Plex Sans, sans-serif",
+      "data": "JetBrains Mono, monospace"
+    },
+    "installation": "Import from Google Fonts: https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap",
+    "usage_rules": {
+      "headings": "Uppercase, tracking-widest, font-bold. Use for section titles and KPI labels.",
+      "body": "High legibility. Use for standard text and form labels.",
+      "data": "Use for ASINs, IDs, Prices, and Status codes. Tabular nums are mandatory."
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": {
+        "default": "#0F1115",
+        "paper": "#13161B",
+        "subtle": "#1A1D24"
+      },
+      "primary": {
+        "main": "#FF9900",
+        "hover": "#FFAD33",
+        "foreground": "#000000"
+      },
+      "secondary": {
+        "main": "#232F3E",
+        "foreground": "#FFFFFF"
+      },
+      "status": {
+        "success": "#00C853",
+        "warning": "#FFD600",
+        "error": "#D50000",
+        "info": "#2979FF",
+        "neutral": "#607D8B"
+      },
+      "border": {
+        "default": "#2A2F3A",
+        "active": "#FF9900"
+      },
+      "text": {
+        "primary": "#E6E6E6",
+        "secondary": "#94A3B8",
+        "muted": "#475569"
+      }
+    },
+    "gradients": {
+      "glow": "radial-gradient(circle at center, rgba(255, 153, 0, 0.15) 0%, transparent 70%)",
+      "scanline": "linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.5) 50%)"
+    }
+  },
+  "layout": {
+    "spacing_system": "Tailwind Scale (p-1 to p-64). Use generous padding (p-6, p-8) inside containers.",
+    "grid_system": {
+      "dashboard": "grid-cols-1 md:grid-cols-4 gap-4. Hero KPI spans 2 cols.",
+      "forms": "grid-cols-1 md:grid-cols-2 gap-6. Inputs are full width."
+    },
+    "containers": {
+      "card": "bg-[#13161B] border border-[#2A2F3A] rounded-[2px] shadow-none hover:border-[#FF9900]/50 transition-colors duration-300",
+      "panel": "bg-[#0F1115] border-r border-[#2A2F3A]"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#FF9900] text-black font-bold uppercase tracking-wider hover:bg-[#FFAD33] rounded-[2px] h-10 px-6 shadow-[0_0_10px_rgba(255,153,0,0.3)]",
+      "secondary": "bg-transparent border border-[#2A2F3A] text-[#E6E6E6] hover:bg-[#2A2F3A] rounded-[2px] h-10 px-6",
+      "ghost": "text-[#94A3B8] hover:text-[#FF9900] hover:bg-transparent"
+    },
+    "inputs": {
+      "default": "bg-[#0F1115] border border-[#2A2F3A] text-[#E6E6E6] rounded-[2px] focus:border-[#FF9900] focus:ring-1 focus:ring-[#FF9900] placeholder:text-[#475569] h-10",
+      "search": "pl-10 bg-[#13161B]"
+    },
+    "status_badge": {
+      "base": "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border",
+      "variants": {
+        "IN_POOL": "bg-blue-900/20 text-blue-400 border-blue-800",
+        "ASSIGNED": "bg-purple-900/20 text-purple-400 border-purple-800",
+        "IN_WORK": "bg-yellow-900/20 text-yellow-400 border-yellow-800",
+        "ON_HOLD": "bg-gray-800 text-gray-400 border-gray-700",
+        "PROBLEMATIC": "bg-red-900/20 text-red-400 border-red-800",
+        "DONE": "bg-green-900/20 text-green-400 border-green-800"
+      }
+    },
+    "tables": {
+      "header": "bg-[#1A1D24] text-[#94A3B8] uppercase text-xs font-bold tracking-wider border-b border-[#2A2F3A]",
+      "row": "hover:bg-[#1A1D24] transition-colors border-b border-[#2A2F3A] last:border-0",
+      "cell": "py-3 px-4 text-sm text-[#E6E6E6]"
+    }
+  },
+  "visual_enhancers": {
+    "textures": {
+      "noise": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")"
+    },
+    "effects": {
+      "glass": "backdrop-blur-md bg-[#0F1115]/80 border-b border-[#2A2F3A]",
+      "tracing_beam": "relative overflow-hidden after:content-[''] after:absolute after:inset-0 after:border after:border-[#FF9900] after:opacity-0 hover:after:opacity-100 after:transition-opacity"
+    }
+  },
+  "motion": {
+    "transitions": "transition-all duration-200 ease-out",
+    "hover": "hover:-translate-y-[1px]",
+    "list_stagger": "Use framer-motion staggerChildren: 0.05 for table rows"
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1647735282241-edad5f6439e4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxhbWF6b24lMjBsb2dpc3RpY3MlMjB3YXJlaG91c2UlMjBkYXJrfGVufDB8fHxibGFja3wxNzY2NDg4NjE5fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Dark warehouse exterior with sign, sets the industrial mood",
+      "category": "background"
+    },
+    "empty_state": {
+      "url": "https://images.unsplash.com/photo-1709334197341-122c6fd5ae1d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDF8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGRhdGElMjBuZXR3b3JrJTIwZGFyayUyMGJhY2tncm91bmR8ZW58MHx8fGJsYWNrfDE3NjY0ODg2MjF8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract data lines for empty states or loading screens",
+      "category": "illustration"
+    },
+    "logo_placeholder": {
+      "text": "PROCTO_13",
+      "style": "font-mono font-bold text-2xl tracking-tighter text-[#FF9900]"
+    }
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react' for icons. Use 'JetBrains Mono' for all numbers and IDs.",
+    "2. THEME: Force dark mode class on the html element. There is no light mode.",
+    "3. LAYOUT: Use the 'Control Room' grid for the dashboard. It must look dense.",
+    "4. COMPONENTS: Customize Shadcn components to match the 'card' and 'input' styles defined above. Remove rounded-xl, use rounded-[2px].",
+    "5. LANGUAGE: All UI text must be in Russian. Code variables remain in English.",
+    "6. LOGIN: Use the 'login_background' image with a heavy dark overlay (bg-black/80) so the form pops.",
+    "7. TABLES: This is the most important part. Make them dense (py-2). Use sticky headers.",
+    "8. STATUS: Use the defined color mapping for statuses. They must be instantly recognizable."
+  ],
+  "universal_guidelines": [
+    "Do not use gradients for backgrounds, only for subtle glows.",
+    "Avoid rounded corners larger than 4px.",
+    "Use 'sonner' for notifications.",
+    "All interactive elements must have data-testid.",
+    "Input fields must be clearly defined with borders, no 'ghost' inputs unless necessary."
+  ]
+}
