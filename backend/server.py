@@ -1172,6 +1172,11 @@ async def get_brand_detail(brand_id: str, user: dict = Depends(get_current_user)
     notes = await db.brand_notes.find({"brand_id": brand_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     events = await db.brand_events.find({"brand_id": brand_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     
+    # Контакты бренда
+    contacts = await db.brand_contacts.find({"brand_id": brand_id}, {"_id": 0}).to_list(100)
+    brand["contacts"] = contacts
+    brand["contacts_count"] = len(contacts)
+    
     # История назначений (закрывает дыру #4, #5)
     assignment_history = await db.brand_assignment_history.find(
         {"brand_id": brand_id}, {"_id": 0}
