@@ -445,6 +445,54 @@ async def log_event(event_type: str, user_id: str, brand_id: Optional[str] = Non
     }
     await db.brand_events.insert_one(event)
 
+def sanitize_input(text: str) -> str:
+    """Санитизация ввода от XSS (закрывает дыру #30)"""
+    if not text:
+        return ""
+    # Удаляем потенциально опасные теги и символы
+    dangerous_patterns = [
+        r'<script[^>]*>.*?</script>',
+        r'<iframe[^>]*>.*?</iframe>',
+        r'javascript:',
+        r'on\w+\s*=',
+        r'<\s*img[^>]+onerror',
+    ]
+    result = text
+    for pattern in dangerous_patterns:
+        result = re.sub(pattern, '', result, flags=re.IGNORECASE | re.DOTALL)
+    # Экранируем HTML теги
+    result = result.replace('<', '&lt;').replace('>', '&gt;')
+    return result.strip()
+
+async def get_global_settings():
+    """Получить глобальные настройки системы"""
+    settings = await db.system_settings.find_one({"type": "global"}, {"_id": 0})
+    if not settings:
+        # Дефолтные настройки
+        settings = {
+            "type": "global",
+            "work_hours_start": "09:00",
+            "work_hours_end": "18:00",
+            "weekends": [5, 6],  # Сб, Вс
+            "holidays": [],
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.system_settings.insert_one(settings)
+    return settings
+
+def is_working_time(settings: dict = None) -> bool:
+    """Проверка рабочего времени с учётом выходных (закрывает дыру #34)"""
+    now = datetime.now(timezone.utc)
+    if settings:
+        # Проверка выходных
+        if now.weekday() in settings.get("weekends", [5, 6]):
+            return False
+        # Проверка праздников
+        today_str = now.strftime("%Y-%m-%d")
+        if today_str in settings.get("holidays", []):
+            return False
+    return True
+
 async def create_alert(alert_type: str, message: str, severity: str = "warning",
                        user_id: Optional[str] = None, brand_id: Optional[str] = None):
     """Создание алерта (закрывает дыру #24)"""
