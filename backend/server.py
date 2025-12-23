@@ -3982,8 +3982,12 @@ async def upload_bash_file(
 # ВАЖНО: Static routes должны быть ПЕРЕД dynamic routes (/bash/{batch_id})
 @api_router.get("/bash/item-statuses")
 async def get_item_statuses(admin: dict = Depends(require_admin)):
-    """Получить список доступных статусов товаров"""
-    return {"statuses": ITEM_STATUSES}
+    """Получить список доступных статусов товаров (включая кастомные)"""
+    # Получаем все уникальные статусы из базы
+    custom_statuses = await db.batch_items.distinct("status")
+    # Фильтруем пустые и добавляем в список
+    all_statuses = list(set([s for s in custom_statuses if s]))
+    return {"statuses": all_statuses}
 
 @api_router.get("/bash/carriers")
 async def search_carriers(
