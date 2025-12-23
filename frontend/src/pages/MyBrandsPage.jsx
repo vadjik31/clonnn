@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, useAuth } from "../App";
 import { toast } from "sonner";
-import { Search, Download, Filter, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Search, Download, ChevronLeft, ChevronRight, RefreshCw, MessageSquare, Phone, Mail, Globe } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -81,6 +81,10 @@ const MyBrandsPage = () => {
     { value: "OUTCOME_APPROVED", label: "Одобрен" },
     { value: "OUTCOME_DECLINED", label: "Отклонён" },
     { value: "OUTCOME_REPLIED", label: "Ответил" },
+    { value: "REPLIED_NEED_ACTION", label: "Нужно действие" },
+    { value: "REPLIED_WAITING", label: "Ожидаем от них" },
+    { value: "REPLIED_APPROVED", label: "Одобрили" },
+    { value: "REPLIED_DECLINED", label: "Отказали" },
     { value: "PROBLEMATIC", label: "Проблемный" },
   ];
 
@@ -187,24 +191,25 @@ const MyBrandsPage = () => {
             <thead>
               <tr className="table-header">
                 <th className="py-3 px-4 text-left">Бренд</th>
-                <th className="py-3 px-4 text-center">Приоритет</th>
-                <th className="py-3 px-4 text-center">Товаров</th>
+                <th className="py-3 px-4 text-center">Приор.</th>
+                <th className="py-3 px-4 text-center">Тов.</th>
                 <th className="py-3 px-4 text-left">Статус</th>
                 <th className="py-3 px-4 text-left">Этап</th>
+                <th className="py-3 px-4 text-center" title="Контакты">📞</th>
+                <th className="py-3 px-4 text-left">Заметка</th>
                 <th className="py-3 px-4 text-left">След. действие</th>
-                <th className="py-3 px-4 text-left">Последняя активность</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={8} className="py-8 text-center text-[#94A3B8]">
                     Загрузка...
                   </td>
                 </tr>
               ) : brands.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={8} className="py-8 text-center text-[#94A3B8]">
                     <div className="space-y-2">
                       <p>У вас пока нет брендов</p>
                       <p className="text-sm">Нажмите "Получить бренды" чтобы начать работу</p>
@@ -221,27 +226,46 @@ const MyBrandsPage = () => {
                       onClick={() => navigate(`/brands/${brand.id}`)}
                       data-testid={`brand-row-${brand.id}`}
                     >
-                      <td className="table-cell font-medium">{brand.name_original}</td>
-                      <td className="table-cell text-center font-mono text-[#FF9900]">{brand.priority_score}</td>
-                      <td className="table-cell text-center font-mono">{brand.items_count}</td>
+                      <td className="table-cell font-medium max-w-[200px] truncate" title={brand.name_original}>
+                        {brand.name_original}
+                      </td>
+                      <td className="table-cell text-center font-mono text-[#FF9900] text-sm">{brand.priority_score}</td>
+                      <td className="table-cell text-center font-mono text-sm">{brand.items_count}</td>
                       <td className="table-cell">
                         <StatusBadge status={brand.status} />
                       </td>
                       <td className="table-cell">
                         <StageBadge stage={brand.pipeline_stage} />
                       </td>
+                      <td className="table-cell text-center">
+                        {brand.contacts_count > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-green-400" title={`${brand.contacts_count} контакт(ов)`}>
+                            <Phone size={14} />
+                            <span className="text-xs">{brand.contacts_count}</span>
+                          </span>
+                        ) : (
+                          <span className="text-[#475569]">—</span>
+                        )}
+                      </td>
+                      <td className="table-cell max-w-[200px]">
+                        {brand.last_note ? (
+                          <div className="flex items-start gap-1">
+                            <MessageSquare size={12} className="text-[#FF9900] flex-shrink-0 mt-0.5" />
+                            <span className="text-xs text-[#94A3B8] truncate" title={brand.last_note}>
+                              {brand.last_note}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[#475569] text-xs">—</span>
+                        )}
+                      </td>
                       <td className="table-cell">
                         {brand.next_action_at ? (
-                          <span className={`font-mono text-sm ${isOverdue ? "text-red-400 font-bold" : "text-[#94A3B8]"}`}>
+                          <span className={`font-mono text-xs ${isOverdue ? "text-red-400 font-bold" : "text-[#94A3B8]"}`}>
                             {isOverdue && "🔥 "}
                             {new Date(brand.next_action_at).toLocaleDateString('ru-RU')}
                           </span>
                         ) : "—"}
-                      </td>
-                      <td className="table-cell text-[#94A3B8] text-sm">
-                        {brand.last_action_at 
-                          ? new Date(brand.last_action_at).toLocaleString('ru-RU')
-                          : "—"}
                       </td>
                     </tr>
                   );
@@ -297,7 +321,7 @@ const StageBadge = ({ stage }) => {
   };
   const config = stageConfig[stage] || { label: stage, color: "bg-gray-800 text-gray-400" };
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
       {config.label}
     </span>
   );
