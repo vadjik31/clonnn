@@ -4236,11 +4236,57 @@ async def delete_batch_note(
         raise HTTPException(status_code=404, detail="Заметка не найдена")
     return {"status": "success"}
 
-# 17track API Integration
+# 17track API Integration v2.4
 import httpx
 
-TRACK17_API_KEY = os.environ.get("TRACK17_API_KEY", "")
-TRACK17_API_URL = "https://api.17track.net/track/v2.2"
+TRACK17_API_KEY = os.environ.get("TRACK17_API_KEY", "114009CAF9576DB785D2108EAD87B842")
+TRACK17_REGISTER_URL = "https://api.17track.net/track/v2.4/register"
+TRACK17_INFO_URL = "https://api.17track.net/track/v2.4/gettrackinfo"
+
+def extract_carrier_from_response(item):
+    """Извлечь имя перевозчика из ответа API"""
+    try:
+        providers = item.get("track_info", {}).get("tracking", {}).get("providers", [])
+        if providers:
+            return providers[0].get("provider", {}).get("name", "")
+    except:
+        pass
+    return ""
+
+def extract_status_from_response(item):
+    """Извлечь статус из ответа API"""
+    try:
+        latest = item.get("track_info", {}).get("latest_status", {})
+        status = latest.get("status", "")
+        sub_status = latest.get("sub_status", "")
+        if status and sub_status:
+            return f"{status} / {sub_status}"
+        return status or sub_status or "Нет данных"
+    except:
+        pass
+    return "Нет данных"
+
+def extract_latest_event(item):
+    """Извлечь последнее событие"""
+    try:
+        latest_event = item.get("track_info", {}).get("latest_event", {})
+        description = latest_event.get("description", "")
+        time_str = latest_event.get("time_iso", "")
+        location = latest_event.get("location", "")
+        
+        parts = []
+        if description:
+            parts.append(description)
+        if location:
+            parts.append(f"({location})")
+        
+        return {
+            "description": " ".join(parts) if parts else "",
+            "time": time_str
+        }
+    except:
+        pass
+    return {"description": "", "time": ""}
 
 @api_router.get("/tracking/{tracking_number}")
 async def track_shipment(
@@ -4248,36 +4294,30 @@ async def track_shipment(
     carrier_code: Optional[str] = None,
     admin: dict = Depends(require_admin)
 ):
-    """Получить статус отправления через 17track API"""
+    """Получить статус отправления через 17track API v2.4"""
     if not TRACK17_API_KEY:
         raise HTTPException(status_code=500, detail="17track API key not configured")
     
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            # Сначала регистрируем трек
-            register_payload = [{
-                "number": tracking_number,
-                "carrier": carrier_code if carrier_code else None
-            }]
-            
             headers = {
                 "17token": TRACK17_API_KEY,
                 "Content-Type": "application/json"
             }
             
-            # Регистрируем трекинг номер
-            register_resp = await client.post(
-                f"{TRACK17_API_URL}/register",
-                json=register_payload,
-                headers=headers
-            )
+            # 1. Регистрируем трекинг номер
+            register_payload = [{"number": tracking_number}]
+            if carrier_code:
+                register_payload[0]["carrier"] = int(carrier_code)
             
-            # Получаем статус
-            track_payload = [{"number": tracking_number}]
-            track_resp = await client.post(
-                f"{TRACK17_API_URL}/gettrackinfo",
-                json=track_payload,
-                headers=headers
+            await client.post(TRACK17_REGISTER_URL, json=register_payload, headers=headers)
+            
+            # Небольшая пауза для обработки
+            await asyncio.sleep(0.5)
+            
+            # 2. Получаем информацию о треке
+            info_payload = [{"number": tracking_number}]
+            info_resp = await client.post(TRACK17_INFO_URL, json=info_payload, headers=headers)
             )
             
             if track_resp.status_code == 200:
