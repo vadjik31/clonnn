@@ -4429,6 +4429,29 @@ async def import_sku_quantity(
         "not_found": not_found
     }
 
+# Экспорт SKU + количество (товары где есть supplier_sku и quantity > 0)
+@api_router.get("/bash/{batch_id}/export-sku-quantity")
+async def export_sku_quantity(
+    batch_id: str,
+    admin: dict = Depends(require_admin)
+):
+    """Экспорт SKU + количество для товаров с заполненными данными"""
+    batch = await db.batches.find_one({"id": batch_id})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    # Получаем товары с supplier_sku и quantity > 0
+    items = await db.batch_items.find({
+        "batch_id": batch_id,
+        "supplier_sku": {"$ne": "", "$exists": True},
+        "quantity": {"$gt": 0}
+    }, {"_id": 0, "supplier_sku": 1, "quantity": 1, "asin": 1, "title": 1}).to_list(10000)
+    
+    return {
+        "items": items,
+        "total": len(items)
+    }
+
 # Массовое обновление статуса товаров
 @api_router.put("/bash/{batch_id}/items-status")
 async def bulk_update_items_status(
