@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, useAuth } from "../App";
 import { toast } from "sonner";
-import { Search, Filter, ChevronLeft, ChevronRight, RotateCcw, UserPlus, Archive, Ban, CheckSquare, Square } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, RotateCcw, UserPlus, Archive, Ban, CheckSquare, Square, CheckCircle, MessageSquare, Phone, Clock, Info } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -23,6 +23,65 @@ import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
 import StatusBadge from "../components/StatusBadge";
 
+// Компонент тултипа с роадмапом
+const BrandTooltip = ({ brandId, children }) => {
+  const [timeline, setTimeline] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [show, setShow] = useState(false);
+
+  const fetchTimeline = useCallback(async () => {
+    if (timeline || loading) return;
+    setLoading(true);
+    try {
+      const res = await api.get(`/brands/${brandId}/timeline`);
+      setTimeline(res.data);
+    } catch (e) {
+      console.error("Timeline error", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [brandId, timeline, loading]);
+
+  return (
+    <div 
+      className="relative group"
+      onMouseEnter={() => { setShow(true); fetchTimeline(); }}
+      onMouseLeave={() => setShow(false)}
+    >
+      {children}
+      {show && (
+        <div className="absolute z-50 left-full top-0 ml-2 w-64 bg-[#1A1D23] border border-[#FF9900]/30 rounded p-3 shadow-xl pointer-events-none">
+          <div className="text-xs font-medium text-[#FF9900] mb-2">Роадмап бренда</div>
+          {loading ? (
+            <div className="text-[#94A3B8] text-xs">Загрузка...</div>
+          ) : timeline ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs text-[#E6E6E6]">
+                <MessageSquare size={12} className="text-blue-400" />
+                <span>Заметок: {timeline.notes_count}</span>
+                <Phone size={12} className="text-green-400 ml-2" />
+                <span>Контактов: {timeline.contacts_count}</span>
+              </div>
+              {timeline.timeline?.length > 0 ? (
+                <div className="space-y-1 mt-2 border-l-2 border-[#2A2F3A] pl-2">
+                  {timeline.timeline.slice(0, 5).map((item, i) => (
+                    <div key={i} className="text-xs">
+                      <span className="text-[#94A3B8]">{item.date}</span>
+                      <span className="text-[#E6E6E6] ml-1">{item.action}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[#94A3B8] text-xs">Нет истории</div>
+              )}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BrandsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -34,6 +93,8 @@ const BrandsPage = () => {
   
   // Selection for bulk actions (super_admin only)
   const [selectedBrands, setSelectedBrands] = useState(new Set());
+  const [selectAllPages, setSelectAllPages] = useState(false);
+  const [allBrandIds, setAllBrandIds] = useState([]);
   const [bulkModal, setBulkModal] = useState({ open: false, action: null });
   
   // Filters
@@ -52,6 +113,7 @@ const BrandsPage = () => {
 
   useEffect(() => {
     fetchBrands();
+    setSelectAllPages(false);
   }, [filters]);
 
   useEffect(() => {
