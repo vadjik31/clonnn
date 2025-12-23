@@ -539,6 +539,8 @@ const StageModal = ({ open, onClose, brandId, onSuccess }) => {
 const OutcomeModal = ({ open, onClose, brandId, onSuccess }) => {
   const [outcome, setOutcome] = useState("");
   const [note, setNote] = useState("");
+  const [channel, setChannel] = useState("");
+  const [contactDate, setContactDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
 
   const outcomes = [
@@ -547,20 +549,35 @@ const OutcomeModal = ({ open, onClose, brandId, onSuccess }) => {
     { value: "OUTCOME_REPLIED", label: "Ответил", icon: Reply, color: "text-blue-400" },
   ];
 
+  const channels = [
+    { value: "email", label: "Email" },
+    { value: "phone", label: "Телефон" },
+    { value: "social_media", label: "Соцсети" },
+    { value: "website_form", label: "Форма на сайте" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "other", label: "Другое" },
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!outcome || !note.trim()) {
-      toast.error("Заполните все поля");
+    if (!outcome || !note.trim() || !channel || !contactDate) {
+      toast.error("Заполните все обязательные поля");
       return;
     }
     setLoading(true);
     try {
-      await api.post(`/brands/${brandId}/outcome`, { outcome, note_text: note });
+      await api.post(`/brands/${brandId}/outcome`, { 
+        outcome, 
+        note_text: note,
+        channel,
+        contact_date: contactDate
+      });
       toast.success("Исход установлен");
       onSuccess();
       onClose();
       setOutcome("");
       setNote("");
+      setChannel("");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ошибка");
     } finally {
@@ -594,6 +611,32 @@ const OutcomeModal = ({ open, onClose, brandId, onSuccess }) => {
                   <span className="text-sm">{o.label}</span>
                 </button>
               ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Канал связи *</Label>
+              <Select value={channel} onValueChange={setChannel}>
+                <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]" data-testid="channel-select">
+                  <SelectValue placeholder="Выберите канал" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                  {channels.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Дата контакта *</Label>
+              <Input
+                type="date"
+                value={contactDate}
+                onChange={(e) => setContactDate(e.target.value)}
+                className="bg-[#0F1115] border-[#2A2F3A]"
+                required
+                data-testid="contact-date"
+              />
             </div>
           </div>
           <div className="space-y-2">
