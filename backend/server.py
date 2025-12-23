@@ -1063,7 +1063,7 @@ async def claim_brands(
         # Проверка лимита активных брендов (закрывает дыру #9)
         current_active = await db.brands.count_documents({
             "assigned_to_user_id": user["id"],
-            "status": {"$nin": [BrandStatus.IN_POOL]}
+            "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}
         })
         
         if current_active >= max_active:
@@ -1080,7 +1080,7 @@ async def claim_brands(
         
         for _ in range(batch_size):
             # Атомарная выдача с проверкой истории (закрывает дыры #1, #4)
-            # Ищем бренд, который не был у этого сёрчера ранее
+            # Ищем бренд, который не был у этого сёрчера ранее и не в ЧС
             pipeline = [
                 {"$match": {
                     "status": BrandStatus.IN_POOL,
