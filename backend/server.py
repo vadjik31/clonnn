@@ -152,6 +152,7 @@ class NoteType:
     ON_HOLD = "on_hold"
     OUTCOME = "outcome"
     QUALITY_WARNING = "quality_warning"
+    STATUS_CHANGE = "status_change"
 
 class EventType:
     USER_LOGIN = "user_login"
