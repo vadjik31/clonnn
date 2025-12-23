@@ -1,51 +1,73 @@
 {
-  "timestamp": "2025-12-23T11:28:16.170166",
+  "timestamp": "2025-12-23T11:44:34.261085",
   "base_url": "https://brandsearch-1.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:16.226097"
+      "timestamp": "2025-12-23T11:44:34.316474"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:16.277297"
+      "timestamp": "2025-12-23T11:44:34.356601"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:16.313831"
+      "timestamp": "2025-12-23T11:44:34.402540"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:16.389575"
+      "timestamp": "2025-12-23T11:44:34.479136"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:16.820361"
+      "timestamp": "2025-12-23T11:44:35.145653"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:16.895670"
+      "timestamp": "2025-12-23T11:44:35.274429"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:16.968184"
+      "timestamp": "2025-12-23T11:44:40.692554"
     },
     "brand_workflow": {
       "passed": true,
-      "timestamp": "2025-12-23T11:28:17.065463"
+      "timestamp": "2025-12-23T11:44:40.808070"
+    },
+    "security_fixes": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:44:45.821104"
+    },
+    "references_endpoints": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:44:45.889135"
+    },
+    "dashboard_alerts": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:44:45.937693"
+    },
+    "brands_health_score": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:44:46.049166"
     },
     "authentication_security": {
       "passed": false,
-      "timestamp": "2025-12-23T11:28:17.133066"
+      "timestamp": "2025-12-23T11:44:46.115380"
     }
   },
   "summary": {
-    "total_tests": 14,
-    "passed_tests": 13,
-    "failed_tests": 1,
-    "success_rate": 92.85714285714286
+    "total_tests": 26,
+    "passed_tests": 24,
+    "failed_tests": 2,
+    "success_rate": 92.3076923076923
   },
   "failed_tests": [
+    {
+      "test": "Outcome Without Required Fields",
+      "expected": 400,
+      "actual": 422,
+      "response": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"channel\"],\"msg\":\"Field required\",\"input\":{\"outcome\":\"OUTCOME_APPROVED\",\"note_text\":\"Testing outcome without required fields\"},\"url\":\"https://errors.pydantic"
+    },
     {
       "test": "Unauthorized Access",
       "expected": 401,
