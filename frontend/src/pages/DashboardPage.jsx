@@ -234,14 +234,24 @@ const DashboardPage = () => {
   );
 };
 
-const KPICard = ({ icon: Icon, label, value, color, testId }) => (
+const KPICard = ({ icon: Icon, label, value, color, testId, tooltip }) => (
   <div 
-    className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6 card-hover"
+    className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6 card-hover group relative"
     data-testid={testId}
   >
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-[#94A3B8] text-sm uppercase tracking-wider">{label}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-[#94A3B8] text-sm uppercase tracking-wider">{label}</p>
+          {tooltip && (
+            <div className="relative">
+              <HelpCircle size={12} className="text-[#94A3B8] opacity-50 group-hover:opacity-100 cursor-help" />
+              <div className="absolute bottom-full left-0 mb-2 px-3 py-2 bg-[#1A1D23] border border-[#FF9900]/30 rounded text-xs text-[#E6E6E6] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 max-w-[200px] text-wrap">
+                {tooltip}
+              </div>
+            </div>
+          )}
+        </div>
         <p className={`text-3xl font-mono font-bold mt-2 ${color}`}>{value.toLocaleString()}</p>
       </div>
       <Icon size={32} className={color} />
