@@ -8,11 +8,33 @@ import {
   AlertTriangle,
   TrendingUp,
   Users,
-  Bell,
-  Activity,
-  ShieldAlert
+  HelpCircle
 } from "lucide-react";
-import { Button } from "../components/ui/button";
+
+// Глоссарий терминов
+const glossary = {
+  "Всего брендов": "Общее количество брендов в системе (без архивных и ЧС)",
+  "В пуле": "Бренды, доступные для назначения сёрчерам",
+  "В работе": "Бренды, назначенные сёрчерам и активно обрабатываемые",
+  "Просрочено": "Бренды без действий более 3 дней",
+  "Рассмотрение": "Начальный этап - сёрчер изучает бренд",
+  "Письмо 1": "Отправлено первое письмо бренду",
+  "Письмо 2": "Отправлено второе письмо (follow-up)",
+  "Мультиканал": "Использованы несколько каналов связи",
+  "Звонок/Пуш": "Рекомендуется позвонить или напомнить",
+  "Закрыт": "Работа с брендом завершена"
+};
+
+// Компонент подсказки
+const Tooltip = ({ text, children }) => (
+  <div className="relative group inline-flex items-center gap-1">
+    {children}
+    <HelpCircle size={12} className="text-[#94A3B8] opacity-50 group-hover:opacity-100 cursor-help" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[#1A1D23] border border-[#FF9900]/30 rounded text-xs text-[#E6E6E6] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 max-w-[250px] text-wrap">
+      {text}
+    </div>
+  </div>
+);
 
 const DashboardPage = () => {
   const [data, setData] = useState(null);
@@ -30,16 +52,6 @@ const DashboardPage = () => {
       toast.error("Ошибка загрузки дашборда");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const resolveAlert = async (alertId) => {
-    try {
-      await api.post(`/alerts/${alertId}/resolve`);
-      toast.success("Алерт закрыт");
-      fetchDashboard();
-    } catch (error) {
-      toast.error("Ошибка");
     }
   };
 
