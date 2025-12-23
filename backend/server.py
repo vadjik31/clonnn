@@ -4278,8 +4278,25 @@ async def track_batch(
             "message": "Трекинг номер не указан"
         }
     
-    # Вызываем трекинг API
-    tracking_result = await track_shipment(tracking_number, admin=admin)
+    carrier_code = batch.get("carrier_code")
+    
+    # Вызываем трекинг API с carrier_code
+    tracking_result = await track_shipment(tracking_number, carrier_code=carrier_code, admin=admin)
+    
+    # Парсим статус для удобного отображения
+    parsed_status = None
+    if tracking_result.get("status") == "success":
+        data = tracking_result.get("data", {}).get("data", {})
+        accepted = data.get("accepted", [])
+        if accepted:
+            track_info = accepted[0].get("track", {})
+            parsed_status = {
+                "status_code": track_info.get("e"),
+                "last_event": track_info.get("z0", {}).get("z") if track_info.get("z0") else None,
+                "last_time": track_info.get("z0", {}).get("a") if track_info.get("z0") else None,
+                "carrier": track_info.get("w1"),
+                "events": track_info.get("z1", [])[:5] if track_info.get("z1") else []
+            }
     
     # Сохраняем результат
     await db.batches.update_one(
@@ -4287,10 +4304,12 @@ async def track_batch(
         {"$set": {
             "tracking_status": tracking_result.get("status"),
             "tracking_data": tracking_result.get("data"),
+            "tracking_parsed": parsed_status,
             "tracking_updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
     
+    tracking_result["parsed"] = parsed_status
     return tracking_result
 
 # Получить статусы товаров
