@@ -3121,38 +3121,7 @@ async def get_similar_brands(
         "count": len(similar)
     }
 
-# ============== EXPORT WITH WATERMARK ==============
-
-@api_router.get("/export/brands")
-async def export_brands_with_watermark(
-    status: Optional[str] = None,
-    assigned_to: Optional[str] = None,
-    format: str = Query("json", enum=["json", "csv"]),
-    user: dict = Depends(require_admin)
-):
-    """Экспорт брендов с водяным знаком"""
-    query = {"status": {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}}
-    if status:
-        query["status"] = status
-    if assigned_to:
-        query["assigned_to_user_id"] = assigned_to
-    
-    brands = await db.brands.find(query, {"_id": 0}).to_list(10000)
-    
-    # Добавляем водяной знак
-    watermark_info = generate_export_watermark_info(user["id"], user["nickname"])
-    brands = add_watermark_to_data(brands, user["id"], user["nickname"])
-    
-    # Логируем экспорт
-    await log_event(
-        EventType.EXPORT_CREATED,
-        user["id"],
-        metadata={
-            "count": len(brands),
-            "format": format,
-            "watermark_id": watermark_info["export_id"],
-            "status_filter": status,
-            "assigned_filter": assigned_to
+# ============== REPROCESSING ENDPOINTS ==============
         }
     )
     
