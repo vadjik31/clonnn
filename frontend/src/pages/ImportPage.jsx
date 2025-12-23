@@ -1,15 +1,32 @@
 import { useState, useEffect, useRef } from "react";
-import { api } from "../App";
+import { api, useAuth } from "../App";
 import { toast } from "sonner";
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Clock, Trash2, Archive, MoreVertical } from "lucide-react";
 import { Button } from "../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 const ImportPage = () => {
+  const { user } = useAuth();
   const [imports, setImports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef(null);
+
+  const isSuperAdmin = user?.role === "super_admin";
 
   useEffect(() => {
     fetchImports();
@@ -17,10 +34,18 @@ const ImportPage = () => {
 
   const fetchImports = async () => {
     try {
-      const response = await api.get("/import/history");
-      setImports(response.data);
+      // Супер-админ видит расширенную информацию
+      const endpoint = isSuperAdmin ? "/super-admin/imports" : "/import/history";
+      const response = await api.get(endpoint);
+      setImports(isSuperAdmin ? response.data.imports : response.data);
     } catch (error) {
-      toast.error("Ошибка загрузки истории импорта");
+      // Fallback для обычных админов
+      try {
+        const response = await api.get("/import/history");
+        setImports(response.data);
+      } catch (e) {
+        toast.error("Ошибка загрузки истории импорта");
+      }
     } finally {
       setLoading(false);
     }
@@ -54,6 +79,23 @@ const ImportPage = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleDeleteImport = async (importId, archive = true) => {
+    setDeleting(true);
+    try {
+      await api.delete(`/super-admin/imports/${importId}?archive=${archive}`);
+      toast.success(archive 
+        ? "Импорт удалён, бренды перемещены в архив" 
+        : "Импорт и все бренды полностью удалены"
+      );
+      setDeleteModal(null);
+      fetchImports();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка удаления");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -149,11 +191,16 @@ const ImportPage = () => {
 
       {/* Import History */}
       <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] overflow-hidden">
-        <div className="p-4 border-b border-[#2A2F3A]">
+        <div className="p-4 border-b border-[#2A2F3A] flex justify-between items-center">
           <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
             <Clock size={18} className="text-[#FF9900]" />
             История импортов
           </h3>
+          {isSuperAdmin && (
+            <span className="text-xs text-[#94A3B8] bg-[#FF9900]/10 px-2 py-1 rounded">
+              Супер-админ: можно удалять импорты
+            </span>
+          )}
         </div>
         
         <table className="w-full" data-testid="imports-table">
@@ -164,13 +211,15 @@ const ImportPage = () => {
               <th className="py-3 px-4 text-center">Новых</th>
               <th className="py-3 px-4 text-center">Дублей</th>
               <th className="py-3 px-4 text-center">Товаров</th>
+              {isSuperAdmin && <th className="py-3 px-4 text-center">Активных</th>}
               <th className="py-3 px-4 text-left">Дата</th>
+              {isSuperAdmin && <th className="py-3 px-4 text-center">Действия</th>}
             </tr>
           </thead>
           <tbody>
             {imports.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-[#94A3B8]">
+                <td colSpan={isSuperAdmin ? 8 : 6} className="py-8 text-center text-[#94A3B8]">
                   Нет импортов
                 </td>
               </tr>
@@ -187,15 +236,114 @@ const ImportPage = () => {
                   <td className="table-cell text-center font-mono text-green-400">{imp.stats?.new_brands || 0}</td>
                   <td className="table-cell text-center font-mono text-yellow-400">{imp.stats?.duplicate_brands || 0}</td>
                   <td className="table-cell text-center font-mono">{imp.stats?.items_added || 0}</td>
+                  {isSuperAdmin && (
+                    <td className="table-cell text-center font-mono text-[#FF9900]">
+                      {imp.active_brands_count ?? "—"}
+                    </td>
+                  )}
                   <td className="table-cell text-[#94A3B8] text-sm">
-                    {new Date(imp.imported_at).toLocaleString('ru-RU')}
+                    {new Date(imp.imported_at || imp.created_at).toLocaleString('ru-RU')}
                   </td>
+                  {isSuperAdmin && (
+                    <td className="table-cell text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical size={16} className="text-[#94A3B8]" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#13161B] border-[#2A2F3A]">
+                          <DropdownMenuItem 
+                            onClick={() => setDeleteModal({ ...imp, action: "archive" })}
+                            className="text-yellow-400 cursor-pointer"
+                          >
+                            <Archive size={14} className="mr-2" />
+                            Удалить → Архив
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => setDeleteModal({ ...imp, action: "delete" })}
+                            className="text-red-400 cursor-pointer"
+                          >
+                            <Trash2 size={14} className="mr-2" />
+                            Удалить навсегда
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <Dialog open={true} onOpenChange={() => setDeleteModal(null)}>
+          <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+            <DialogHeader>
+              <DialogTitle className={`font-mono uppercase tracking-wider ${
+                deleteModal.action === "delete" ? "text-red-400" : "text-yellow-400"
+              }`}>
+                {deleteModal.action === "delete" ? "Удалить навсегда" : "Удалить в архив"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-[#94A3B8]">
+                Удалить импорт <span className="text-[#FF9900] font-mono">{deleteModal.file_name}</span>?
+              </p>
+              
+              <div className="bg-[#0F1115] p-4 rounded-[2px] space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#94A3B8]">Активных брендов:</span>
+                  <span className="text-[#E6E6E6] font-mono">{deleteModal.active_brands_count ?? "?"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#94A3B8]">Уже в архиве:</span>
+                  <span className="text-[#E6E6E6] font-mono">{deleteModal.archived_brands_count ?? 0}</span>
+                </div>
+              </div>
+
+              {deleteModal.action === "delete" ? (
+                <div className="bg-red-900/20 border border-red-800 p-3 rounded-[2px]">
+                  <p className="text-red-400 text-sm">
+                    ⚠️ Все бренды и товары будут <strong>безвозвратно удалены</strong>!
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-yellow-900/20 border border-yellow-800 p-3 rounded-[2px]">
+                  <p className="text-yellow-400 text-sm">
+                    Бренды будут перемещены в архив. Их можно будет восстановить.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteModal(null)}
+                  className="flex-1 border-[#2A2F3A] text-[#94A3B8]"
+                  disabled={deleting}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  onClick={() => handleDeleteImport(deleteModal.id, deleteModal.action === "archive")}
+                  disabled={deleting}
+                  className={`flex-1 ${
+                    deleteModal.action === "delete" 
+                      ? "bg-red-600 hover:bg-red-700" 
+                      : "bg-yellow-600 hover:bg-yellow-700"
+                  }`}
+                >
+                  {deleting ? "Удаление..." : "Подтвердить"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
