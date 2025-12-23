@@ -1,163 +1,180 @@
 <analysis>**original_problem_statement:**
-The user initially requested an internal web system for managing a brand database for PROCTO 13 LLC, featuring roles like Super-Admin, Admin, and Searcher. This included specs for authentication, Excel imports, a brand management funnel, and UI/UX guidelines.
+The user initially requested an internal web system for managing a brand database for PROCTO 13 LLC, featuring roles like Super-Admin, Admin, and Searcher.
 
-The project scope has significantly expanded with a new, large feature request: a BASH section. This module is for managing product batches (parties) imported from Excel files. Key requirements include:
-*   Parsing uploaded Excel files ().
-*   Displaying product data in a detailed table with sorting and filtering.
-*   Calculating Profit and ROI based on dynamic user inputs (e.g., cost price, extra costs) and parsed data (e.g., fees, shipping weights).
-*   Implementing complex, user-defined formulas for shipping costs and ROI.
-*   Integrating with the  API for real-time shipment tracking.
-*   Providing a summary dashboard for each batch.
+The project's scope then expanded significantly with a large feature request: a BASH section for managing product batches from uploaded Excel files. This involved parsing, complex financial calculations (Profit/ROI), and a detailed data table.
 
-The user also requested that the standard  role be given the same access to employee activity logs as the .
+Through iterative feedback, the user has further refined the BASH feature with several new requests:
+*   **Custom Statuses:** The ability for users to create their own statuses for batch items (e.g., out of stock, heavy), filter by them, and mass-delete items based on a selected status.
+*   **Improved Batch Management:** A dedicated list view for all batches, rather than viewing one at a time, to allow for easier navigation and management.
+*   **Enhanced Tracking:** A more robust integration with the 17track API (v2.4), showing the actual shipment status directly on the page and providing an auto-complete for selecting the shipping carrier. The user provided a Google Apps Script as a reference for the desired implementation.
+*   **UI/UX Fixes:**
+    *   Fix table rows jumping to the top after an edit.
+    *   Prevent long product titles from being cut off.
+    *   Allow zooming in on product images.
+    *   Add a dedicated section for managing Suppliers.
+*   **Data Handling:**
+    *   Use the 90-day average price if a Buy Box price is unavailable.
+    *   Add a feature to export items that have a supplier SKU and quantity greater than zero.
+    *   Correct the summary ROI calculation.
 
 **User's preferred language**: Russian
 
 **what currently exists?**
-A substantial full-stack application is in place with a FastAPI backend, React frontend, and MongoDB database. Key roles (, , ) are functional. Several major features have been implemented and refined based on user feedback, including:
-*   A robust set of  tools for mass data manipulation, settings management, and import control.
-*   A complete workflow for  users to manage assigned brands.
-*   Fixes for critical bugs related to brand status updates and priority assignment logic.
-*   Significant performance optimizations on the backend to resolve UI lag.
-*   A complete UI/UX overhaul of the Dashboard and Analytics pages, including removing clutter (alerts), adding explanatory tooltips, and implementing a more advanced KPI calculation engine.
-*   Enhanced usability features like human-readable activity logs (in Russian), a select all function for mass actions across paginated data, and a brand history roadmap tooltip.
+A full-stack application (FastAPI, React, MongoDB) with a complete BASH module for managing product batches. The BASH feature allows users to:
+- Upload Excel files () which are parsed and stored in the database.
+- View batches in a list and drill down into a detailed view for each batch.
+- The detail view includes a summary dashboard (Total Items, Cost, Revenue, Profit, ROI) and a comprehensive table of all items.
+- The item table displays product info, financial data, and allows for real-time editing of , , and , with  and  recalculating instantly.
+- **Custom Statuses**: Users can create, assign, filter by, and bulk-delete items based on custom text statuses.
+- **Image Zoom**: Users can click on a product thumbnail to see a larger version.
+- **Tracking**: A basic tracking implementation exists that can be updated with a tracking number and carrier.
+- **Admin Logs**: The  for  users to view employee activity logs has been successfully implemented and verified.
 
 **Last working item**:
-*   **Last item agent was working:** The agent began implementing the user's latest request, which is divided into two parts:
-    1.  **Admin Logs:** Granting  users access to employee activity logs, previously a -only feature.
-    2.  **BASH Feature Scaffolding:** Creating the foundational files and routes for the new, large-scale batch management feature.
+*   **Last item agent was working:** The agent started to address the user's latest feedback batch:
+    1.  **Tracking API Update:** Began refactoring the backend 17track integration to use the more advanced v2.4 API, based on a script the user provided.
+    2.  **Jumping Rows Fix:** Acknowledged the issue where editing an item causes it to jump to the top of the table.
+    3.  **Suppliers Section:** Acknowledged the request to create a new section for managing suppliers.
 *   **Status:** IN PROGRESS
 *   **Agent Testing Done:** N
 *   **Which testing method agent to use?**
-    *   **Admin Logs:** Use the screenshot tool. Log in with  credentials and verify that the new Сотрудники (Staff) page loads and correctly displays user activity.
-    *   **BASH Feature:** This is a large feature requiring phased testing. After the initial UI is built, use the **frontend testing agent** to test file uploads and data display. Use the **backend testing agent** to create unit/integration tests for the complex Excel parsing and financial calculation logic.
+    *   **Tracking API:** Backend testing using  to verify the new v2.4 API flow (register, then get info).
+    *   **Jumping Rows Fix:** Use the screenshot tool. Edit a value in a cell midway down the  table and verify the row does not change position.
+    *   **Suppliers Section:** Use the **frontend testing agent** to test the creation of a new supplier page, form submission, and data persistence.
 *   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-None. The agent has successfully resolved all previously reported bugs.
+*   **Issue 1: Table rows jump on edit (P0)**
+    *   **Description:** When a user edits an input field (e.g., Себест.) in the BASH item table, the entire table re-sorts, causing the edited row to jump, creating a poor user experience.
+    *   **Attempted fixes:** None yet. The agent acknowledged the issue.
+    *   **Next debug checklist:**
+        1.  Examine . The issue is likely caused by a  hook that re-fetches or re-sorts the entire  array whenever a single item is updated.
+        2.  Modify the state update logic. Instead of re-fetching the whole list, update the single item within the existing client-side array to prevent a re-sort. The sorting should only be triggered by an explicit click on a column header.
+    *   **Why fix this issue and what will be achieved with the fix?** To improve usability and prevent user frustration when entering data for multiple items.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Frontend.
+    *   **Blocked on other issue:** No.
 
 **In progress Task List**:
-*   **Task 1: Implement Admin Access to Employee Logs (P0)**
-    *   **Description**: Enable the standard  role to view employee check-in and activity logs, mirroring the functionality of the .
-    *   **Where to resume**:
-        1.  The backend endpoints (, ) were modified to use a new  dependency. This change needs to be verified.
-        2.  A new frontend page  was created but is currently a placeholder. It needs to be implemented by reusing the logic from 's .
-        3.  A new route () and sidebar link (Сотрудники) have already been added.
-    *   **What will be achieved with this?**: Admins will gain the ability to monitor team activity without needing super-admin privileges.
+*   **Task 1: Overhaul 17track Integration to v2.4 (P0)**
+    *   **Description**: Refactor the backend tracking logic based on the user's Google Apps Script. The new flow should first  tracking numbers with the 17track v2.4 API and then use  to retrieve detailed status information. The UI should display the descriptive status text (e.g., In Transit / Arrived at Hub) instead of a generic message.
+    *   **Where to resume**: The agent was modifying the  function in . The function needs to be completed to implement the two-step register/fetch process and parse the richer response from the v2.4 API.
+    *   **What will be achieved with this?**: Provides accurate, real-time shipment status directly in the UI, as requested by the user.
     *   **Status**: IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?**: Both.
+    *   **Should Test frontend/backend/both after fix?** Both. Backend via curl, frontend via screenshot to verify the status text is displayed correctly.
     *   **Blocked on something**: No.
 
-*   **Task 2: Develop BASH Feature for Batch Management (P0)**
-    *   **Description**: Build the comprehensive batch management system. This is a multi-step task involving file parsing, UI/UX for data interaction, complex financial calculations, and third-party API integration for tracking.
-    *   **Where to resume**:
-        1.  Initial scaffolding is complete: placeholder page , route , and a sidebar link are in place.
-        2.  The next step is to begin the backend implementation. Create MongoDB models for  and . Develop an API endpoint () that uses a library like  or  to parse the uploaded Excel file and persist the data.
-        3.  Following the backend, build the initial frontend UI to upload a file and display the parsed data in a simple table.
-    *   **What will be achieved with this?**: This will deliver a major new module for product sourcing analysis, which is a core requirement for the user.
-    *   **Status**: IN PROGRESS (scaffolding only)
-    *   **Should Test frontend/backend/both after fix?**: Both.
+*   **Task 2: Implement Suppliers Section (P1)**
+    *   **Description**: Create a new page for managing suppliers. All roles can view, but only , , and  can create/edit. The page should contain a table and a form with fields for Сайт поставщика (Website), имя поставщика (Name), логин (Login), пароль (Password), and заметки (Notes).
+    *   **Where to resume**: This task has not been started.
+        1.  **Backend**: Add a new MongoDB collection  and create CRUD endpoints in .
+        2.  **Frontend**: Create a new page component (e.g., ), add a route in , and a link in .
+    *   **What will be achieved with this?**: Fulfills a direct user request for a centralized place to manage supplier information.
+    *   **Status**: NOT STARTED
+    *   **Should Test frontend/backend/both after fix?** Both.
     *   **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
-*   **Upcoming Tasks (Phases of the BASH feature):**
-    1.  **BASH - Backend Calculations (P0):** Implement the user's specific formulas for Profit and ROI in the backend.
-    2.  **BASH - Interactive UI (P0):** Enhance the  table with sorting, filtering, and pagination. Add input fields for  and  that trigger real-time recalculation of profit/ROI.
-    3.  **BASH - Batch Tracking (P1):**
-        *   Integrate with the 17track API to fetch shipment status.
-        *   Create UI elements to display tracking information.
-        *   Store the API key () in a backend environment variable.
-    4.  **BASH - Batch Summary & Suppliers (P2):** Add a dashboard to summarize batch financials and a new section for managing suppliers.
-
-*   **Future Tasks (From user's backlog):**
+*   **Future Tasks:**
     *   **XSS Protection:** Sanitize all user-generated input fields to prevent cross-site scripting.
     *   **Error Monitoring Page:** Create a dedicated UI for admins to view system errors and incidents.
     *   **Log Retention Policy:** Implement a scheduled task to clean up old activity logs.
 
 **Completed work in this session**
-- **Bug Fix: Replied Functionality (DONE):** Resolved a critical bug preventing searchers from updating a brand's status.
-- **Performance Fix: SuperAdmin Page (DONE):** Eliminated a 10-15 second lag by optimizing database queries with a MongoDB aggregation pipeline and adding a new index.
-- **KPI & Analytics Overhaul (DONE):** Rebuilt the KPI logic with a new backend endpoint () and redesigned the  to display more meaningful metrics with explanatory tooltips.
-- **Dashboard & Logs UX (DONE):**
-    - Removed the Alerts section from the dashboard to reduce clutter.
-    - Translated activity logs into readable Russian and exposed them in the UI.
-- **Mass Actions & Brand Roadmap (DONE):**
-    - Implemented a Select all on all pages feature on the  for true mass actions.
-    - Added a mass Reset to Pool action for admins.
-    - Added a Brand Roadmap tooltip that shows a brand's recent history on hover.
-- **Bug Fix: Brand Priority Logic (DONE):** Fixed a flaw where searchers received low-priority brands. The fix involved clearing assignment history when a brand is reset to the pool, ensuring high-priority brands are correctly redistributed.
+- **Admin Logs Feature (DONE):** Successfully created and verified the  page, allowing  users to view employee activity logs.
+- **BASH Feature - Initial Implementation (DONE):**
+    - Built backend for Excel file upload, parsing, and data storage for batches and items.
+    - Created the initial  frontend with file upload and a data table.
+- **BASH Feature - Iteration 1 (User Feedback) (DONE):**
+    - Implemented a batch list view and detail view, improving navigation.
+    - Added a fallback to use the 90-day average price when Buy Box price is missing.
+    - Added fields for Supplier Link and Supplier SKU.
+    - Added a Notes feature for each item.
+    - Implemented  on input fields to reduce UI jerkiness.
+- **BASH Feature - Iteration 2 (User Feedback) (DONE):**
+    - **Custom Statuses:** Implemented user-creatable statuses with filtering and bulk deletion.
+    - **Carrier Autocomplete:** Added an autocomplete feature for selecting the shipping carrier when tracking a batch.
+    - **Fixed Backend Routing:** Resolved an issue where static API routes were being incorrectly intercepted by dynamic routes.
+- **BASH Feature - Iteration 3 (User Feedback) (DONE):**
+    - **Fixed ROI Calculation:** Corrected the summary ROI formula to provide accurate results.
+    - **UI Enhancements:**
+        - Made product titles wrap to be fully visible.
+        - Implemented an image zoom feature on-click.
+        - Re-introduced separate columns for , , and  fees.
+        - Removed the Продаж/мес (Sales/month) column as requested.
+        - Added an Экспорт (Export) button to the UI.
+    - **Fixed Status Filter:** Ensured newly created custom statuses correctly appear in the filter dropdowns.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 - **Backend:** FastAPI, MongoDB (), Pydantic, JWT.
-- **Frontend:** React, , , .
-- **Upcoming Tech:**  or  for Excel parsing, external API calls via  or  for 17track integration.
+- **Data Parsing:**  and  for handling  uploads.
+- **API Calls:**  for making requests to the 17track API.
+- **Frontend:** React, , , , .
 
 **key DB schema**
-*   **Existing:** , , , , , , .
-*   **To be created for BASH feature:**
-    *   : To store information about each uploaded file/party.
-    *   : To store data for each product within a batch, including calculated financial metrics.
-    - : To store tracking information for batches.
+*   : { id, name, user_id, created_at, tracking_number, carrier_code, tracking_status, last_tracked_at, notes: [...] }
+*   : { id, batch_id, asin, title, ..., cost_price, extra_costs, quantity, profit, roi, supplier_link, supplier_sku, status, custom_status }
+*   : Static list from  used for auto-complete.
+*   **To be created**: : { site, name, login, password, notes, created_by, created_at }
 
 **All files of reference**
-*   **/app/backend/server.py**: **CRITICAL**. This monolithic file contains all backend logic and has been heavily modified. The new BASH feature logic will be added here.
-*   **/app/frontend/src/pages/BashPage.jsx**: **New**. This will contain the entire UI for the batch management feature.
-*   **/app/frontend/src/pages/StaffPage.jsx**: **New**. This page will be implemented to show activity logs for the  role.
-*   **/app/frontend/src/pages/BrandsPage.jsx**: Heavily modified to add select all functionality, the roadmap tooltip, and the Reset to Pool action.
-*   **/app/frontend/src/pages/AnalyticsPage.jsx**: Overhauled to use the new KPI endpoint and UI.
-*   **/app/frontend/src/components/Sidebar.jsx**: Updated with new navigation links for Сотрудники and BASH.
-*   **/app/frontend/src/App.js**: Updated with routes for the new pages.
+*   **/app/backend/server.py**: Contains all backend logic, including the entire BASH feature. It was heavily modified to add new endpoints and update existing logic for tracking, statuses, and ROI calculation.
+*   **/app/frontend/src/pages/BashPage.jsx**: The main frontend file for the BASH feature. It has been overwritten multiple times to incorporate user feedback on UI, calculations, and new features like custom statuses and image zoom.
+*   **/app/backend/.env**: The  was added here.
+*   **/app/frontend/src/pages/StaffPage.jsx**: Created and completed to provide admins with access to logs.
+*   : Updated with routes for  and .
 
 **Areas that need refactoring**:
-*   The  file is now critically large and difficult to maintain. It is the top candidate for refactoring. The logic should be split into separate files for routes, models, and services (e.g., , ).
+*   **/app/backend/server.py**: This file is critically oversized (4500+ lines) and urgently needs to be broken down into a more maintainable structure (e.g., separate files for routes, models, and services in directories like , , etc.).
+*   **/app/frontend/src/pages/BashPage.jsx**: This component is also very large and complex. It should be refactored into smaller, more manageable components (e.g., , , , , ).
 
 **key api endpoints**
-*   **New (Upcoming for BASH):**
-    *    (POST)
-    *    (GET)
-    *    (GET, PUT)
-    *    (GET)
-*   **Modified for Admin Logs:**
-    *   
-    *   
+*    (POST)
+*    (GET)
+*    (GET, PUT, DELETE)
+*    (GET)
+*    (GET, POST)
+*    (POST)
+*    (GET)
+*    (POST)
+*   **(New)  (GET, POST)**
+*   **(New)  (PUT, DELETE)**
 
 **Critical Info for New Agent**
-*   The highest priority is to continue the development of the BASH feature as per the user's detailed request.
-*   The second priority is to complete the implementation of the  to provide admins with access to activity logs.
-*   The 17track API key is ****. This MUST be stored as an environment variable and not hardcoded in the source code.
-*   Pay close attention to the user-defined formulas for the BASH feature's financial calculations.
-*   The user is highly engaged and provides specific, detailed feedback. Plan and confirm each major step before implementation.
+*   The top priorities are fixing the jumping rows bug, overhauling the 17track integration, and then implementing the Suppliers section.
+*   The user provides very specific, iterative feedback. Always confirm your plan before implementing major changes.
+*   The user's reference script for 17track API v2.4 is the source of truth for the new tracking implementation.
+*   The  and  files are extremely large. Navigate them carefully and consider that they are prime candidates for refactoring after the current tasks are completed.
 
 **documents and test_reports created in this job**
 *   
-*   User-provided artifacts for the BASH feature:
-    *   
-    *   
+*   User-provided artifacts (, ) have been downloaded and used.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **на преп по всему, на амазон паунд README.md backend backend_test.py design_guidelines.json frontend phase2_3_test.py requirements.md test_reports test_result.md tests yarn.lock 0,8 на 1 штуку, да начинай**: Confirmed the go-ahead for the BASH feature and clarified a shipping cost formula.
-2.  **(long message with artifacts)**: The primary request outlining the entire BASH feature, including calculations, UI, and the 17track integration.
-3.  **как-то странно бренды даются в приоритетность...**: Reported the bug with brand priority assignment (now fixed).
-4.  **надо в админ панеле добавить к все бренды кнопку сбросить...**: Requested the mass Reset to Pool feature (now implemented).
-5.  **есть моменты, момент первый - не доставлять в базу импорты...**: A large batch of feature/improvement requests that have since been implemented (import filter, KPI overhaul, roadmap, etc.).
-6.  **только нажимаю на кнопку супер-админ так сразу сайт ложится...**: Reported the major performance issue on the SuperAdmin page (now fixed).
-7.  **поехали да**: Confirmation to proceed with the plan.
-8.  **какой логин и пароль супер-админа то**: User asked for credentials.
-9.  **да поехали**: Confirmation to proceed with the plan.
-10. **(Summary from agent)**: The last agent finished a task and provided a summary.
+1.  **Latest:** Requested fixes for tracking, jumping rows, and the addition of a Suppliers section. Provided a Google Apps Script for the 17track v2.4 API as a reference.
+2.  Reported issues: image zoom not working, custom statuses not saving to the filter list, incorrect ROI calculation, missing export button, and requested removal of Sales/mo and re-addition of fee breakdown.
+3.  Provided a screenshot showing a truncated product title.
+4.  Gave feedback on the previous implementation: tracking status message is uninformative (Статус получен), summary ROI is 0%, SKU import is incorrect, ROI doesn't update in real-time, and requested fully custom statuses and image zoom.
+5.  Final approval of the BASH V2 implementation with instructions for testing.
+6.  Confirmed that the carrier autocomplete feature for tracking is working perfectly.
+7.  Reported a bug where the API for searching carriers was failing due to an incorrect route order in .
+8.  Confirmed the Delete by Status modal is working as expected.
+9.  Confirmed the custom status selection modal is working as expected.
+10. Confirmed the detailed batch view is working perfectly, noting all the new features (stats, tracking card, filters, table data).
 
 **Project Health Check:**
-*   **Broken:** None. All known bugs are fixed.
+*   **Broken:** The BASH item table has a significant usability issue (jumping rows).
 *   **Mocked:** None.
 
 **3rd Party Integrations**
-*   **17track:** (Upcoming) For shipment tracking. Requires using the provided API key: . This will be the first external integration in the project.
+*   **17track:** Used for shipment tracking. The API key  is stored in . The integration is currently being upgraded from a basic implementation to the v2.4 API.
 
 **Testing status**
-*   **Testing agent used after significant changes:** YES (for previous features)
+*   **Testing agent used after significant changes:** NO (in this session)
 *   **Troubleshoot agent used after agent stuck in loop:** NO
 *   **Test files created:** []
 *   **Known regressions:** None.
@@ -173,4 +190,4 @@ None. The agent has successfully resolved all previously reported bugs.
     *   **Secret Code:** 
 
 **What agent forgot to execute**
-The agent is on track with the user's requests. The new BASH feature is complex, and the agent correctly identified the need to break it down into phases. There is nothing forgotten at this stage.</analysis>
+The agent was actively working on the user's latest requests but was interrupted before it could finish the implementation. The plan to address the feedback was sound, but the work is incomplete. No tasks were forgotten.</analysis>
