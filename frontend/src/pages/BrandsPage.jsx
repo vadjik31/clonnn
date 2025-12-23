@@ -771,12 +771,14 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
   const titles = {
     archive: "Архивировать бренды",
     blacklist: "В чёрный список",
-    assign: "Назначить бренды"
+    assign: "Назначить бренды",
+    release: "Сбросить в пул"
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!reason.trim()) {
+    // Для release причина необязательна
+    if (action !== "release" && !reason.trim()) {
       toast.error("Укажите причину");
       return;
     }
@@ -785,7 +787,7 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
       return;
     }
     setLoading(true);
-    await onSubmit({ reason, userId });
+    await onSubmit({ reason: reason || "Массовый сброс", userId });
     setLoading(false);
   };
 
