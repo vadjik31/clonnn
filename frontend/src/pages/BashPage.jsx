@@ -90,6 +90,9 @@ const BashPage = () => {
   const [sortBy, setSortBy] = useState("roi");
   const [sortOrder, setSortOrder] = useState("desc");
   const itemsPerPage = 25;
+  
+  // Store sorted item IDs to prevent "jumping" on edit
+  const [sortedItemIds, setSortedItemIds] = useState([]);
 
   useEffect(() => { fetchBatches(); }, []);
   useEffect(() => { if (selectedBatch?.id && view === "detail") fetchBatchData(selectedBatch.id); }, [selectedBatch?.id, view]);
