@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../App";
+import { useAuth, api } from "../App";
+import { toast } from "sonner";
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,12 +11,44 @@ import {
   LogOut,
   AlertTriangle,
   Briefcase,
-  BarChart3
+  BarChart3,
+  Shield,
+  UserCheck
 } from "lucide-react";
 
 const Sidebar = ({ user }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [checkInStatus, setCheckInStatus] = useState(null);
+  const [checkingIn, setCheckingIn] = useState(false);
+
+  useEffect(() => {
+    if (user?.role === "searcher") {
+      checkCheckInStatus();
+    }
+  }, [user]);
+
+  const checkCheckInStatus = async () => {
+    try {
+      const res = await api.get("/auth/check-in/status");
+      setCheckInStatus(res.data);
+    } catch (error) {
+      console.error("Check-in status error:", error);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      await api.post("/auth/check-in", { message: "На месте!" });
+      toast.success("Отметка поставлена!");
+      checkCheckInStatus();
+    } catch (error) {
+      toast.error("Ошибка отметки");
+    } finally {
+      setCheckingIn(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -30,12 +64,18 @@ const Sidebar = ({ user }) => {
     { to: "/settings", icon: Settings, label: "Настройки" },
   ];
 
+  const superAdminLinks = [
+    ...adminLinks,
+    { to: "/super-admin", icon: Shield, label: "Супер-админ" },
+  ];
+
   const searcherLinks = [
     { to: "/my-brands", icon: Briefcase, label: "Мои бренды" },
     { to: "/problematic", icon: AlertTriangle, label: "Проблемные" },
   ];
 
-  const links = user?.role === "admin" ? adminLinks : searcherLinks;
+  const links = user?.role === "super_admin" ? superAdminLinks : 
+                user?.role === "admin" ? adminLinks : searcherLinks;
 
   return (
     <aside 
