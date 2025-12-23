@@ -1973,13 +1973,19 @@ async def admin_bulk_release(req: BulkReleaseRequest, admin: dict = Depends(requ
         }}
     )
     
+    # Очищаем историю назначений, чтобы бренды могли снова попасть к тем же сёрчерам
+    # с учётом приоритета
+    if req.clear_history:
+        await db.brand_assignment_history.delete_many({"brand_id": {"$in": req.brand_ids}})
+    
     await log_event(EventType.ADMIN_BULK_RELEASE, admin["id"], metadata={
         "reason": req.reason,
         "count": result.modified_count,
-        "brand_ids": req.brand_ids
+        "brand_ids": req.brand_ids,
+        "history_cleared": req.clear_history
     })
     
-    return {"status": "success", "count": result.modified_count}
+    return {"status": "success", "count": result.modified_count, "history_cleared": req.clear_history}
 
 # ============== DASHBOARD ==============
 @api_router.get("/dashboard", response_model=DashboardResponse)
