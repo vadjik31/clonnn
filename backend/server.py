@@ -2142,6 +2142,8 @@ async def init_data():
     await db.brand_notes.create_index([("brand_id", 1), ("created_at", -1)])
     await db.brand_assignment_history.create_index([("brand_id", 1), ("user_id", 1)], unique=True)
     await db.alerts.create_index([("resolved", 1), ("created_at", -1)])
+    await db.brands.create_index("import_id")  # Для быстрой статистики импортов
+    await db.check_ins.create_index([("date", 1), ("user_id", 1)])  # Для check-ins
     
     return {"status": "initialized"}
 
