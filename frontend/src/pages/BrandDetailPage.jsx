@@ -746,23 +746,37 @@ const ReturnModal = ({ open, onClose, brandId, onSuccess }) => {
 };
 
 const ProblematicModal = ({ open, onClose, brandId, onSuccess }) => {
-  const [reason, setReason] = useState("");
+  const [reasonCode, setReasonCode] = useState("");
+  const [reviewDate, setReviewDate] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const reasons = [
+    { value: "legal_issues", label: "Юридические проблемы" },
+    { value: "aggressive_response", label: "Агрессивный/негативный ответ" },
+    { value: "spam_complaint", label: "Жалоба на спам" },
+    { value: "technical_issues", label: "Технические проблемы" },
+    { value: "other", label: "Другое" },
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!reason.trim() || !note.trim()) {
+    if (!reasonCode || !note.trim()) {
       toast.error("Заполните все поля");
       return;
     }
     setLoading(true);
     try {
-      await api.post(`/brands/${brandId}/problematic`, { reason, note_text: note });
+      await api.post(`/brands/${brandId}/problematic`, { 
+        reason_code: reasonCode, 
+        note_text: note,
+        review_date: reviewDate || null
+      });
       toast.success("Бренд помечен как проблемный");
       onSuccess();
       onClose();
-      setReason("");
+      setReasonCode("");
+      setReviewDate("");
       setNote("");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ошибка");
@@ -779,14 +793,26 @@ const ProblematicModal = ({ open, onClose, brandId, onSuccess }) => {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[#94A3B8]">Причина</Label>
+            <Label className="text-[#94A3B8]">Причина *</Label>
+            <Select value={reasonCode} onValueChange={setReasonCode}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]" data-testid="problematic-reason">
+                <SelectValue placeholder="Выберите причину" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                {reasons.map(r => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Дата пересмотра (опционально)</Label>
             <Input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              type="date"
+              value={reviewDate}
+              onChange={(e) => setReviewDate(e.target.value)}
               className="bg-[#0F1115] border-[#2A2F3A]"
-              placeholder="Краткая причина..."
-              required
-              data-testid="problematic-reason"
+              data-testid="problematic-review-date"
             />
           </div>
           <div className="space-y-2">
