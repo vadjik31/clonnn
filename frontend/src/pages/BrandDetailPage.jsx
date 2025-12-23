@@ -451,6 +451,11 @@ const BrandDetailPage = () => {
         brand={brand}
         onSuccess={fetchBrand}
       />
+      <NoResponseModal
+        open={noResponseModal}
+        onClose={() => setNoResponseModal(false)}
+        onSubmit={handleNoResponse}
+      />
     </div>
   );
 };
