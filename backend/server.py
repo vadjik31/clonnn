@@ -4331,27 +4331,6 @@ async def track_batch(
     tracking_result["parsed"] = parsed_status
     return tracking_result
 
-# Получить статусы товаров
-@api_router.get("/bash/item-statuses")
-async def get_item_statuses(admin: dict = Depends(require_admin)):
-    """Получить список доступных статусов товаров"""
-    return {"statuses": ITEM_STATUSES}
-
-# Получить перевозчиков для автокомплита
-@api_router.get("/bash/carriers")
-async def search_carriers(
-    q: str = Query("", description="Поисковый запрос"),
-    admin: dict = Depends(require_admin)
-):
-    """Поиск перевозчиков по названию"""
-    if not q:
-        return {"carriers": POPULAR_CARRIERS}
-    
-    # Поиск по названию
-    q_lower = q.lower()
-    matched = [c for c in POPULAR_CARRIERS if q_lower in c["name"].lower()]
-    return {"carriers": matched[:20]}
-
 # Массовое удаление товаров по статусу
 @api_router.delete("/bash/{batch_id}/items-by-status")
 async def delete_items_by_status(
