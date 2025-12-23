@@ -280,12 +280,66 @@ const BrandsPage = () => {
         </div>
       </div>
 
+      {/* Bulk Actions Bar (super_admin only) */}
+      {isSuperAdmin && selectedBrands.size > 0 && (
+        <div className="bg-[#FF9900]/10 border border-[#FF9900]/30 rounded-[2px] p-4 flex items-center justify-between">
+          <span className="text-[#FF9900] font-medium">
+            Выбрано: {selectedBrands.size} брендов
+          </span>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => setBulkModal({ open: true, action: "archive" })}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              <Archive size={14} className="mr-1" />
+              В архив
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setBulkModal({ open: true, action: "blacklist" })}
+              variant="destructive"
+            >
+              <Ban size={14} className="mr-1" />
+              В ЧС
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setBulkModal({ open: true, action: "assign" })}
+              className="btn-primary"
+            >
+              <UserPlus size={14} className="mr-1" />
+              Назначить
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setSelectedBrands(new Set())}
+              className="border-[#2A2F3A] text-[#94A3B8]"
+            >
+              Сбросить
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full" data-testid="brands-table">
             <thead>
               <tr className="table-header">
+                {isSuperAdmin && (
+                  <th className="py-3 px-2 text-center w-10">
+                    <button onClick={toggleSelectAll} className="text-[#94A3B8] hover:text-[#FF9900]">
+                      {selectedBrands.size === brands.length && brands.length > 0 ? (
+                        <CheckSquare size={18} />
+                      ) : (
+                        <Square size={18} />
+                      )}
+                    </button>
+                  </th>
+                )}
                 <th className="py-3 px-4 text-left">Бренд</th>
                 <th className="py-3 px-4 text-center">Приоритет</th>
                 <th className="py-3 px-4 text-center">Товаров</th>
@@ -299,26 +353,36 @@ const BrandsPage = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={isSuperAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
                     Загрузка...
                   </td>
                 </tr>
               ) : brands.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={isSuperAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
                     Нет брендов
                   </td>
                 </tr>
               ) : (
                 brands.map((brand) => {
                   const isOverdue = brand.next_action_at && new Date(brand.next_action_at) < new Date();
+                  const isSelected = selectedBrands.has(brand.id);
                   return (
                     <tr 
                       key={brand.id} 
-                      className={`table-row cursor-pointer ${isOverdue ? "bg-red-900/10" : ""}`}
+                      className={`table-row cursor-pointer ${isOverdue ? "bg-red-900/10" : ""} ${isSelected ? "bg-[#FF9900]/10" : ""}`}
                       onClick={() => navigate(`/brands/${brand.id}`)}
                       data-testid={`brand-row-${brand.id}`}
                     >
+                      {isSuperAdmin && (
+                        <td className="table-cell text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelectBrand(brand.id)}
+                            className="border-[#2A2F3A] data-[state=checked]:bg-[#FF9900]"
+                          />
+                        </td>
+                      )}
                       <td className="table-cell font-medium">{brand.name_original}</td>
                       <td className="table-cell text-center font-mono text-[#FF9900]">{brand.priority_score}</td>
                       <td className="table-cell text-center font-mono">{brand.items_count}</td>
