@@ -3979,6 +3979,25 @@ async def upload_bash_file(
         logger.error(f"Error uploading BASH file: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {str(e)}")
 
+# ВАЖНО: Static routes должны быть ПЕРЕД dynamic routes (/bash/{batch_id})
+@api_router.get("/bash/item-statuses")
+async def get_item_statuses(admin: dict = Depends(require_admin)):
+    """Получить список доступных статусов товаров"""
+    return {"statuses": ITEM_STATUSES}
+
+@api_router.get("/bash/carriers")
+async def search_carriers(
+    q: str = Query("", description="Поисковый запрос"),
+    admin: dict = Depends(require_admin)
+):
+    """Поиск перевозчиков по названию"""
+    if not q:
+        return {"carriers": POPULAR_CARRIERS}
+    
+    q_lower = q.lower()
+    matched = [c for c in POPULAR_CARRIERS if q_lower in c["name"].lower()]
+    return {"carriers": matched[:20]}
+
 @api_router.get("/bash")
 async def get_batches(
     skip: int = Query(0, ge=0),
