@@ -196,8 +196,9 @@ const DashboardPage = () => {
                 <th className="py-3 px-4 text-center">Брендов</th>
                 <th className="py-3 px-4 text-center">Просрочено</th>
                 <th className="py-3 px-4 text-center">Очищено</th>
+                <th className="py-3 px-4 text-center">Быстрые возвраты</th>
+                <th className="py-3 px-4 text-center">Низкое качество</th>
                 <th className="py-3 px-4 text-left">Рабочие часы</th>
-                <th className="py-3 px-4 text-left">Последняя активность</th>
               </tr>
             </thead>
             <tbody>
@@ -205,11 +206,11 @@ const DashboardPage = () => {
                 <tr key={searcher.id} className="table-row" data-testid={`searcher-row-${searcher.id}`}>
                   <td className="table-cell font-medium">{searcher.nickname}</td>
                   <td className="table-cell">
-                    <ActivityIndicator status={searcher.activity_status} />
+                    <ActivityIndicator status={searcher.activity_status} inWorkHours={searcher.in_work_hours} />
                   </td>
                   <td className="table-cell text-center font-mono">{searcher.assigned_count}</td>
                   <td className="table-cell text-center font-mono">
-                    <span className={searcher.overdue_count > 0 ? "text-red-400" : ""}>
+                    <span className={searcher.overdue_count > 0 ? "text-red-400 font-bold" : ""}>
                       {searcher.overdue_count}
                     </span>
                   </td>
@@ -218,10 +219,17 @@ const DashboardPage = () => {
                       {searcher.cleared_count}
                     </span>
                   </td>
-                  <td className="table-cell text-[#94A3B8] font-mono text-sm">{searcher.work_hours}</td>
-                  <td className="table-cell text-[#94A3B8] text-sm">
-                    {searcher.last_seen_at ? new Date(searcher.last_seen_at).toLocaleString('ru-RU') : "Нет данных"}
+                  <td className="table-cell text-center font-mono">
+                    <span className={searcher.quick_returns_count > 5 ? "text-red-400 font-bold" : ""}>
+                      {searcher.quick_returns_count || 0}
+                    </span>
                   </td>
+                  <td className="table-cell text-center font-mono">
+                    <span className={searcher.low_quality_count > 5 ? "text-yellow-400" : ""}>
+                      {searcher.low_quality_count || 0}
+                    </span>
+                  </td>
+                  <td className="table-cell text-[#94A3B8] font-mono text-sm">{searcher.work_hours}</td>
                 </tr>
               ))}
             </tbody>
