@@ -3122,23 +3122,6 @@ async def get_similar_brands(
     }
 
 # ============== REPROCESSING ENDPOINTS ==============
-        }
-    )
-    
-    if format == "csv":
-        # Для CSV убираем служебные поля
-        for b in brands:
-            b.pop("_export_mark", None)
-            b.pop("_export_seq", None)
-    
-    return {
-        "brands": brands,
-        "total": len(brands),
-        "watermark": watermark_info,
-        "exported_at": datetime.now(timezone.utc).isoformat()
-    }
-
-# ============== REPROCESSING ENDPOINTS ==============
 
 @api_router.get("/super-admin/reprocessing/candidates")
 async def get_reprocessing_candidates(
