@@ -3662,14 +3662,18 @@ class BatchItemUpdate(BaseModel):
     cost_price: Optional[float] = None
     extra_costs: Optional[float] = None
     quantity: Optional[int] = None
-    notes: Optional[str] = None
+    supplier_link: Optional[str] = None  # Ссылка на товар у поставщика
+    supplier_sku: Optional[str] = None   # SKU/название у поставщика
 
 class BatchUpdate(BaseModel):
     name: Optional[str] = None
     supplier: Optional[str] = None
     tracking_number: Optional[str] = None
     status: Optional[str] = None
-    notes: Optional[str] = None
+
+class BatchNoteCreate(BaseModel):
+    text: str
+    item_id: Optional[str] = None  # Если заметка к товару
 
 # Формула расчёта доставки (фунт * 0.8 на Амазон)
 def calculate_shipping_cost(weight_grams: float) -> float:
