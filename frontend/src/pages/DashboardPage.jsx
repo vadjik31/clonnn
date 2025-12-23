@@ -101,56 +101,6 @@ const DashboardPage = () => {
         <p className="text-[#94A3B8] mt-1">Обзор системы и активность сёрчеров</p>
       </div>
 
-      {/* Alerts Section - Improved */}
-      {Object.keys(groupedAlerts).length > 0 && (
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6" data-testid="alerts-section">
-          <h2 className="text-lg font-semibold text-[#E6E6E6] mb-4 uppercase tracking-wider font-mono flex items-center gap-2">
-            <Bell size={18} className="text-red-400" />
-            Алерты ({data?.alerts?.length || 0})
-          </h2>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Object.entries(groupedAlerts).map(([type, alerts]) => {
-              const config = alertTypeLabels[type] || alertTypeLabels.other;
-              const Icon = config.icon;
-              return (
-                <div key={type} className="bg-[#0F1115] border border-[#2A2F3A] rounded-[2px] p-4">
-                  <h4 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${config.color}`}>
-                    <Icon size={14} />
-                    {config.label} ({alerts.length})
-                  </h4>
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {alerts.slice(0, 5).map((alert) => (
-                      <div key={alert.id} className="flex items-start justify-between gap-2 py-2 border-b border-[#2A2F3A] last:border-0">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-[#E6E6E6] truncate">{alert.message}</p>
-                          <p className="text-xs text-[#94A3B8]">
-                            {new Date(alert.created_at).toLocaleDateString('ru-RU')}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => resolveAlert(alert.id)}
-                          className="text-[#94A3B8] hover:text-[#E6E6E6] p-1 h-auto"
-                        >
-                          ✕
-                        </Button>
-                      </div>
-                    ))}
-                    {alerts.length > 5 && (
-                      <p className="text-xs text-[#94A3B8] text-center pt-2">
-                        +{alerts.length - 5} ещё
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
