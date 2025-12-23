@@ -15,6 +15,8 @@ import MyBrandsPage from "./pages/MyBrandsPage";
 import ProblematicPage from "./pages/ProblematicPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
+import StaffPage from "./pages/StaffPage";
+import BashPage from "./pages/BashPage";
 
 // Components
 import Sidebar from "./components/Sidebar";
