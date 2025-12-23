@@ -797,7 +797,8 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
         <DialogHeader>
           <DialogTitle className={`font-mono uppercase tracking-wider ${
             action === "blacklist" ? "text-red-400" : 
-            action === "archive" ? "text-yellow-400" : "text-[#FF9900]"
+            action === "archive" ? "text-yellow-400" : 
+            action === "release" ? "text-blue-400" : "text-[#FF9900]"
           }`}>
             {titles[action]}
           </DialogTitle>
@@ -806,6 +807,12 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
           <p className="text-[#94A3B8]">
             Выбрано брендов: <span className="text-[#FF9900] font-bold">{count}</span>
           </p>
+          
+          {action === "release" && (
+            <p className="text-sm text-blue-400 bg-blue-900/20 p-3 rounded">
+              Все выбранные бренды будут освобождены от текущих сёрчеров и возвращены в пул.
+            </p>
+          )}
           
           {action === "assign" && (
             <div className="space-y-2">
@@ -823,16 +830,18 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
             </div>
           )}
           
-          <div className="space-y-2">
-            <Label className="text-[#94A3B8]">Причина</Label>
-            <Textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
-              placeholder="Укажите причину..."
-              required
-            />
-          </div>
+          {action !== "release" && (
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Причина</Label>
+              <Textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+                placeholder="Укажите причину..."
+                required
+              />
+            </div>
+          )}
           
           <div className="flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
@@ -844,6 +853,7 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
               className={
                 action === "blacklist" ? "bg-red-600 hover:bg-red-700" :
                 action === "archive" ? "bg-yellow-600 hover:bg-yellow-700" :
+                action === "release" ? "bg-blue-600 hover:bg-blue-700" :
                 "btn-primary"
               }
             >
