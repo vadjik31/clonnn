@@ -1,395 +1,176 @@
 <analysis>**original_problem_statement:**
-The user wants to build an internal web system for managing a database of brands for a company named PROCTO 13 LLC. The system should be in Russian.
+The user initially requested an internal web system for managing a brand database for PROCTO 13 LLC, featuring roles like Super-Admin, Admin, and Searcher. This included specs for authentication, Excel imports, a brand management funnel, and UI/UX guidelines.
 
-**PRODUCT REQUIREMENTS:**
+The project scope has significantly expanded with a new, large feature request: a BASH section. This module is for managing product batches (parties) imported from Excel files. Key requirements include:
+*   Parsing uploaded Excel files ().
+*   Displaying product data in a detailed table with sorting and filtering.
+*   Calculating Profit and ROI based on dynamic user inputs (e.g., cost price, extra costs) and parsed data (e.g., fees, shipping weights).
+*   Implementing complex, user-defined formulas for shipping costs and ROI.
+*   Integrating with the  API for real-time shipment tracking.
+*   Providing a summary dashboard for each batch.
 
-*   **Roles:** Super-Admin, Admin, and Searcher.
-*   **Super-Admin:** Has full control. Manages users, imports, brands, global settings (work hours, weekends), and can archive/blacklist/delete data. Has access to an analytics dashboard and detailed activity logs. Can perform mass actions on brands.
-*   **Admin:** (To be refined) A role with fewer permissions than Super-Admin, unable to edit sensitive data.
-*   **Searcher:** Receives batches of brands, manages their status and funnel stage with mandatory notes. Can add contact information, update brand status (including new Replied sub-statuses), and mark brands as problematic or on hold. Must check-in at the start of their session.
-*   **Authentication:** Login with Email, Password, and a mandatory Secret Code.
-*   **Excel Import:** Handles dynamic column order, normalizes brand names, calculates priority, and allows Super-Admins to delete an entire import and its associated brands.
-*   **Brand Funnel & Logic:**
-    *   A detailed state machine for brand status (, , , , , etc.).
-    *   An Undo feature for the last action.
-    *   A contact management system for each brand (type, value, notes, primary).
-    *   A brand history/event log.
-*   **Advanced Features:**
-    *   Fuzzy matching to find similar brand names.
-    *   Watermarks on data exports.
-    *   A mechanism to reprocess brands after 6-12 months.
-*   **UI/UX:**
-    *   Dark theme, inspired by Amazon.
-    *   Dedicated dashboards for Admins (KPIs, alerts) and Super-Admins (global settings, activity monitoring).
-    *   Improved alerts section on the main dashboard.
-    *   Mass selection and action UI on the main brands table for Super-Admins.
+The user also requested that the standard  role be given the same access to employee activity logs as the .
 
 **User's preferred language**: Russian
 
 **what currently exists?**
-A mature full-stack application (FastAPI + React + MongoDB) is in place. The initial MVP and several major feature phases are complete. A  role has been implemented with extensive permissions, including mass actions, global settings management, and import deletion. A check-in system for searchers is live. The searcher's workflow has been enhanced with a detailed contact management system and a multi-stage Replied status. Backend logic for future tasks like fuzzy search, watermarking, and brand reprocessing has been added but is not yet fully integrated with the UI.
+A substantial full-stack application is in place with a FastAPI backend, React frontend, and MongoDB database. Key roles (, , ) are functional. Several major features have been implemented and refined based on user feedback, including:
+*   A robust set of  tools for mass data manipulation, settings management, and import control.
+*   A complete workflow for  users to manage assigned brands.
+*   Fixes for critical bugs related to brand status updates and priority assignment logic.
+*   Significant performance optimizations on the backend to resolve UI lag.
+*   A complete UI/UX overhaul of the Dashboard and Analytics pages, including removing clutter (alerts), adding explanatory tooltips, and implementing a more advanced KPI calculation engine.
+*   Enhanced usability features like human-readable activity logs (in Russian), a select all function for mass actions across paginated data, and a brand history roadmap tooltip.
 
 **Last working item**:
-- Last item agent was working: Debugging a bug reported by the user. When a searcher uses the Ответил (Replied) feature, selects a sub-status, and submits the modal, a generic ошибка (error) toast appears without saving the change.
-- Status: IN PROGRESS
-- Agent Testing Done: N
-- Which testing method agent to use? backend testing agent. Start by using  to test the  endpoint directly to isolate the issue. Check backend logs for errors. Once the backend is confirmed working, use the screenshot tool to verify the frontend flow.
-- User Testing Done: N
+*   **Last item agent was working:** The agent began implementing the user's latest request, which is divided into two parts:
+    1.  **Admin Logs:** Granting  users access to employee activity logs, previously a -only feature.
+    2.  **BASH Feature Scaffolding:** Creating the foundational files and routes for the new, large-scale batch management feature.
+*   **Status:** IN PROGRESS
+*   **Agent Testing Done:** N
+*   **Which testing method agent to use?**
+    *   **Admin Logs:** Use the screenshot tool. Log in with  credentials and verify that the new Сотрудники (Staff) page loads and correctly displays user activity.
+    *   **BASH Feature:** This is a large feature requiring phased testing. After the initial UI is built, use the **frontend testing agent** to test file uploads and data display. Use the **backend testing agent** to create unit/integration tests for the complex Excel parsing and financial calculation logic.
+*   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1: Replied functionality is broken for Searchers (P0)**
-    - **Description**: When a user with the 'Searcher' role tries to update a brand's status using the Ответил (Replied) modal, the action fails with a generic error toast notification.
-    - **Attempted fixes**: None. The issue was just reported by the user.
-    - **Next debug checklist**:
-        1.  Examine the backend logs for tracebacks immediately after the error occurs: ==> /var/log/supervisor/backend.err.log <==
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/applications.py", line 123, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 148, in simple_response
-    await self.app(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
-    raise exc
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    await app(scope, receive, sender)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 756, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 776, in app
-    await route.handle(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 297, in handle
-    await self.app(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 77, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
-    raise exc
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    await app(scope, receive, sender)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 72, in app
-    response = await func(request)
-               ^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 278, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/app/backend/server.py", line 1751, in set_replied_status
-    "note_type": NoteType.STATUS_CHANGE,
-                 ^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: type object 'NoteType' has no attribute 'STATUS_CHANGE'
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/root/.venv/lib/python3.11/site-packages/uvicorn/protocols/http/h11_impl.py", line 408, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 84, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1054, in __call__
-    await super().__call__(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/applications.py", line 123, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 85, in __call__
-    await self.app(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 65, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
-    raise exc
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    await app(scope, receive, sender)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 756, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 776, in app
-    await route.handle(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 297, in handle
-    await self.app(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 77, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 64, in wrapped_app
-    raise exc
-  File "/root/.venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    await app(scope, receive, sender)
-  File "/root/.venv/lib/python3.11/site-packages/starlette/routing.py", line 72, in app
-    response = await func(request)
-               ^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 278, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/root/.venv/lib/python3.11/site-packages/fastapi/routing.py", line 191, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/app/backend/server.py", line 1751, in set_replied_status
-    "note_type": NoteType.STATUS_CHANGE,
-                 ^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: type object 'NoteType' has no attribute 'STATUS_CHANGE'
-INFO:     Will watch for changes in these directories: ['/app/backend']
-INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     Started reloader process [29] using WatchFiles
-INFO:     Started server process [65]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-
-==> /var/log/supervisor/backend.out.log <==
-INFO:     10.64.140.241:60028 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.138.73:46406 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.64.128.22:49992 - "GET /api/brands?limit=1 HTTP/1.1" 200 OK
-INFO:     10.64.136.153:41158 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/contacts HTTP/1.1" 200 OK
-INFO:     10.64.128.23:39288 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.64.136.144:44458 - "GET /api/brands?limit=1 HTTP/1.1" 200 OK
-INFO:     10.64.128.23:39288 - "POST /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/contacts HTTP/1.1" 200 OK
-INFO:     10.64.128.23:39288 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/contacts HTTP/1.1" 200 OK
-INFO:     10.64.136.144:49380 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.64.136.153:60452 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6 HTTP/1.1" 200 OK
-INFO:     10.64.140.244:34374 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.240:42092 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.138.73:53780 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.64.136.144:51934 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6 HTTP/1.1" 200 OK
-INFO:     10.64.140.241:49818 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.64.138.73:51412 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.64.128.23:60684 - "OPTIONS /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.144:48790 - "OPTIONS /api/auth/check-in/status HTTP/1.1" 200 OK
-INFO:     10.64.136.144:48774 - "OPTIONS /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6 HTTP/1.1" 200 OK
-INFO:     10.64.136.144:48784 - "OPTIONS /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/last-action HTTP/1.1" 200 OK
-INFO:     10.64.128.23:60688 - "OPTIONS /api/auth/check-in/status HTTP/1.1" 200 OK
-INFO:     10.64.128.23:60694 - "OPTIONS /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/last-action HTTP/1.1" 200 OK
-INFO:     10.64.128.23:60684 - "OPTIONS /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6 HTTP/1.1" 200 OK
-INFO:     10.64.136.144:48774 - "GET /api/auth/check-in/status HTTP/1.1" 200 OK
-INFO:     10.64.136.145:39064 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.145:39076 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.144:48790 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6 HTTP/1.1" 200 OK
-INFO:     10.64.136.145:39076 - "GET /api/auth/check-in/status HTTP/1.1" 200 OK
-INFO:     10.64.136.145:39064 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.144:48790 - "GET /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6 HTTP/1.1" 200 OK
-INFO:     10.64.138.73:45460 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.138.73:49800 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.241:47632 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.144:40900 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.136.153:47058 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.136.145:47900 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.128.22:43320 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.128.23:43758 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.145:47900 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.153:59370 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.244:58748 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.240:45190 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.207:37928 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.207:59246 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.207:42890 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/stage HTTP/1.1" 200 OK
-INFO:     10.64.140.240:45578 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.140.244:60124 - "PUT /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/info HTTP/1.1" 200 OK
-INFO:     10.64.140.240:51880 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.207:59084 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.240:44012 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/contacts HTTP/1.1" 200 OK
-INFO:     10.64.138.73:48384 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.207:47458 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.244:33146 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.128.23:45184 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/contacts HTTP/1.1" 200 OK
-INFO:     10.64.136.144:44848 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.153:57700 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/contacts HTTP/1.1" 200 OK
-INFO:     10.64.136.144:35624 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.145:47898 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.153:34160 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.136.145:47898 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.128.22:53156 - "GET /api/brands/6b9c9b26-50cd-49df-9efd-83d78b24132f/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.153:34174 - "GET /api/brands/6b9c9b26-50cd-49df-9efd-83d78b24132f HTTP/1.1" 200 OK
-INFO:     10.64.128.23:35300 - "GET /api/brands/6b9c9b26-50cd-49df-9efd-83d78b24132f/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.153:34174 - "GET /api/brands/6b9c9b26-50cd-49df-9efd-83d78b24132f HTTP/1.1" 200 OK
-INFO:     10.64.136.144:58208 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.136.153:34174 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.136.144:58208 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.144:58216 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.153:34174 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.145:34908 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.128.23:39270 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.136.144:58216 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.128.22:40456 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.153:34174 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.128.23:39270 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.144:58216 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.153:37358 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.128.23:38440 - "GET /api/brands?page=1&limit=50 HTTP/1.1" 200 OK
-INFO:     10.64.136.144:51588 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.136.145:37666 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.153:37358 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/last-action HTTP/1.1" 200 OK
-INFO:     10.64.128.22:34516 - "GET /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e HTTP/1.1" 200 OK
-INFO:     10.64.136.153:37358 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.240:58760 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.128.22:40400 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/replied HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.136.144:39520 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/replied HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.136.145:46828 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/replied HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.136.144:39532 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/replied HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.136.144:38248 - "POST /api/brands/dd53126c-3360-42a9-9d6d-67fe3ab1148e/replied HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.136.145:43026 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.244:40740 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.128.23:49444 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     10.64.128.23:49444 - "POST /api/brands/83ef080f-a4db-4f84-ba6a-e64bcfbf3ba6/replied HTTP/1.1" 500 Internal Server Error
-INFO:     10.64.136.207:33298 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.240:49794 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.241:54680 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.136.207:49392 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.244:33988 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK
-INFO:     10.64.140.240:43888 - "POST /api/auth/heartbeat HTTP/1.1" 200 OK.
-        2.  Use  to manually send a POST request to the  endpoint with a valid searcher token and payload to see if the error is in the backend logic.
-        3.  Review the  component and its submission handler in  to check if the API request payload is correctly formed.
-        4.  Inspect the  function in  to trace the logic and data validation.
-    - **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for the searcher's core workflow, preventing them from accurately tracking communication with brands.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?** N
-    - **Should Test frontend/backend/both after fix?** both
-    - **Blocked on other issue**: None
+None. The agent has successfully resolved all previously reported bugs.
 
 **In progress Task List**:
-None.
+*   **Task 1: Implement Admin Access to Employee Logs (P0)**
+    *   **Description**: Enable the standard  role to view employee check-in and activity logs, mirroring the functionality of the .
+    *   **Where to resume**:
+        1.  The backend endpoints (, ) were modified to use a new  dependency. This change needs to be verified.
+        2.  A new frontend page  was created but is currently a placeholder. It needs to be implemented by reusing the logic from 's .
+        3.  A new route () and sidebar link (Сотрудники) have already been added.
+    *   **What will be achieved with this?**: Admins will gain the ability to monitor team activity without needing super-admin privileges.
+    *   **Status**: IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?**: Both.
+    *   **Blocked on something**: No.
+
+*   **Task 2: Develop BASH Feature for Batch Management (P0)**
+    *   **Description**: Build the comprehensive batch management system. This is a multi-step task involving file parsing, UI/UX for data interaction, complex financial calculations, and third-party API integration for tracking.
+    *   **Where to resume**:
+        1.  Initial scaffolding is complete: placeholder page , route , and a sidebar link are in place.
+        2.  The next step is to begin the backend implementation. Create MongoDB models for  and . Develop an API endpoint () that uses a library like  or  to parse the uploaded Excel file and persist the data.
+        3.  Following the backend, build the initial frontend UI to upload a file and display the parsed data in a simple table.
+    *   **What will be achieved with this?**: This will deliver a major new module for product sourcing analysis, which is a core requirement for the user.
+    *   **Status**: IN PROGRESS (scaffolding only)
+    *   **Should Test frontend/backend/both after fix?**: Both.
+    *   **Blocked on something**: No.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks:**
-    1.  **Frontend for Future Features (P1):** Create UI components to interact with the already-implemented backend logic for:
-        *   Fuzzy matching search for brands.
-        *   Initiating watermarked exports.
-        *   Viewing and actioning brand reprocessing candidates.
-    2.  **Refine Admin Role (P1):** Implement UI restrictions for the regular  role to prevent access to sensitive  functions.
+*   **Upcoming Tasks (Phases of the BASH feature):**
+    1.  **BASH - Backend Calculations (P0):** Implement the user's specific formulas for Profit and ROI in the backend.
+    2.  **BASH - Interactive UI (P0):** Enhance the  table with sorting, filtering, and pagination. Add input fields for  and  that trigger real-time recalculation of profit/ROI.
+    3.  **BASH - Batch Tracking (P1):**
+        *   Integrate with the 17track API to fetch shipment status.
+        *   Create UI elements to display tracking information.
+        *   Store the API key () in a backend environment variable.
+    4.  **BASH - Batch Summary & Suppliers (P2):** Add a dashboard to summarize batch financials and a new section for managing suppliers.
 
-- **Future Tasks (from original holes list):**
-    *   **#5 - Context Loss on Reassignment:** Ensure brand history/timeline is preserved correctly when a brand is moved between searchers.
-    *   **#25 - KPI Attribution:** Attribute events to admins vs. searchers correctly for accurate KPI calculations.
-    *   **#30 - XSS Protection:** Complete the sanitization of all user-generated input fields.
-    *   **#34 - Business Hours for Alerts:** Make alerts respect the configured work hours and weekends.
-    *   **#35 - Error Monitoring Page:** Create a UI to view system incidents and errors.
-    *   **#36 - Log Retention Policy:** Implement a cleanup mechanism for old logs.
+*   **Future Tasks (From user's backlog):**
+    *   **XSS Protection:** Sanitize all user-generated input fields to prevent cross-site scripting.
+    *   **Error Monitoring Page:** Create a dedicated UI for admins to view system errors and incidents.
+    *   **Log Retention Policy:** Implement a scheduled task to clean up old activity logs.
 
 **Completed work in this session**
-- **Recently completed:**
-    - **Super-Admin Role & Features (DONE):**
-        - Implemented  role with full system privileges.
-        - Created  to manage global settings (work hours, weekends), monitor searcher check-ins, and access new features.
-        - Added mass actions (archive, blacklist, reassign) with a checkbox-based selection UI on the .
-        - Enabled deletion of entire imports and their associated brands from the .
-    - **Searcher Workflow Enhancements (DONE):**
-        - Implemented a mandatory Зашёл! (Check-in) button for searchers.
-        - Created a detailed contact management system (add/view contacts with type, value, note).
-        - Implemented a multi-stage Replied status (, , , ).
-        - Added the latest brand note to the main  table view.
-        - Fixed a bug where newly added contacts were not appearing in the UI.
-    - **Dashboard & UI Improvements (DONE):**
-        - Redesigned the alerts section on the  for better grouping and clarity.
-    - **Backend Foundation for Future Work (DONE):**
-        - Added backend logic and API endpoints for fuzzy search, watermarked exports, and identifying brands for reprocessing.
-        - Segregated  and  roles in the backend.
-
-**Earlier issues found/mentioned but not fixed**
-None.
-
-**Known issue recurrence from previous fork**
-None.
+- **Bug Fix: Replied Functionality (DONE):** Resolved a critical bug preventing searchers from updating a brand's status.
+- **Performance Fix: SuperAdmin Page (DONE):** Eliminated a 10-15 second lag by optimizing database queries with a MongoDB aggregation pipeline and adding a new index.
+- **KPI & Analytics Overhaul (DONE):** Rebuilt the KPI logic with a new backend endpoint () and redesigned the  to display more meaningful metrics with explanatory tooltips.
+- **Dashboard & Logs UX (DONE):**
+    - Removed the Alerts section from the dashboard to reduce clutter.
+    - Translated activity logs into readable Russian and exposed them in the UI.
+- **Mass Actions & Brand Roadmap (DONE):**
+    - Implemented a Select all on all pages feature on the  for true mass actions.
+    - Added a mass Reset to Pool action for admins.
+    - Added a Brand Roadmap tooltip that shows a brand's recent history on hover.
+- **Bug Fix: Brand Priority Logic (DONE):** Fixed a flaw where searchers received low-priority brands. The fix involved clearing assignment history when a brand is reset to the pool, ensuring high-priority brands are correctly redistributed.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, MongoDB (via ), Pydantic for data models, JWT for authentication.
-- **Frontend:** React,  for API calls,  for routing,  components.
-- **Core Logic:** A complex state machine for brand status is implemented in . Business logic is heavily concentrated in this single file.
+- **Backend:** FastAPI, MongoDB (), Pydantic, JWT.
+- **Frontend:** React, , , .
+- **Upcoming Tech:**  or  for Excel parsing, external API calls via  or  for 17track integration.
 
 **key DB schema**
-- : 
-- : 
-- : 
-- : Logs all actions on a brand.
-- : 
-- : 
-- : Tracks imported files and their stats.
+*   **Existing:** , , , , , , .
+*   **To be created for BASH feature:**
+    *   : To store information about each uploaded file/party.
+    *   : To store data for each product within a batch, including calculated financial metrics.
+    - : To store tracking information for batches.
 
 **All files of reference**
-- : **CRITICAL FILE.** All backend logic resides here. Heavily modified to add super-admin features, contact management, new statuses, and foundational logic for future tasks.
-- : **CRITICAL FILE.** Modified to add the contact management UI and new modals for the Replied and Contact actions. Currently the source of a bug.
-- : Updated to display contact count and the latest note in the brands table.
-- : Updated to support mass selection and bulk actions for super-admins.
-- : **New file** for the super-admin dashboard.
-- : Updated to allow super-admins to delete imports and associated brands.
-- : UI for the alerts section was redesigned.
-- : Updated with routing for  and logic for the searcher check-in feature.
-- : Updated with new navigation links and the check-in button.
-- : Updated to display new sub-statuses.
+*   **/app/backend/server.py**: **CRITICAL**. This monolithic file contains all backend logic and has been heavily modified. The new BASH feature logic will be added here.
+*   **/app/frontend/src/pages/BashPage.jsx**: **New**. This will contain the entire UI for the batch management feature.
+*   **/app/frontend/src/pages/StaffPage.jsx**: **New**. This page will be implemented to show activity logs for the  role.
+*   **/app/frontend/src/pages/BrandsPage.jsx**: Heavily modified to add select all functionality, the roadmap tooltip, and the Reset to Pool action.
+*   **/app/frontend/src/pages/AnalyticsPage.jsx**: Overhauled to use the new KPI endpoint and UI.
+*   **/app/frontend/src/components/Sidebar.jsx**: Updated with new navigation links for Сотрудники and BASH.
+*   **/app/frontend/src/App.js**: Updated with routes for the new pages.
 
 **Areas that need refactoring**:
-- The monolithic  file is now over 3000 lines and contains models, routes, and business logic. It urgently needs to be broken down into a more modular structure (e.g., , , ) to improve maintainability.
+*   The  file is now critically large and difficult to maintain. It is the top candidate for refactoring. The logic should be split into separate files for routes, models, and services (e.g., , ).
 
 **key api endpoints**
--  (GET, PUT)
--  (GET)
--  (POST)
--  (DELETE)
--  (POST)
--  (GET, POST)
--  (POST) - **This is likely the source of the current bug.**
--  (GET)
--  (GET)
--  (GET)
+*   **New (Upcoming for BASH):**
+    *    (POST)
+    *    (GET)
+    *    (GET, PUT)
+    *    (GET)
+*   **Modified for Admin Logs:**
+    *   
+    *   
 
 **Critical Info for New Agent**
-- The user is actively testing the application and providing targeted feedback. The immediate priority is to fix the bug they reported.
-- The  is now the primary administrative role. The previous  role is being deprecated in favor of more granular permissions.
-- The backend is a single, massive  file. Be very careful when making changes and rely on file search to understand existing logic.
-- After fixing the current bug, the next logical step is to build the frontend interfaces for the future tasks whose backend logic is already in place.
+*   The highest priority is to continue the development of the BASH feature as per the user's detailed request.
+*   The second priority is to complete the implementation of the  to provide admins with access to activity logs.
+*   The 17track API key is ****. This MUST be stored as an environment variable and not hardcoded in the source code.
+*   Pay close attention to the user-defined formulas for the BASH feature's financial calculations.
+*   The user is highly engaged and provides specific, detailed feedback. Plan and confirm each major step before implementation.
 
 **documents and test_reports created in this job**
-- 
-- 
+*   
+*   User-provided artifacts for the BASH feature:
+    *   
+    *   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.   (error, when I, as a searcher, click replied and then select a sub-status, it just says error in the top right and that's it)
-2.   (I added a contact for the searcher, but it didn't appear here)
-3.   (testing, there are several problems in the searcher view...)
-4.   (PERFECT! The deletion menu on the import page works...)
-5.   (Right in the import section (where the files are) I should have a menu that can delete the import itself and its results... and finish this...)
-6.   (close the rest of the holes, and also... [list of super-admin features])
-7.   (remind me which holes we haven't closed yet?)
-8.   (1. Yes, into the archive. 2. Yes. 3. Yes, the current one, and there will be just admins...)
-9.   (proceed)
-10.  (Let's go, do the next phase (next 2 phases if you can))
+1.  **на преп по всему, на амазон паунд README.md backend backend_test.py design_guidelines.json frontend phase2_3_test.py requirements.md test_reports test_result.md tests yarn.lock 0,8 на 1 штуку, да начинай**: Confirmed the go-ahead for the BASH feature and clarified a shipping cost formula.
+2.  **(long message with artifacts)**: The primary request outlining the entire BASH feature, including calculations, UI, and the 17track integration.
+3.  **как-то странно бренды даются в приоритетность...**: Reported the bug with brand priority assignment (now fixed).
+4.  **надо в админ панеле добавить к все бренды кнопку сбросить...**: Requested the mass Reset to Pool feature (now implemented).
+5.  **есть моменты, момент первый - не доставлять в базу импорты...**: A large batch of feature/improvement requests that have since been implemented (import filter, KPI overhaul, roadmap, etc.).
+6.  **только нажимаю на кнопку супер-админ так сразу сайт ложится...**: Reported the major performance issue on the SuperAdmin page (now fixed).
+7.  **поехали да**: Confirmation to proceed with the plan.
+8.  **какой логин и пароль супер-админа то**: User asked for credentials.
+9.  **да поехали**: Confirmation to proceed with the plan.
+10. **(Summary from agent)**: The last agent finished a task and provided a summary.
 
 **Project Health Check:**
-- **Broken:** The Replied status update functionality is not working for the Searcher role.
-- **Mocked:** None.
+*   **Broken:** None. All known bugs are fixed.
+*   **Mocked:** None.
 
 **3rd Party Integrations**
-- None.
+*   **17track:** (Upcoming) For shipment tracking. Requires using the provided API key: . This will be the first external integration in the project.
 
 **Testing status**
-- Testing agent used after significant changes: YES
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: []
-- Known regressions: The Replied feature is broken.
+*   **Testing agent used after significant changes:** YES (for previous features)
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** []
+*   **Known regressions:** None.
 
 **Credentials to test flow:**
-- **Role:** Super Admin
-- **Email:** 
-- **Password:** 
-- **Secret Code:** 
-
-- **Role:** Searcher
-- **Email:** 
-- **Password:** 
-- **Secret Code:** 
+*   **Role: Super Admin**
+    *   **Email:** 
+    *   **Password:** 
+    *   **Secret Code:** 
+*   **Role: Searcher**
+    *   **Email:** 
+    *   **Password:** 
+    *   **Secret Code:** 
 
 **What agent forgot to execute**
-The agent has a clear plan for future work based on user requests but hasn't forgotten anything. The following are user-requested tasks that have been acknowledged and are planned for future implementation:
-- **UI for Future Features:**
-    - Fuzzy matching search.
-    - Watermarked data exports.
-    - Brand reprocessing management.
-- **Limited Admin Role:** Creating UI restrictions for the standard  role.</analysis>
+The agent is on track with the user's requests. The new BASH feature is complex, and the agent correctly identified the need to break it down into phases. There is nothing forgotten at this stage.</analysis>
