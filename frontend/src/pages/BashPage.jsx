@@ -935,10 +935,10 @@ const BashPage = () => {
                 notes.map(note => (
                   <div 
                     key={note.id} 
-                    className={`p-3 rounded-[2px] border ${
+                    className={`p-3 rounded-[2px] border-l-4 ${
                       note.created_by_role === 'super_admin' 
-                        ? 'bg-purple-900/20 border-purple-500/30' 
-                        : 'bg-[#0F1115] border-[#2A2F3A]'
+                        ? 'bg-purple-900/30 border-l-purple-500' 
+                        : 'bg-orange-900/20 border-l-[#FF9900]'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
