@@ -495,7 +495,8 @@ const getNoteTypeLabel = (type) => {
     problematic: "Проблема",
     general: "Общая",
     admin_note: "От админа",
-    on_hold: "Пауза"
+    on_hold: "Пауза",
+    outcome: "Исход"
   };
   return labels[type] || type;
 };
@@ -508,6 +509,9 @@ const getEventLabel = (type) => {
     status_changed: "Статус изменён",
     stage_completed: "Этап завершён",
     returned_to_pool: "Возвращён в пул",
+    marked_no_response: "Нет ответа",
+    undo_action: "Действие отменено",
+    outcome_set: "Исход установлен",
     marked_problematic: "Помечен как проблемный",
     marked_on_hold: "Поставлен на паузу",
     reassigned: "Переназначен",
