@@ -218,6 +218,16 @@ function AppContent() {
               <Layout><SuperAdminPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/staff" element={
+            <ProtectedRoute adminOnly>
+              <Layout><StaffPage /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/bash" element={
+            <ProtectedRoute adminOnly>
+              <Layout><BashPage /></Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Searcher Routes */}
           <Route path="/my-brands" element={
