@@ -13,7 +13,8 @@ import {
   Briefcase,
   BarChart3,
   Shield,
-  UserCheck
+  UserCheck,
+  Boxes
 } from "lucide-react";
 
 const Sidebar = ({ user }) => {
@@ -59,14 +60,23 @@ const Sidebar = ({ user }) => {
     { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
     { to: "/analytics", icon: BarChart3, label: "Аналитика" },
     { to: "/users", icon: Users, label: "Пользователи" },
+    { to: "/staff", icon: UserCheck, label: "Сотрудники" },
     { to: "/import", icon: Upload, label: "Импорт" },
     { to: "/brands", icon: Package, label: "Все бренды" },
+    { to: "/bash", icon: Boxes, label: "BASH" },
     { to: "/settings", icon: Settings, label: "Настройки" },
   ];
 
   const superAdminLinks = [
-    ...adminLinks,
+    { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
+    { to: "/analytics", icon: BarChart3, label: "Аналитика" },
+    { to: "/users", icon: Users, label: "Пользователи" },
+    { to: "/staff", icon: UserCheck, label: "Сотрудники" },
+    { to: "/import", icon: Upload, label: "Импорт" },
+    { to: "/brands", icon: Package, label: "Все бренды" },
+    { to: "/bash", icon: Boxes, label: "BASH" },
     { to: "/super-admin", icon: Shield, label: "Супер-админ" },
+    { to: "/settings", icon: Settings, label: "Настройки" },
   ];
 
   const searcherLinks = [
