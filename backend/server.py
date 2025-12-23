@@ -495,6 +495,118 @@ def is_working_time(settings: dict = None) -> bool:
             return False
     return True
 
+# ============== FUZZY MATCHING ==============
+
+def fuzzy_match_brand(name1: str, name2: str) -> float:
+    """Сравнение названий брендов с fuzzy matching"""
+    # Нормализуем оба названия
+    n1 = normalize_brand_name(name1)
+    n2 = normalize_brand_name(name2)
+    
+    # Точное совпадение
+    if n1 == n2:
+        return 1.0
+    
+    # Используем SequenceMatcher для fuzzy matching
+    return SequenceMatcher(None, n1, n2).ratio()
+
+async def find_similar_brands(name: str, threshold: float = 0.85) -> List[Dict]:
+    """Поиск похожих брендов по названию"""
+    normalized = normalize_brand_name(name)
+    
+    # Получаем все бренды (для оптимизации можно добавить индекс)
+    all_brands = await db.brands.find(
+        {"status": {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}},
+        {"_id": 0, "id": 1, "name_original": 1, "name_normalized": 1}
+    ).to_list(10000)
+    
+    similar = []
+    for brand in all_brands:
+        score = fuzzy_match_brand(name, brand.get("name_original", ""))
+        if score >= threshold and score < 1.0:  # Исключаем точные совпадения
+            similar.append({
+                "id": brand["id"],
+                "name": brand["name_original"],
+                "similarity": round(score * 100, 1)
+            })
+    
+    # Сортируем по similarity
+    similar.sort(key=lambda x: x["similarity"], reverse=True)
+    return similar[:10]  # Топ 10
+
+# ============== WATERMARK FOR EXPORT ==============
+
+def add_watermark_to_data(data: List[Dict], user_id: str, user_nickname: str) -> List[Dict]:
+    """Добавление водяного знака в экспортируемые данные"""
+    export_id = str(uuid.uuid4())[:8]
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M")
+    watermark = f"PROCTO13_EXPORT_{export_id}_{user_nickname}_{timestamp}"
+    
+    # Добавляем скрытые маркеры
+    for i, item in enumerate(data):
+        # Добавляем watermark в метаданные
+        item["_export_mark"] = watermark
+        item["_export_seq"] = i
+    
+    return data
+
+def generate_export_watermark_info(user_id: str, user_nickname: str) -> Dict:
+    """Генерация информации о водяном знаке"""
+    return {
+        "export_id": str(uuid.uuid4()),
+        "exported_by": user_nickname,
+        "exported_by_id": user_id,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "watermark_hash": hashlib.sha256(f"{user_id}_{datetime.now().timestamp()}".encode()).hexdigest()[:16]
+    }
+
+# ============== REPROCESSING MECHANISM ==============
+
+async def get_brands_for_reprocessing(months: int = 6) -> List[Dict]:
+    """Получить бренды для повторной обработки (через N месяцев)"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=months * 30)).isoformat()
+    
+    # Бренды с исходами NO_RESPONSE или OUTCOME_DECLINED, закрытые давно
+    brands = await db.brands.find({
+        "status": {"$in": [BrandStatus.NO_RESPONSE, BrandStatus.OUTCOME_DECLINED]},
+        "last_action_at": {"$lt": cutoff}
+    }, {"_id": 0}).to_list(1000)
+    
+    return brands
+
+async def mark_brand_for_reprocessing(brand_id: str, admin_id: str):
+    """Пометить бренд для повторной обработки"""
+    now = datetime.now(timezone.utc)
+    
+    brand = await db.brands.find_one({"id": brand_id})
+    if not brand:
+        return None
+    
+    # Сохраняем историю предыдущей обработки
+    await db.brands.update_one(
+        {"id": brand_id},
+        {"$set": {
+            "status": BrandStatus.IN_POOL,
+            "assigned_to_user_id": None,
+            "assigned_to_nickname": None,
+            "pipeline_stage": PipelineStage.REVIEW,
+            "reprocessing_count": brand.get("reprocessing_count", 0) + 1,
+            "reprocessed_at": now.isoformat(),
+            "reprocessed_by": admin_id,
+            "prev_processing": {
+                "status": brand.get("status"),
+                "last_action_at": brand.get("last_action_at"),
+                "assigned_to": brand.get("assigned_to_nickname")
+            }
+        }}
+    )
+    
+    await log_event("brand_reprocessed", admin_id, brand_id, metadata={
+        "reprocessing_count": brand.get("reprocessing_count", 0) + 1
+    })
+    
+    return True
+
 async def create_alert(alert_type: str, message: str, severity: str = "warning",
                        user_id: Optional[str] = None, brand_id: Optional[str] = None):
     """Создание алерта (закрывает дыру #24)"""
