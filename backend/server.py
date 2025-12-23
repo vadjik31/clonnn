@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, Body
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Query, Body, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -7,13 +7,16 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
 import pandas as pd
 from io import BytesIO
 import json
+import hashlib
+import re
+from difflib import SequenceMatcher
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -36,9 +39,10 @@ security = HTTPBearer()
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ============== ENUMS ==============
+# ============== ENUMS & CONSTANTS ==============
 class UserRole:
     ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
     SEARCHER = "searcher"
 
 class BrandStatus:
@@ -60,6 +64,68 @@ class PipelineStage:
     CALL_OR_PUSH_RECOMMENDED = "CALL_OR_PUSH_RECOMMENDED"
     CLOSED = "CLOSED"
 
+# Матрица разрешённых переходов этапов (закрывает дыру #17)
+STAGE_TRANSITIONS = {
+    PipelineStage.REVIEW: [PipelineStage.EMAIL_1_DONE],
+    PipelineStage.EMAIL_1_DONE: [PipelineStage.EMAIL_2_DONE, PipelineStage.MULTI_CHANNEL_DONE],
+    PipelineStage.EMAIL_2_DONE: [PipelineStage.MULTI_CHANNEL_DONE, PipelineStage.CALL_OR_PUSH_RECOMMENDED],
+    PipelineStage.MULTI_CHANNEL_DONE: [PipelineStage.CALL_OR_PUSH_RECOMMENDED, PipelineStage.CLOSED],
+    PipelineStage.CALL_OR_PUSH_RECOMMENDED: [PipelineStage.CLOSED],
+    PipelineStage.CLOSED: []  # Нельзя переходить из CLOSED
+}
+
+# Справочники причин (закрывает дыру #33)
+class ReturnReason:
+    INVALID_BRAND = "invalid_brand"           # Не бренд
+    DUPLICATE = "duplicate"                    # Дубликат
+    WRONG_CATEGORY = "wrong_category"          # Не наша категория
+    NO_CONTACTS = "no_contacts"                # Нет контактов
+    SITE_DOWN = "site_down"                    # Сайт не работает
+    LANGUAGE_BARRIER = "language_barrier"      # Языковой барьер
+    OTHER = "other"                            # Другое
+
+RETURN_REASONS = {
+    ReturnReason.INVALID_BRAND: "Не является брендом",
+    ReturnReason.DUPLICATE: "Дубликат другого бренда",
+    ReturnReason.WRONG_CATEGORY: "Не подходит по категории",
+    ReturnReason.NO_CONTACTS: "Невозможно найти контакты",
+    ReturnReason.SITE_DOWN: "Сайт недоступен",
+    ReturnReason.LANGUAGE_BARRIER: "Языковой барьер",
+    ReturnReason.OTHER: "Другая причина"
+}
+
+class ProblematicReason:
+    LEGAL_ISSUES = "legal_issues"              # Юридические проблемы
+    AGGRESSIVE_RESPONSE = "aggressive_response" # Агрессивный ответ
+    SPAM_COMPLAINT = "spam_complaint"          # Жалоба на спам
+    TECHNICAL_ISSUES = "technical_issues"      # Технические проблемы
+    OTHER = "other"
+
+PROBLEMATIC_REASONS = {
+    ProblematicReason.LEGAL_ISSUES: "Юридические проблемы",
+    ProblematicReason.AGGRESSIVE_RESPONSE: "Агрессивный/негативный ответ",
+    ProblematicReason.SPAM_COMPLAINT: "Жалоба на спам",
+    ProblematicReason.TECHNICAL_ISSUES: "Технические проблемы",
+    ProblematicReason.OTHER: "Другое"
+}
+
+class OutcomeChannel:
+    EMAIL = "email"
+    PHONE = "phone"
+    SOCIAL_MEDIA = "social_media"
+    WEBSITE_FORM = "website_form"
+    LINKEDIN = "linkedin"
+    OTHER = "other"
+
+OUTCOME_CHANNELS = {
+    OutcomeChannel.EMAIL: "Email",
+    OutcomeChannel.PHONE: "Телефон",
+    OutcomeChannel.SOCIAL_MEDIA: "Соцсети",
+    OutcomeChannel.WEBSITE_FORM: "Форма на сайте",
+    OutcomeChannel.LINKEDIN: "LinkedIn",
+    OutcomeChannel.OTHER: "Другое"
+}
+
 class NoteType:
     STAGE_DONE = "stage_done"
     RETURN_TO_POOL = "return_to_pool"
@@ -67,6 +133,8 @@ class NoteType:
     GENERAL = "general"
     ADMIN_NOTE = "admin_note"
     ON_HOLD = "on_hold"
+    OUTCOME = "outcome"
+    QUALITY_WARNING = "quality_warning"
 
 class EventType:
     USER_LOGIN = "user_login"
@@ -79,8 +147,20 @@ class EventType:
     MARKED_ON_HOLD = "marked_on_hold"
     REASSIGNED = "reassigned"
     ADMIN_RELEASED = "admin_released"
+    ADMIN_BULK_RELEASE = "admin_bulk_release"
     HEARTBEAT = "heartbeat"
     IMPORT_COMPLETED = "import_completed"
+    EXPORT_CREATED = "export_created"
+    SENSITIVE_VIEW = "sensitive_view"
+    OUTCOME_SET = "outcome_set"
+    INFO_UPDATED = "info_updated"
+    UNDO_ACTION = "undo_action"
+
+# Лимиты (закрывает дыру #9)
+MAX_ACTIVE_BRANDS_PER_SEARCHER = 300
+CLAIM_BATCH_SIZE = 100
+QUICK_RETURN_HOURS = 48  # Время для определения "быстрой очистки"
+MAX_RETURN_RATE_PERCENT = 30  # Порог для алерта
 
 # ============== PYDANTIC MODELS ==============
 class UserCreate(BaseModel):
@@ -105,7 +185,7 @@ class UserUpdate(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
-    password: str  # показываем в админке
+    password: str
     secret_code: str
     nickname: str
     role: str
@@ -114,6 +194,8 @@ class UserResponse(BaseModel):
     work_hours_end: str
     last_seen_at: Optional[str] = None
     created_at: str
+    active_brands_count: Optional[int] = 0
+    return_rate: Optional[float] = 0.0
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -144,9 +226,15 @@ class BrandResponse(BaseModel):
     website_url: Optional[str] = None
     website_found: bool = False
     contacts_found: bool = False
+    contact_made: bool = False
+    contact_channel: Optional[str] = None
+    contact_date: Optional[str] = None
     on_hold_reason: Optional[str] = None
     on_hold_review_date: Optional[str] = None
     items_count: int = 0
+    health_score: int = 0
+    quality_warnings: List[str] = []
+    assignment_count: int = 0
     created_at: str
 
 class BrandItemResponse(BaseModel):
@@ -162,22 +250,27 @@ class BrandDetailResponse(BaseModel):
     items: List[BrandItemResponse]
     notes: List[Dict[str, Any]]
     events: List[Dict[str, Any]]
+    assignment_history: List[Dict[str, Any]]
 
 class StageCompleteRequest(BaseModel):
     stage: str
     note_text: str
+    channel: Optional[str] = None  # Канал связи
 
 class OutcomeRequest(BaseModel):
-    outcome: str  # OUTCOME_APPROVED, OUTCOME_DECLINED, OUTCOME_REPLIED
+    outcome: str
     note_text: str
+    channel: str  # Обязательный канал (закрывает дыру #12, #45)
+    contact_date: str  # Обязательная дата контакта
 
 class ReturnToPoolRequest(BaseModel):
-    reason: str
+    reason_code: str  # Код из справочника
     note_text: str
 
 class MarkProblematicRequest(BaseModel):
-    reason: str
+    reason_code: str  # Код из справочника
     note_text: str
+    review_date: Optional[str] = None  # Дата пересмотра (закрывает дыру #16)
 
 class MarkOnHoldRequest(BaseModel):
     reason: str
@@ -188,6 +281,9 @@ class UpdateBrandInfoRequest(BaseModel):
     website_url: Optional[str] = None
     website_found: Optional[bool] = None
     contacts_found: Optional[bool] = None
+    contact_made: Optional[bool] = None
+    contact_channel: Optional[str] = None
+    contact_date: Optional[str] = None
 
 class ReassignBrandRequest(BaseModel):
     new_user_id: str
@@ -198,6 +294,26 @@ class SettingsUpdate(BaseModel):
     delay_multichannel_days: Optional[int] = None
     delay_call_days: Optional[int] = None
     brand_inactivity_days: Optional[int] = None
+    max_active_brands: Optional[int] = None
+    max_return_rate: Optional[int] = None
+
+class BulkReleaseRequest(BaseModel):
+    brand_ids: List[str]
+    reason: str
+
+class BulkReleasePreview(BaseModel):
+    count: int
+    brands: List[Dict[str, Any]]
+
+class AlertResponse(BaseModel):
+    id: str
+    alert_type: str
+    user_id: Optional[str] = None
+    brand_id: Optional[str] = None
+    message: str
+    severity: str
+    created_at: str
+    resolved: bool = False
 
 class DashboardResponse(BaseModel):
     total_brands: int
@@ -207,6 +323,10 @@ class DashboardResponse(BaseModel):
     brands_by_status: Dict[str, int]
     brands_by_stage: Dict[str, int]
     searchers_activity: List[Dict[str, Any]]
+    alerts: List[AlertResponse]
+
+# Idempotency tracking (закрывает дыру #2)
+claim_requests_in_progress = set()
 
 # ============== AUTH HELPERS ==============
 def create_token(user_id: str, role: str) -> str:
@@ -235,26 +355,103 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return user
 
 async def require_admin(user: dict = Depends(get_current_user)):
-    if user["role"] != UserRole.ADMIN:
+    if user["role"] not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
         raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+async def require_super_admin(user: dict = Depends(get_current_user)):
+    if user["role"] != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Super admin access required")
     return user
 
 # ============== HELPERS ==============
 def normalize_brand_name(name: str) -> str:
     if not name:
         return ""
-    return " ".join(name.lower().strip().split())
+    # Убираем спецсимволы, приводим к нижнему регистру
+    normalized = " ".join(name.lower().strip().split())
+    normalized = re.sub(r'[^\w\s]', '', normalized)
+    return normalized
 
-async def log_event(event_type: str, user_id: str, brand_id: Optional[str] = None, metadata: Optional[dict] = None):
+def calculate_similarity(name1: str, name2: str) -> float:
+    """Fuzzy matching для определения похожих брендов (закрывает дыру #37)"""
+    return SequenceMatcher(None, name1.lower(), name2.lower()).ratio()
+
+async def log_event(event_type: str, user_id: str, brand_id: Optional[str] = None, 
+                    metadata: Optional[dict] = None, ip_address: Optional[str] = None):
     event = {
         "id": str(uuid.uuid4()),
         "event_type": event_type,
         "user_id": user_id,
         "brand_id": brand_id,
         "metadata": metadata or {},
+        "ip_address": ip_address,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.brand_events.insert_one(event)
+
+async def create_alert(alert_type: str, message: str, severity: str = "warning",
+                       user_id: Optional[str] = None, brand_id: Optional[str] = None):
+    """Создание алерта (закрывает дыру #24)"""
+    alert = {
+        "id": str(uuid.uuid4()),
+        "alert_type": alert_type,
+        "user_id": user_id,
+        "brand_id": brand_id,
+        "message": message,
+        "severity": severity,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "resolved": False
+    }
+    await db.alerts.insert_one(alert)
+    return alert
+
+async def check_abuse_alerts(user_id: str, user_nickname: str):
+    """Проверка на абьюз очистки (закрывает дыру #3, #24)"""
+    # Считаем статистику за последние 7 дней
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    
+    # Количество полученных брендов
+    assigned_events = await db.brand_events.count_documents({
+        "user_id": user_id,
+        "event_type": EventType.BRANDS_ASSIGNED,
+        "created_at": {"$gte": week_ago}
+    })
+    
+    # Количество возвратов
+    return_events = await db.brand_events.count_documents({
+        "user_id": user_id,
+        "event_type": EventType.RETURNED_TO_POOL,
+        "created_at": {"$gte": week_ago}
+    })
+    
+    # Быстрые возвраты (< 48 часов без этапов)
+    quick_returns = await db.brand_events.count_documents({
+        "user_id": user_id,
+        "event_type": EventType.RETURNED_TO_POOL,
+        "created_at": {"$gte": week_ago},
+        "metadata.quick_return": True
+    })
+    
+    total_assigned = assigned_events * CLAIM_BATCH_SIZE  # Примерная оценка
+    if total_assigned > 0:
+        return_rate = (return_events / max(total_assigned, 1)) * 100
+        
+        if return_rate > MAX_RETURN_RATE_PERCENT:
+            await create_alert(
+                "high_return_rate",
+                f"Сёрчер {user_nickname} имеет высокий % очисток: {return_rate:.1f}%",
+                "warning",
+                user_id
+            )
+        
+        if quick_returns > 10:
+            await create_alert(
+                "quick_returns",
+                f"Сёрчер {user_nickname}: {quick_returns} быстрых возвратов без этапов",
+                "warning",
+                user_id
+            )
 
 async def get_settings() -> dict:
     settings = await db.settings.find_one({"id": "global"}, {"_id": 0})
@@ -264,7 +461,9 @@ async def get_settings() -> dict:
             "delay_email2_days": 2,
             "delay_multichannel_days": 2,
             "delay_call_days": 2,
-            "brand_inactivity_days": 7
+            "brand_inactivity_days": 7,
+            "max_active_brands": MAX_ACTIVE_BRANDS_PER_SEARCHER,
+            "max_return_rate": MAX_RETURN_RATE_PERCENT
         }
         await db.settings.insert_one(settings)
     return settings
@@ -279,9 +478,83 @@ def calculate_next_action(current_stage: str, settings: dict) -> Optional[dateti
         return now + timedelta(days=settings["delay_call_days"])
     return None
 
+def calculate_health_score(brand: dict) -> int:
+    """Расчёт health score бренда (закрывает дыру #44)"""
+    score = 0
+    
+    # Базовые данные
+    if brand.get("website_url"):
+        score += 15
+    if brand.get("website_found"):
+        score += 10
+    if brand.get("contacts_found"):
+        score += 15
+    if brand.get("contact_made"):
+        score += 20
+    if brand.get("contact_channel"):
+        score += 10
+    if brand.get("contact_date"):
+        score += 10
+    
+    # Этапы воронки
+    stage = brand.get("pipeline_stage", PipelineStage.REVIEW)
+    stage_scores = {
+        PipelineStage.REVIEW: 0,
+        PipelineStage.EMAIL_1_DONE: 5,
+        PipelineStage.EMAIL_2_DONE: 10,
+        PipelineStage.MULTI_CHANNEL_DONE: 15,
+        PipelineStage.CALL_OR_PUSH_RECOMMENDED: 18,
+        PipelineStage.CLOSED: 20
+    }
+    score += stage_scores.get(stage, 0)
+    
+    return min(score, 100)
+
+def get_quality_warnings(brand: dict) -> List[str]:
+    """Получение предупреждений о качестве (закрывает дыру #18)"""
+    warnings = []
+    stage = brand.get("pipeline_stage", PipelineStage.REVIEW)
+    
+    # В работе без сайта
+    if stage not in [PipelineStage.REVIEW, PipelineStage.CLOSED]:
+        if not brand.get("website_found"):
+            warnings.append("В работе без найденного сайта")
+        if not brand.get("contacts_found"):
+            warnings.append("В работе без найденных контактов")
+    
+    # Исход без контакта
+    if brand.get("status", "").startswith("OUTCOME_"):
+        if not brand.get("contact_made"):
+            warnings.append("Исход без подтверждённого контакта")
+        if not brand.get("contact_channel"):
+            warnings.append("Исход без указания канала")
+    
+    return warnings
+
+async def check_brand_was_assigned_to_user(brand_id: str, user_id: str) -> bool:
+    """Проверка, был ли бренд ранее у этого сёрчера (закрывает дыру #4)"""
+    history = await db.brand_assignment_history.find_one({
+        "brand_id": brand_id,
+        "user_id": user_id
+    })
+    return history is not None
+
+async def record_assignment_history(brand_id: str, user_id: str):
+    """Запись истории назначений"""
+    await db.brand_assignment_history.update_one(
+        {"brand_id": brand_id, "user_id": user_id},
+        {"$set": {
+            "brand_id": brand_id,
+            "user_id": user_id,
+            "assigned_at": datetime.now(timezone.utc).isoformat()
+        },
+        "$inc": {"assignment_count": 1}},
+        upsert=True
+    )
+
 # ============== AUTH ROUTES ==============
 @api_router.post("/auth/login", response_model=LoginResponse)
-async def login(req: LoginRequest):
+async def login(req: LoginRequest, request: Request):
     user = await db.users.find_one({"email": req.email}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
@@ -293,13 +566,28 @@ async def login(req: LoginRequest):
         raise HTTPException(status_code=403, detail="Аккаунт отключён")
     
     token = create_token(user["id"], user["role"])
-    await log_event(EventType.USER_LOGIN, user["id"])
+    ip = request.client.host if request.client else None
+    await log_event(EventType.USER_LOGIN, user["id"], ip_address=ip)
     await db.users.update_one({"id": user["id"]}, {"$set": {"last_seen_at": datetime.now(timezone.utc).isoformat()}})
+    
+    # Добавляем статистику
+    active_count = await db.brands.count_documents({
+        "assigned_to_user_id": user["id"],
+        "status": {"$nin": [BrandStatus.IN_POOL]}
+    })
+    user["active_brands_count"] = active_count
+    user["return_rate"] = 0.0
     
     return LoginResponse(token=token, user=UserResponse(**user))
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
+    active_count = await db.brands.count_documents({
+        "assigned_to_user_id": user["id"],
+        "status": {"$nin": [BrandStatus.IN_POOL]}
+    })
+    user["active_brands_count"] = active_count
+    user["return_rate"] = 0.0
     return UserResponse(**user)
 
 @api_router.post("/auth/heartbeat")
@@ -314,7 +602,16 @@ async def heartbeat(user: dict = Depends(get_current_user)):
 @api_router.get("/users", response_model=List[UserResponse])
 async def get_users(admin: dict = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0}).to_list(1000)
-    return [UserResponse(**u) for u in users]
+    result = []
+    for u in users:
+        active_count = await db.brands.count_documents({
+            "assigned_to_user_id": u["id"],
+            "status": {"$nin": [BrandStatus.IN_POOL]}
+        })
+        u["active_brands_count"] = active_count
+        u["return_rate"] = 0.0
+        result.append(UserResponse(**u))
+    return result
 
 @api_router.post("/users", response_model=UserResponse)
 async def create_user(user_data: UserCreate, admin: dict = Depends(require_admin)):
@@ -336,6 +633,8 @@ async def create_user(user_data: UserCreate, admin: dict = Depends(require_admin
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
+    user["active_brands_count"] = 0
+    user["return_rate"] = 0.0
     return UserResponse(**user)
 
 @api_router.put("/users/{user_id}", response_model=UserResponse)
@@ -349,10 +648,27 @@ async def update_user(user_id: str, user_data: UserUpdate, admin: dict = Depends
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    user["active_brands_count"] = await db.brands.count_documents({
+        "assigned_to_user_id": user_id,
+        "status": {"$nin": [BrandStatus.IN_POOL]}
+    })
+    user["return_rate"] = 0.0
     return UserResponse(**user)
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
+    # Сначала освобождаем бренды (закрывает дыру #6)
+    await db.brands.update_many(
+        {"assigned_to_user_id": user_id},
+        {"$set": {
+            "status": BrandStatus.IN_POOL,
+            "assigned_to_user_id": None,
+            "assigned_at": None,
+            "pipeline_stage": PipelineStage.REVIEW,
+            "next_action_at": None
+        }}
+    )
+    
     result = await db.users.delete_one({"id": user_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -367,7 +683,6 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
     content = await file.read()
     df = pd.read_excel(BytesIO(content))
     
-    # Check required columns
     required_cols = ['Brand']
     optional_cols = ['ASIN', 'Title', 'Image']
     missing_required = [c for c in required_cols if c not in df.columns]
@@ -376,7 +691,6 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
     if missing_required:
         raise HTTPException(status_code=400, detail=f"Отсутствуют обязательные колонки: {missing_required}")
     
-    # Process brands
     df = df.dropna(subset=['Brand'])
     brand_counts = df['Brand'].value_counts().to_dict()
     
@@ -386,8 +700,13 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
         "new_brands": 0,
         "duplicate_brands": 0,
         "items_added": 0,
-        "missing_columns": missing_optional
+        "missing_columns": missing_optional,
+        "similar_brands_warnings": []
     }
+    
+    # Получаем существующие нормализованные имена для fuzzy matching
+    existing_brands = await db.brands.find({}, {"name_normalized": 1, "name_original": 1}).to_list(10000)
+    existing_normalized = {b["name_normalized"]: b["name_original"] for b in existing_brands}
     
     for brand_name, count in brand_counts.items():
         brand_normalized = normalize_brand_name(str(brand_name))
@@ -397,7 +716,6 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
         existing = await db.brands.find_one({"name_normalized": brand_normalized})
         
         if existing:
-            # Update priority score if higher
             if count > existing.get("priority_score", 0):
                 await db.brands.update_one(
                     {"id": existing["id"]},
@@ -405,7 +723,19 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
                 )
             stats["duplicate_brands"] += 1
         else:
-            # Create new brand
+            # Fuzzy matching для похожих брендов (закрывает дыру #37)
+            similar = []
+            for existing_norm, existing_orig in existing_normalized.items():
+                similarity = calculate_similarity(brand_normalized, existing_norm)
+                if 0.8 <= similarity < 1.0:  # Похожие, но не идентичные
+                    similar.append({"name": existing_orig, "similarity": round(similarity * 100)})
+            
+            if similar:
+                stats["similar_brands_warnings"].append({
+                    "new_brand": str(brand_name),
+                    "similar_to": similar[:3]  # Топ 3 похожих
+                })
+            
             brand_id = str(uuid.uuid4())
             brand = {
                 "id": brand_id,
@@ -422,20 +752,25 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
                 "website_url": None,
                 "website_found": False,
                 "contacts_found": False,
+                "contact_made": False,
+                "contact_channel": None,
+                "contact_date": None,
                 "on_hold_reason": None,
                 "on_hold_review_date": None,
+                "health_score": 0,
+                "assignment_count": 0,
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             await db.brands.insert_one(brand)
+            existing_normalized[brand_normalized] = str(brand_name)
             stats["new_brands"] += 1
             
-            # Add items (up to 10)
             brand_items = df[df['Brand'] == brand_name].head(10)
             for _, row in brand_items.iterrows():
                 image_url = str(row.get('Image', '')) if pd.notna(row.get('Image')) else None
                 if image_url and ';' in image_url:
-                    image_url = image_url.split(';')[0]  # Take first image
+                    image_url = image_url.split(';')[0]
                 
                 item = {
                     "id": str(uuid.uuid4()),
@@ -448,7 +783,6 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
                 await db.brand_items.insert_one(item)
                 stats["items_added"] += 1
     
-    # Save import record
     import_record = {
         "id": str(uuid.uuid4()),
         "file_name": file.filename,
@@ -476,6 +810,7 @@ async def get_brands(
     assigned_to: Optional[str] = None,
     overdue: Optional[bool] = None,
     inactive_hours: Optional[int] = None,
+    low_quality: Optional[bool] = None,
     search: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
@@ -483,7 +818,6 @@ async def get_brands(
 ):
     query = {}
     
-    # Searchers only see their own brands
     if user["role"] == UserRole.SEARCHER:
         query["assigned_to_user_id"] = user["id"]
     elif assigned_to:
@@ -511,6 +845,9 @@ async def get_brands(
         ]
         query["status"] = {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD]}
     
+    if low_quality:
+        query["health_score"] = {"$lt": 30}
+    
     total = await db.brands.count_documents(query)
     skip = (page - 1) * limit
     
@@ -519,7 +856,6 @@ async def get_brands(
         ("created_at", 1)
     ]).skip(skip).limit(limit).to_list(limit)
     
-    # Add nickname and items count
     for brand in brands:
         if brand.get("assigned_to_user_id"):
             assigned_user = await db.users.find_one({"id": brand["assigned_to_user_id"]}, {"nickname": 1})
@@ -528,6 +864,8 @@ async def get_brands(
             brand["assigned_to_nickname"] = None
         
         brand["items_count"] = await db.brand_items.count_documents({"brand_id": brand["id"]})
+        brand["health_score"] = calculate_health_score(brand)
+        brand["quality_warnings"] = get_quality_warnings(brand)
     
     return {
         "brands": brands,
@@ -543,11 +881,9 @@ async def get_brand_detail(brand_id: str, user: dict = Depends(get_current_user)
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
     
-    # Searchers can only view their own brands
     if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
         raise HTTPException(status_code=403, detail="Доступ запрещён")
     
-    # Get assigned user nickname
     if brand.get("assigned_to_user_id"):
         assigned_user = await db.users.find_one({"id": brand["assigned_to_user_id"]}, {"nickname": 1})
         brand["assigned_to_nickname"] = assigned_user["nickname"] if assigned_user else None
@@ -555,12 +891,18 @@ async def get_brand_detail(brand_id: str, user: dict = Depends(get_current_user)
         brand["assigned_to_nickname"] = None
     
     brand["items_count"] = await db.brand_items.count_documents({"brand_id": brand_id})
+    brand["health_score"] = calculate_health_score(brand)
+    brand["quality_warnings"] = get_quality_warnings(brand)
     
     items = await db.brand_items.find({"brand_id": brand_id}, {"_id": 0}).to_list(10)
     notes = await db.brand_notes.find({"brand_id": brand_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     events = await db.brand_events.find({"brand_id": brand_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     
-    # Add user nicknames to notes and events
+    # История назначений (закрывает дыру #4, #5)
+    assignment_history = await db.brand_assignment_history.find(
+        {"brand_id": brand_id}, {"_id": 0}
+    ).to_list(100)
+    
     for note in notes:
         note_user = await db.users.find_one({"id": note["user_id"]}, {"nickname": 1})
         note["user_nickname"] = note_user["nickname"] if note_user else "Unknown"
@@ -569,48 +911,133 @@ async def get_brand_detail(brand_id: str, user: dict = Depends(get_current_user)
         event_user = await db.users.find_one({"id": event["user_id"]}, {"nickname": 1})
         event["user_nickname"] = event_user["nickname"] if event_user else "Unknown"
     
+    for hist in assignment_history:
+        hist_user = await db.users.find_one({"id": hist["user_id"]}, {"nickname": 1})
+        hist["user_nickname"] = hist_user["nickname"] if hist_user else "Unknown"
+    
     return BrandDetailResponse(
         brand=BrandResponse(**brand),
         items=[BrandItemResponse(**i) for i in items],
         notes=notes,
-        events=events
+        events=events,
+        assignment_history=assignment_history
     )
 
 @api_router.post("/brands/claim")
-async def claim_brands(user: dict = Depends(get_current_user)):
-    """Получить пакет брендов (до 100)"""
+async def claim_brands(
+    idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
+    user: dict = Depends(get_current_user)
+):
+    """Получить пакет брендов с защитой от дублей (закрывает дыры #1, #2, #4, #9)"""
     if user["role"] != UserRole.SEARCHER:
         raise HTTPException(status_code=403, detail="Только сёрчеры могут получать бренды")
     
-    # Atomic assignment using findAndModify equivalent
-    assigned_brands = []
-    now = datetime.now(timezone.utc).isoformat()
+    # Idempotency check (закрывает дыру #2)
+    request_key = idempotency_key or f"{user['id']}_{datetime.now(timezone.utc).timestamp()}"
+    if request_key in claim_requests_in_progress:
+        raise HTTPException(status_code=429, detail="Запрос уже обрабатывается")
     
-    for _ in range(100):
-        brand = await db.brands.find_one_and_update(
-            {"status": BrandStatus.IN_POOL, "assigned_to_user_id": None},
-            {"$set": {
-                "status": BrandStatus.ASSIGNED,
-                "assigned_to_user_id": user["id"],
-                "assigned_at": now,
-                "pipeline_stage": PipelineStage.REVIEW,
-                "updated_at": now
-            }},
-            sort=[("priority_score", -1), ("created_at", 1)],
-            return_document=True
-        )
-        if not brand:
-            break
-        assigned_brands.append(brand["id"])
+    claim_requests_in_progress.add(request_key)
     
-    if assigned_brands:
-        await log_event(EventType.BRANDS_ASSIGNED, user["id"], metadata={"count": len(assigned_brands)})
+    try:
+        settings = await get_settings()
+        max_active = settings.get("max_active_brands", MAX_ACTIVE_BRANDS_PER_SEARCHER)
+        
+        # Проверка лимита активных брендов (закрывает дыру #9)
+        current_active = await db.brands.count_documents({
+            "assigned_to_user_id": user["id"],
+            "status": {"$nin": [BrandStatus.IN_POOL]}
+        })
+        
+        if current_active >= max_active:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Достигнут лимит активных брендов ({max_active}). Завершите работу с текущими."
+            )
+        
+        available_slots = max_active - current_active
+        batch_size = min(CLAIM_BATCH_SIZE, available_slots)
+        
+        assigned_brands = []
+        now = datetime.now(timezone.utc).isoformat()
+        
+        for _ in range(batch_size):
+            # Атомарная выдача с проверкой истории (закрывает дыры #1, #4)
+            # Ищем бренд, который не был у этого сёрчера ранее
+            pipeline = [
+                {"$match": {
+                    "status": BrandStatus.IN_POOL,
+                    "assigned_to_user_id": None
+                }},
+                {"$lookup": {
+                    "from": "brand_assignment_history",
+                    "let": {"brand_id": "$id"},
+                    "pipeline": [
+                        {"$match": {
+                            "$expr": {
+                                "$and": [
+                                    {"$eq": ["$brand_id", "$$brand_id"]},
+                                    {"$eq": ["$user_id", user["id"]]}
+                                ]
+                            }
+                        }}
+                    ],
+                    "as": "prev_assignments"
+                }},
+                {"$match": {"prev_assignments": {"$size": 0}}},  # Не был у этого сёрчера
+                {"$sort": {"priority_score": -1, "created_at": 1}},
+                {"$limit": 1}
+            ]
+            
+            result = await db.brands.aggregate(pipeline).to_list(1)
+            
+            if not result:
+                # Если все бренды уже были - берём любой свободный
+                brand = await db.brands.find_one_and_update(
+                    {"status": BrandStatus.IN_POOL, "assigned_to_user_id": None},
+                    {"$set": {
+                        "status": BrandStatus.ASSIGNED,
+                        "assigned_to_user_id": user["id"],
+                        "assigned_at": now,
+                        "pipeline_stage": PipelineStage.REVIEW,
+                        "updated_at": now,
+                        "$inc": {"assignment_count": 1}
+                    }},
+                    sort=[("priority_score", -1), ("created_at", 1)],
+                    return_document=True
+                )
+            else:
+                brand_id = result[0]["id"]
+                brand = await db.brands.find_one_and_update(
+                    {"id": brand_id, "status": BrandStatus.IN_POOL, "assigned_to_user_id": None},
+                    {"$set": {
+                        "status": BrandStatus.ASSIGNED,
+                        "assigned_to_user_id": user["id"],
+                        "assigned_at": now,
+                        "pipeline_stage": PipelineStage.REVIEW,
+                        "updated_at": now
+                    },
+                    "$inc": {"assignment_count": 1}},
+                    return_document=True
+                )
+            
+            if not brand:
+                break
+            
+            assigned_brands.append(brand["id"])
+            await record_assignment_history(brand["id"], user["id"])
+        
+        if assigned_brands:
+            await log_event(EventType.BRANDS_ASSIGNED, user["id"], metadata={"count": len(assigned_brands)})
+        
+        return {"status": "success", "count": len(assigned_brands)}
     
-    return {"status": "success", "count": len(assigned_brands)}
+    finally:
+        claim_requests_in_progress.discard(request_key)
 
 @api_router.post("/brands/{brand_id}/stage")
 async def complete_stage(brand_id: str, req: StageCompleteRequest, user: dict = Depends(get_current_user)):
-    """Завершить этап воронки"""
+    """Завершить этап воронки с валидацией переходов (закрывает дыру #17)"""
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
@@ -618,10 +1045,15 @@ async def complete_stage(brand_id: str, req: StageCompleteRequest, user: dict = 
     if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
         raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
     
-    valid_stages = [PipelineStage.EMAIL_1_DONE, PipelineStage.EMAIL_2_DONE, 
-                    PipelineStage.MULTI_CHANNEL_DONE, PipelineStage.CALL_OR_PUSH_RECOMMENDED]
-    if req.stage not in valid_stages:
-        raise HTTPException(status_code=400, detail="Неверный этап")
+    current_stage = brand.get("pipeline_stage", PipelineStage.REVIEW)
+    
+    # Проверка разрешённых переходов (закрывает дыру #17)
+    allowed_transitions = STAGE_TRANSITIONS.get(current_stage, [])
+    if req.stage not in allowed_transitions:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Недопустимый переход: {current_stage} → {req.stage}. Разрешены: {allowed_transitions}"
+        )
     
     settings = await get_settings()
     now = datetime.now(timezone.utc)
@@ -635,13 +1067,15 @@ async def complete_stage(brand_id: str, req: StageCompleteRequest, user: dict = 
         "updated_at": now.isoformat()
     }
     
-    # Start funnel if not started
     if not brand.get("funnel_started_at") and req.stage != PipelineStage.REVIEW:
         update_data["funnel_started_at"] = now.isoformat()
     
+    # Обновляем health score
+    brand_updated = {**brand, **update_data}
+    update_data["health_score"] = calculate_health_score(brand_updated)
+    
     await db.brands.update_one({"id": brand_id}, {"$set": update_data})
     
-    # Add note
     note = {
         "id": str(uuid.uuid4()),
         "brand_id": brand_id,
@@ -649,17 +1083,18 @@ async def complete_stage(brand_id: str, req: StageCompleteRequest, user: dict = 
         "note_text": req.note_text,
         "note_type": NoteType.STAGE_DONE,
         "stage": req.stage,
+        "channel": req.channel,
         "created_at": now.isoformat()
     }
     await db.brand_notes.insert_one(note)
     
-    await log_event(EventType.STAGE_COMPLETED, user["id"], brand_id, {"stage": req.stage})
+    await log_event(EventType.STAGE_COMPLETED, user["id"], brand_id, {"stage": req.stage, "channel": req.channel})
     
     return {"status": "success"}
 
 @api_router.post("/brands/{brand_id}/outcome")
 async def set_outcome(brand_id: str, req: OutcomeRequest, user: dict = Depends(get_current_user)):
-    """Установить исход"""
+    """Установить исход с обязательными полями (закрывает дыры #11, #12, #45)"""
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
@@ -671,33 +1106,53 @@ async def set_outcome(brand_id: str, req: OutcomeRequest, user: dict = Depends(g
     if req.outcome not in valid_outcomes:
         raise HTTPException(status_code=400, detail="Неверный исход")
     
+    # Валидация обязательных полей для исхода (закрывает дыру #45)
+    if req.channel not in OUTCOME_CHANNELS:
+        raise HTTPException(status_code=400, detail=f"Неверный канал. Допустимые: {list(OUTCOME_CHANNELS.keys())}")
+    
     now = datetime.now(timezone.utc).isoformat()
-    await db.brands.update_one({"id": brand_id}, {"$set": {
+    
+    update_data = {
         "status": req.outcome,
         "pipeline_stage": PipelineStage.CLOSED,
         "next_action_at": None,
         "last_action_at": now,
-        "updated_at": now
-    }})
+        "updated_at": now,
+        "contact_made": True,
+        "contact_channel": req.channel,
+        "contact_date": req.contact_date
+    }
+    
+    # Обновляем health score
+    brand_updated = {**brand, **update_data}
+    update_data["health_score"] = calculate_health_score(brand_updated)
+    
+    await db.brands.update_one({"id": brand_id}, {"$set": update_data})
     
     note = {
         "id": str(uuid.uuid4()),
         "brand_id": brand_id,
         "user_id": user["id"],
         "note_text": req.note_text,
-        "note_type": NoteType.GENERAL,
+        "note_type": NoteType.OUTCOME,
         "outcome": req.outcome,
+        "channel": req.channel,
+        "contact_date": req.contact_date,
         "created_at": now
     }
     await db.brand_notes.insert_one(note)
     
-    await log_event(EventType.STATUS_CHANGED, user["id"], brand_id, {"outcome": req.outcome})
+    await log_event(EventType.OUTCOME_SET, user["id"], brand_id, {
+        "outcome": req.outcome,
+        "channel": req.channel,
+        "contact_date": req.contact_date
+    })
     
     return {"status": "success"}
 
 @api_router.post("/brands/{brand_id}/return")
 async def return_to_pool(brand_id: str, req: ReturnToPoolRequest, user: dict = Depends(get_current_user)):
-    """Вернуть бренд в пул"""
+    """Вернуть бренд в пул с валидацией причины (закрывает дыры #3, #14, #33)"""
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
@@ -705,14 +1160,32 @@ async def return_to_pool(brand_id: str, req: ReturnToPoolRequest, user: dict = D
     if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
         raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
     
-    now = datetime.now(timezone.utc).isoformat()
+    # Валидация причины (закрывает дыру #33)
+    if req.reason_code not in RETURN_REASONS:
+        raise HTTPException(status_code=400, detail=f"Неверная причина. Допустимые: {list(RETURN_REASONS.keys())}")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Определяем "быструю очистку" (закрывает дыру #3)
+    assigned_at = brand.get("assigned_at")
+    quick_return = False
+    no_stages = brand.get("pipeline_stage") == PipelineStage.REVIEW
+    
+    if assigned_at:
+        assigned_dt = datetime.fromisoformat(assigned_at.replace('Z', '+00:00'))
+        hours_held = (now - assigned_dt).total_seconds() / 3600
+        quick_return = hours_held < QUICK_RETURN_HOURS and no_stages
+    
+    # Полный сброс состояния (закрывает дыру #14)
     await db.brands.update_one({"id": brand_id}, {"$set": {
         "status": BrandStatus.IN_POOL,
         "pipeline_stage": PipelineStage.REVIEW,
         "assigned_to_user_id": None,
         "assigned_at": None,
         "next_action_at": None,
-        "updated_at": now
+        "funnel_started_at": None,
+        "updated_at": now.isoformat()
+        # НЕ сбрасываем: website_url, website_found, contacts_found - это данные бренда
     }})
     
     note = {
@@ -721,18 +1194,27 @@ async def return_to_pool(brand_id: str, req: ReturnToPoolRequest, user: dict = D
         "user_id": user["id"],
         "note_text": req.note_text,
         "note_type": NoteType.RETURN_TO_POOL,
-        "reason": req.reason,
-        "created_at": now
+        "reason_code": req.reason_code,
+        "reason_label": RETURN_REASONS[req.reason_code],
+        "quick_return": quick_return,
+        "created_at": now.isoformat()
     }
     await db.brand_notes.insert_one(note)
     
-    await log_event(EventType.RETURNED_TO_POOL, user["id"], brand_id, {"reason": req.reason})
+    await log_event(EventType.RETURNED_TO_POOL, user["id"], brand_id, {
+        "reason_code": req.reason_code,
+        "quick_return": quick_return,
+        "no_stages": no_stages
+    })
+    
+    # Проверка на абьюз (закрывает дыру #24)
+    await check_abuse_alerts(user["id"], user["nickname"])
     
     return {"status": "success"}
 
 @api_router.post("/brands/{brand_id}/problematic")
 async def mark_problematic(brand_id: str, req: MarkProblematicRequest, user: dict = Depends(get_current_user)):
-    """Пометить как проблемный"""
+    """Пометить как проблемный с датой пересмотра (закрывает дыры #16, #33)"""
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
@@ -740,9 +1222,19 @@ async def mark_problematic(brand_id: str, req: MarkProblematicRequest, user: dic
     if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
         raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
     
+    # Валидация причины
+    if req.reason_code not in PROBLEMATIC_REASONS:
+        raise HTTPException(status_code=400, detail=f"Неверная причина. Допустимые: {list(PROBLEMATIC_REASONS.keys())}")
+    
     now = datetime.now(timezone.utc).isoformat()
+    
+    # Дата пересмотра по умолчанию через 30 дней (закрывает дыру #16)
+    review_date = req.review_date or (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+    
     await db.brands.update_one({"id": brand_id}, {"$set": {
         "status": BrandStatus.PROBLEMATIC,
+        "on_hold_reason": req.reason_code,
+        "on_hold_review_date": review_date,
         "last_action_at": now,
         "updated_at": now
     }})
@@ -753,18 +1245,23 @@ async def mark_problematic(brand_id: str, req: MarkProblematicRequest, user: dic
         "user_id": user["id"],
         "note_text": req.note_text,
         "note_type": NoteType.PROBLEMATIC,
-        "reason": req.reason,
+        "reason_code": req.reason_code,
+        "reason_label": PROBLEMATIC_REASONS[req.reason_code],
+        "review_date": review_date,
         "created_at": now
     }
     await db.brand_notes.insert_one(note)
     
-    await log_event(EventType.MARKED_PROBLEMATIC, user["id"], brand_id, {"reason": req.reason})
+    await log_event(EventType.MARKED_PROBLEMATIC, user["id"], brand_id, {
+        "reason_code": req.reason_code,
+        "review_date": review_date
+    })
     
     return {"status": "success"}
 
 @api_router.post("/brands/{brand_id}/on-hold")
 async def mark_on_hold(brand_id: str, req: MarkOnHoldRequest, user: dict = Depends(get_current_user)):
-    """Пометить как ON_HOLD"""
+    """Пометить как ON_HOLD (закрывает дыру #15)"""
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
@@ -778,6 +1275,7 @@ async def mark_on_hold(brand_id: str, req: MarkOnHoldRequest, user: dict = Depen
         "on_hold_reason": req.reason,
         "on_hold_review_date": req.review_date,
         "last_action_at": now,
+        "next_action_at": None,  # ON_HOLD не считается просроченным
         "updated_at": now
     }})
     
@@ -793,7 +1291,10 @@ async def mark_on_hold(brand_id: str, req: MarkOnHoldRequest, user: dict = Depen
     }
     await db.brand_notes.insert_one(note)
     
-    await log_event(EventType.MARKED_ON_HOLD, user["id"], brand_id, {"reason": req.reason, "review_date": req.review_date})
+    await log_event(EventType.MARKED_ON_HOLD, user["id"], brand_id, {
+        "reason": req.reason,
+        "review_date": req.review_date
+    })
     
     return {"status": "success"}
 
@@ -810,7 +1311,13 @@ async def update_brand_info(brand_id: str, req: UpdateBrandInfoRequest, user: di
     update_data = {k: v for k, v in req.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
+    # Обновляем health score
+    brand_updated = {**brand, **update_data}
+    update_data["health_score"] = calculate_health_score(brand_updated)
+    
     await db.brands.update_one({"id": brand_id}, {"$set": update_data})
+    
+    await log_event(EventType.INFO_UPDATED, user["id"], brand_id, {"updated_fields": list(update_data.keys())})
     
     return {"status": "success"}
 
@@ -821,11 +1328,10 @@ async def add_note(brand_id: str, req: BrandNoteCreate, user: dict = Depends(get
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
     
-    # Admins can add notes to any brand, searchers only to their own
     if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
         raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
     
-    note_type = NoteType.ADMIN_NOTE if user["role"] == UserRole.ADMIN else req.note_type
+    note_type = NoteType.ADMIN_NOTE if user["role"] in [UserRole.ADMIN, UserRole.SUPER_ADMIN] else req.note_type
     
     note = {
         "id": str(uuid.uuid4()),
@@ -842,7 +1348,7 @@ async def add_note(brand_id: str, req: BrandNoteCreate, user: dict = Depends(get
 # ============== ADMIN BRAND ACTIONS ==============
 @api_router.post("/admin/brands/{brand_id}/release")
 async def admin_release_brand(brand_id: str, reason: str = Body(..., embed=True), admin: dict = Depends(require_admin)):
-    """Админ: освободить бренд"""
+    """Админ: освободить бренд (закрывает дыру #19)"""
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
@@ -861,14 +1367,15 @@ async def admin_release_brand(brand_id: str, reason: str = Body(..., embed=True)
     
     await log_event(EventType.ADMIN_RELEASED, admin["id"], brand_id, {
         "reason": reason,
-        "previous_user_id": old_user_id
+        "previous_user_id": old_user_id,
+        "admin_nickname": admin["nickname"]
     })
     
     return {"status": "success"}
 
 @api_router.post("/admin/brands/{brand_id}/reassign")
 async def admin_reassign_brand(brand_id: str, req: ReassignBrandRequest, admin: dict = Depends(require_admin)):
-    """Админ: переназначить бренд"""
+    """Админ: переназначить бренд (закрывает дыру #4 - история)"""
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
@@ -885,22 +1392,37 @@ async def admin_reassign_brand(brand_id: str, req: ReassignBrandRequest, admin: 
         "assigned_at": now,
         "status": BrandStatus.ASSIGNED if brand["status"] == BrandStatus.IN_POOL else brand["status"],
         "updated_at": now
-    }})
+    },
+    "$inc": {"assignment_count": 1}})
+    
+    # Записываем историю назначений
+    await record_assignment_history(brand_id, req.new_user_id)
     
     await log_event(EventType.REASSIGNED, admin["id"], brand_id, {
         "reason": req.reason,
         "previous_user_id": old_user_id,
-        "new_user_id": req.new_user_id
+        "new_user_id": req.new_user_id,
+        "admin_nickname": admin["nickname"]
     })
     
     return {"status": "success"}
 
+@api_router.post("/admin/brands/bulk-release/preview")
+async def admin_bulk_release_preview(req: BulkReleaseRequest, admin: dict = Depends(require_admin)):
+    """Предпросмотр массового освобождения (закрывает дыру #32)"""
+    brands = await db.brands.find(
+        {"id": {"$in": req.brand_ids}},
+        {"_id": 0, "id": 1, "name_original": 1, "assigned_to_user_id": 1, "status": 1}
+    ).to_list(len(req.brand_ids))
+    
+    return BulkReleasePreview(count=len(brands), brands=brands)
+
 @api_router.post("/admin/brands/bulk-release")
-async def admin_bulk_release(brand_ids: List[str] = Body(...), reason: str = Body(...), admin: dict = Depends(require_admin)):
-    """Админ: массовое освобождение"""
+async def admin_bulk_release(req: BulkReleaseRequest, admin: dict = Depends(require_admin)):
+    """Админ: массовое освобождение (закрывает дыру #32)"""
     now = datetime.now(timezone.utc).isoformat()
     result = await db.brands.update_many(
-        {"id": {"$in": brand_ids}},
+        {"id": {"$in": req.brand_ids}},
         {"$set": {
             "status": BrandStatus.IN_POOL,
             "pipeline_stage": PipelineStage.REVIEW,
@@ -911,9 +1433,10 @@ async def admin_bulk_release(brand_ids: List[str] = Body(...), reason: str = Bod
         }}
     )
     
-    await log_event(EventType.ADMIN_RELEASED, admin["id"], metadata={
-        "reason": reason,
-        "count": result.modified_count
+    await log_event(EventType.ADMIN_BULK_RELEASE, admin["id"], metadata={
+        "reason": req.reason,
+        "count": result.modified_count,
+        "brand_ids": req.brand_ids
     })
     
     return {"status": "success", "count": result.modified_count}
@@ -925,29 +1448,25 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
     in_pool = await db.brands.count_documents({"status": BrandStatus.IN_POOL})
     assigned = await db.brands.count_documents({"status": {"$ne": BrandStatus.IN_POOL}})
     
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    
+    # Просроченные (исключая ON_HOLD) - закрывает дыру #15
     overdue = await db.brands.count_documents({
-        "next_action_at": {"$lt": now, "$ne": None},
+        "next_action_at": {"$lt": now_iso, "$ne": None},
         "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
                            BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED, 
                            BrandStatus.OUTCOME_REPLIED]}
     })
     
-    # Brands by status
-    pipeline_status = [
-        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
-    ]
+    pipeline_status = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
     status_counts = await db.brands.aggregate(pipeline_status).to_list(100)
     brands_by_status = {s["_id"]: s["count"] for s in status_counts}
     
-    # Brands by stage
-    pipeline_stage = [
-        {"$group": {"_id": "$pipeline_stage", "count": {"$sum": 1}}}
-    ]
+    pipeline_stage = [{"$group": {"_id": "$pipeline_stage", "count": {"$sum": 1}}}]
     stage_counts = await db.brands.aggregate(pipeline_stage).to_list(100)
     brands_by_stage = {s["_id"]: s["count"] for s in stage_counts}
     
-    # Searchers activity
     searchers = await db.users.find({"role": UserRole.SEARCHER}, {"_id": 0}).to_list(100)
     searchers_activity = []
     
@@ -955,29 +1474,62 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
         assigned_count = await db.brands.count_documents({"assigned_to_user_id": s["id"]})
         overdue_count = await db.brands.count_documents({
             "assigned_to_user_id": s["id"],
-            "next_action_at": {"$lt": now, "$ne": None},
+            "next_action_at": {"$lt": now_iso, "$ne": None},
             "status": {"$nin": [BrandStatus.ON_HOLD, BrandStatus.OUTCOME_APPROVED, 
                                BrandStatus.OUTCOME_DECLINED, BrandStatus.OUTCOME_REPLIED]}
         })
         
-        # Calculate activity status
+        # Светофор с учётом рабочих часов (закрывает дыру #21)
         last_seen = s.get("last_seen_at")
+        work_start = s.get("work_hours_start", "09:00")
+        work_end = s.get("work_hours_end", "18:00")
+        
+        # Проверяем, в рабочих ли часах сейчас
+        current_hour = now.hour
+        try:
+            start_hour = int(work_start.split(":")[0])
+            end_hour = int(work_end.split(":")[0])
+            in_work_hours = start_hour <= current_hour < end_hour
+        except:
+            in_work_hours = True
+        
         if last_seen:
             last_seen_dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
-            minutes_ago = (datetime.now(timezone.utc) - last_seen_dt).total_seconds() / 60
-            if minutes_ago < 15:
-                activity_status = "online"
-            elif minutes_ago < 60:
-                activity_status = "idle"
+            minutes_ago = (now - last_seen_dt).total_seconds() / 60
+            
+            if in_work_hours:
+                if minutes_ago < 15:
+                    activity_status = "online"
+                elif minutes_ago < 60:
+                    activity_status = "idle"
+                else:
+                    activity_status = "offline"
             else:
-                activity_status = "offline"
+                activity_status = "off_hours"
         else:
-            activity_status = "offline"
+            activity_status = "offline" if in_work_hours else "off_hours"
         
-        # Count cleared brands (anti-abuse)
+        # Статистика возвратов (закрывает дыру #3)
+        week_ago = (now - timedelta(days=7)).isoformat()
         cleared_count = await db.brand_events.count_documents({
             "user_id": s["id"],
-            "event_type": EventType.RETURNED_TO_POOL
+            "event_type": EventType.RETURNED_TO_POOL,
+            "created_at": {"$gte": week_ago}
+        })
+        
+        # Быстрые возвраты
+        quick_returns = await db.brand_events.count_documents({
+            "user_id": s["id"],
+            "event_type": EventType.RETURNED_TO_POOL,
+            "created_at": {"$gte": week_ago},
+            "metadata.quick_return": True
+        })
+        
+        # Низкое качество
+        low_quality = await db.brands.count_documents({
+            "assigned_to_user_id": s["id"],
+            "health_score": {"$lt": 30},
+            "status": {"$nin": [BrandStatus.IN_POOL]}
         })
         
         searchers_activity.append({
@@ -986,10 +1538,19 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
             "assigned_count": assigned_count,
             "overdue_count": overdue_count,
             "cleared_count": cleared_count,
+            "quick_returns_count": quick_returns,
+            "low_quality_count": low_quality,
             "activity_status": activity_status,
             "last_seen_at": s.get("last_seen_at"),
-            "work_hours": f"{s.get('work_hours_start', '09:00')} - {s.get('work_hours_end', '18:00')}"
+            "work_hours": f"{work_start} - {work_end}",
+            "in_work_hours": in_work_hours
         })
+    
+    # Получаем непрочитанные алерты (закрывает дыру #24)
+    alerts = await db.alerts.find(
+        {"resolved": False},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
     
     return DashboardResponse(
         total_brands=total,
@@ -998,8 +1559,34 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
         brands_overdue=overdue,
         brands_by_status=brands_by_status,
         brands_by_stage=brands_by_stage,
-        searchers_activity=searchers_activity
+        searchers_activity=searchers_activity,
+        alerts=[AlertResponse(**a) for a in alerts]
     )
+
+@api_router.get("/alerts")
+async def get_alerts(
+    resolved: Optional[bool] = None,
+    limit: int = Query(50, ge=1, le=200),
+    admin: dict = Depends(require_admin)
+):
+    """Получить алерты"""
+    query = {}
+    if resolved is not None:
+        query["resolved"] = resolved
+    
+    alerts = await db.alerts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return alerts
+
+@api_router.post("/alerts/{alert_id}/resolve")
+async def resolve_alert(alert_id: str, admin: dict = Depends(require_admin)):
+    """Разрешить алерт"""
+    result = await db.alerts.update_one(
+        {"id": alert_id},
+        {"$set": {"resolved": True, "resolved_by": admin["id"], "resolved_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Алерт не найден")
+    return {"status": "success"}
 
 # ============== SETTINGS ==============
 @api_router.get("/settings")
@@ -1015,6 +1602,27 @@ async def update_settings(settings_data: SettingsUpdate, admin: dict = Depends(r
     await db.settings.update_one({"id": "global"}, {"$set": update_dict}, upsert=True)
     return await get_settings()
 
+# ============== СПРАВОЧНИКИ ==============
+@api_router.get("/references/return-reasons")
+async def get_return_reasons():
+    """Справочник причин возврата"""
+    return RETURN_REASONS
+
+@api_router.get("/references/problematic-reasons")
+async def get_problematic_reasons():
+    """Справочник причин проблемности"""
+    return PROBLEMATIC_REASONS
+
+@api_router.get("/references/outcome-channels")
+async def get_outcome_channels():
+    """Справочник каналов исхода"""
+    return OUTCOME_CHANNELS
+
+@api_router.get("/references/stage-transitions")
+async def get_stage_transitions():
+    """Матрица переходов этапов"""
+    return STAGE_TRANSITIONS
+
 # ============== EXPORT ==============
 @api_router.get("/export/brands")
 async def export_brands(
@@ -1022,6 +1630,7 @@ async def export_brands(
     assigned_to: Optional[str] = None,
     admin: dict = Depends(require_admin)
 ):
+    """Экспорт брендов с логированием (закрывает дыру #20, #39)"""
     query = {}
     if status:
         query["status"] = status
@@ -1030,7 +1639,6 @@ async def export_brands(
     
     brands = await db.brands.find(query, {"_id": 0}).to_list(10000)
     
-    # Get items for each brand
     for brand in brands:
         items = await db.brand_items.find({"brand_id": brand["id"]}, {"_id": 0}).to_list(10)
         brand["items"] = items
@@ -1039,12 +1647,19 @@ async def export_brands(
             user = await db.users.find_one({"id": brand["assigned_to_user_id"]}, {"nickname": 1})
             brand["assigned_to_nickname"] = user["nickname"] if user else None
     
+    # Логируем экспорт (закрывает дыру #20, #39)
+    await log_event(EventType.EXPORT_CREATED, admin["id"], metadata={
+        "filter_status": status,
+        "filter_assigned_to": assigned_to,
+        "count": len(brands)
+    })
+    
     return brands
 
 # ============== INIT DATA ==============
 @api_router.post("/init")
 async def init_data():
-    """Initialize admin user if not exists"""
+    """Initialize admin user and indexes"""
     admin = await db.users.find_one({"email": "admin@procto13.com"})
     if not admin:
         admin_user = {
@@ -1053,7 +1668,7 @@ async def init_data():
             "password": "admin123",
             "secret_code": "PROCTO13",
             "nickname": "Admin",
-            "role": UserRole.ADMIN,
+            "role": UserRole.SUPER_ADMIN,
             "status": "active",
             "work_hours_start": "09:00",
             "work_hours_end": "18:00",
@@ -1061,15 +1676,28 @@ async def init_data():
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(admin_user)
-        return {"status": "created", "admin_email": "admin@procto13.com", "password": "admin123", "secret_code": "PROCTO13"}
-    return {"status": "exists"}
+    
+    # Создаём индексы (закрывает дыру #27)
+    await db.brands.create_index("name_normalized", unique=True)
+    await db.brands.create_index("status")
+    await db.brands.create_index("assigned_to_user_id")
+    await db.brands.create_index("next_action_at")
+    await db.brands.create_index("last_action_at")
+    await db.brands.create_index("priority_score")
+    await db.brands.create_index("pipeline_stage")
+    await db.brands.create_index("health_score")
+    await db.brand_events.create_index([("brand_id", 1), ("created_at", -1)])
+    await db.brand_events.create_index([("user_id", 1), ("event_type", 1), ("created_at", -1)])
+    await db.brand_notes.create_index([("brand_id", 1), ("created_at", -1)])
+    await db.brand_assignment_history.create_index([("brand_id", 1), ("user_id", 1)], unique=True)
+    await db.alerts.create_index([("resolved", 1), ("created_at", -1)])
+    
+    return {"status": "initialized"}
 
-# Root route
 @api_router.get("/")
 async def root():
-    return {"message": "PROCTO 13 Brand Management API"}
+    return {"message": "PROCTO 13 Brand Management API v2.0"}
 
-# Include router
 app.include_router(api_router)
 
 app.add_middleware(
