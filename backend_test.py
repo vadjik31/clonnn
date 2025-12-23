@@ -618,6 +618,10 @@ class PROCTO13APITester:
             ("brand_operations", self.test_brand_operations),
             ("searcher_claiming", self.test_searcher_brand_claiming),
             ("brand_workflow", self.test_brand_workflow),
+            ("security_fixes", self.test_security_fixes),
+            ("references_endpoints", self.test_references_endpoints),
+            ("dashboard_alerts", self.test_dashboard_alerts),
+            ("brands_health_score", self.test_brands_health_score),
             ("authentication_security", self.test_authentication_security)
         ]
         
