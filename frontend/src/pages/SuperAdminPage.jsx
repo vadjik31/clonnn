@@ -392,25 +392,44 @@ const ActivityTab = ({ searchers, selectedUser, userActivity, onSelectUser }) =>
           {/* Daily Stats */}
           <div className="bg-[#0F1115] p-4 rounded-[2px]">
             <h4 className="text-sm font-medium text-[#FF9900] mb-2">Статистика по дням</h4>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {Object.entries(userActivity.daily_stats || {}).slice(0, 7).map(([date, stats]) => (
-                <div key={date} className="flex justify-between text-sm">
-                  <span className="text-[#E6E6E6]">{date}</span>
-                  <span className="text-[#94A3B8]">{stats.events} событий</span>
+                <div key={date} className="border-b border-[#2A2F3A] pb-2 last:border-0">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-[#E6E6E6] font-medium">{date}</span>
+                    <span className="text-[#FF9900]">{stats.events} действий</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(stats.types || {}).map(([type, count]) => (
+                      <span key={type} className="px-2 py-0.5 bg-[#1A1D24] text-[#94A3B8] rounded text-xs">
+                        {type}: {count}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Recent Events */}
+          {/* Recent Events - Updated with Russian labels */}
           <div className="bg-[#0F1115] p-4 rounded-[2px]">
-            <h4 className="text-sm font-medium text-[#FF9900] mb-2">Последние события</h4>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              {userActivity.events?.slice(0, 20).map(e => (
-                <div key={e.id} className="flex justify-between text-xs">
-                  <span className="text-[#E6E6E6]">{e.event_type}</span>
-                  <span className="text-[#94A3B8]">
-                    {new Date(e.created_at).toLocaleString('ru-RU')}
+            <h4 className="text-sm font-medium text-[#FF9900] mb-2">Последние действия</h4>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {userActivity.events?.slice(0, 30).map(e => (
+                <div key={e.id} className="flex items-center justify-between p-2 bg-[#13161B] rounded text-sm">
+                  <div className="flex-1">
+                    <span className="text-[#E6E6E6]">{e.label_ru || e.event_type}</span>
+                    {e.brand_name && (
+                      <span className="text-[#FF9900] ml-2">• {e.brand_name}</span>
+                    )}
+                  </div>
+                  <span className="text-[#94A3B8] text-xs whitespace-nowrap ml-2">
+                    {new Date(e.created_at).toLocaleString('ru-RU', { 
+                      day: '2-digit', 
+                      month: '2-digit', 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
                   </span>
                 </div>
               ))}
