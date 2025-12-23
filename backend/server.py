@@ -944,6 +944,11 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
     df = df.dropna(subset=['Brand'])
     brand_counts = df['Brand'].value_counts().to_dict()
     
+    # Фильтруем бренды с менее чем 5 товарами (мусор)
+    MIN_ITEMS_PER_BRAND = 5
+    filtered_brand_counts = {k: v for k, v in brand_counts.items() if v >= MIN_ITEMS_PER_BRAND}
+    skipped_brands = len(brand_counts) - len(filtered_brand_counts)
+    
     stats = {
         "total_rows": len(df),
         "unique_brands": len(brand_counts),
@@ -951,14 +956,15 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
         "duplicate_brands": 0,
         "items_added": 0,
         "missing_columns": missing_optional,
-        "similar_brands_warnings": []
+        "similar_brands_warnings": [],
+        "skipped_low_items": skipped_brands  # Пропущено брендов с <5 товаров
     }
     
     # Получаем существующие нормализованные имена для fuzzy matching
     existing_brands = await db.brands.find({}, {"name_normalized": 1, "name_original": 1}).to_list(10000)
     existing_normalized = {b["name_normalized"]: b["name_original"] for b in existing_brands}
     
-    for brand_name, count in brand_counts.items():
+    for brand_name, count in filtered_brand_counts.items():
         brand_normalized = normalize_brand_name(str(brand_name))
         if not brand_normalized:
             continue
