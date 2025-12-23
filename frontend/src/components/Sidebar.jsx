@@ -118,6 +118,27 @@ const Sidebar = ({ user }) => {
 
       {/* User Info */}
       <div className="p-4 border-t border-[#2A2F3A]">
+        {/* Check-In Button for Searchers */}
+        {user?.role === "searcher" && (
+          <div className="mb-4">
+            {checkInStatus?.checked_in ? (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-900/20 text-green-400 rounded-[2px]">
+                <UserCheck size={18} />
+                <span className="text-sm">Отмечен</span>
+              </div>
+            ) : (
+              <button
+                onClick={handleCheckIn}
+                disabled={checkingIn}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FF9900] hover:bg-[#E68A00] text-black font-bold rounded-[2px] transition-all"
+              >
+                <UserCheck size={18} />
+                <span>{checkingIn ? "..." : "Зашёл!"}</span>
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-[2px] bg-[#FF9900]/20 flex items-center justify-center">
             <span className="text-[#FF9900] font-mono font-bold">
@@ -129,7 +150,7 @@ const Sidebar = ({ user }) => {
               {user?.nickname}
             </p>
             <p className="text-xs text-[#94A3B8] uppercase tracking-wider">
-              {user?.role === "admin" ? "Админ" : "Сёрчер"}
+              {user?.role === "super_admin" ? "Супер-админ" : user?.role === "admin" ? "Админ" : "Сёрчер"}
             </p>
           </div>
         </div>
