@@ -142,6 +142,7 @@ class NoteType:
 class EventType:
     USER_LOGIN = "user_login"
     USER_LOGOUT = "user_logout"
+    USER_CHECK_IN = "user_check_in"  # Кнопка "Зашёл"
     BRANDS_ASSIGNED = "brands_assigned"
     STATUS_CHANGED = "status_changed"
     STAGE_COMPLETED = "stage_completed"
@@ -149,9 +150,17 @@ class EventType:
     MARKED_PROBLEMATIC = "marked_problematic"
     MARKED_ON_HOLD = "marked_on_hold"
     MARKED_NO_RESPONSE = "marked_no_response"  # Закрывает дыру #11
+    MARKED_ARCHIVED = "marked_archived"  # Архивирование
+    MARKED_BLACKLISTED = "marked_blacklisted"  # В чёрный список
+    RESTORED_FROM_ARCHIVE = "restored_from_archive"  # Восстановление из архива
+    REMOVED_FROM_BLACKLIST = "removed_from_blacklist"  # Удаление из ЧС
     REASSIGNED = "reassigned"
     ADMIN_RELEASED = "admin_released"
     ADMIN_BULK_RELEASE = "admin_bulk_release"
+    ADMIN_BULK_ARCHIVE = "admin_bulk_archive"  # Массовое архивирование
+    ADMIN_BULK_BLACKLIST = "admin_bulk_blacklist"  # Массовое добавление в ЧС
+    ADMIN_BULK_ASSIGN = "admin_bulk_assign"  # Массовое назначение
+    IMPORT_DELETED = "import_deleted"  # Удаление импорта
     HEARTBEAT = "heartbeat"
     HEARTBEAT_AGGREGATED = "heartbeat_aggregated"  # Закрывает дыру #22
     IMPORT_COMPLETED = "import_completed"
@@ -163,6 +172,8 @@ class EventType:
     UNDO_ACTION = "undo_action"
     REVIEW_TIMEOUT = "review_timeout"  # Закрывает дыру #10
     INACTIVITY_TIMEOUT = "inactivity_timeout"  # Закрывает дыру #7
+    SETTINGS_UPDATED = "settings_updated"  # Обновление настроек
+    USER_ACTIVITY = "user_activity"  # Активность пользователя (клики)
 
 # Лимиты (закрывает дыру #9)
 MAX_ACTIVE_BRANDS_PER_SEARCHER = 300
