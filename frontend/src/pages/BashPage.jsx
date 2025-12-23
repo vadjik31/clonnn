@@ -278,6 +278,7 @@ const BashPage = () => {
       return sortOrder === "desc" ? bVal - aVal : aVal - bVal;
     });
     setSortedItemIds(sorted.map(i => i.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy, sortOrder, statusFilter, search, selectedBatch?.id, items.length]);
   
   // Use stored order to prevent jumping on edit
