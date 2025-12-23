@@ -17,6 +17,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import StaffPage from "./pages/StaffPage";
 import BashPage from "./pages/BashPage";
+import SuppliersPage from "./pages/SuppliersPage";
 
 // Components
 import Sidebar from "./components/Sidebar";
