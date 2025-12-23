@@ -3668,6 +3668,29 @@ ITEM_STATUSES = [
 ]
 
 # Популярные перевозчики для автокомплита
+# Load carriers from CSV file
+import csv
+
+def load_carriers_from_csv():
+    """Load carriers from CSV file"""
+    carriers = []
+    csv_path = ROOT_DIR / 'carriers.csv'
+    if csv_path.exists():
+        try:
+            with open(csv_path, 'r', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    carriers.append({
+                        "key": row.get("key", ""),
+                        "name": row.get("name_en", "")
+                    })
+        except Exception as e:
+            logger.error(f"Error loading carriers CSV: {e}")
+    return carriers
+
+ALL_CARRIERS = load_carriers_from_csv()
+
+# Popular carriers for quick access (fallback if CSV not loaded)
 POPULAR_CARRIERS = [
     {"key": "100001", "name": "DHL Express"},
     {"key": "100002", "name": "UPS"},
