@@ -4601,7 +4601,8 @@ async def create_supplier(
     await log_activity(admin.get("id"), admin.get("nickname"), admin.get("role"), 
                        "create_supplier", f"Создан поставщик: {supplier.name}")
     
-    del supplier_dict["_id"] if "_id" in supplier_dict else None
+    if "_id" in supplier_dict:
+        del supplier_dict["_id"]
     return supplier_dict
 
 @api_router.put("/suppliers/{supplier_id}")
