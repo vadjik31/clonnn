@@ -1202,7 +1202,8 @@ async def get_brand_detail(brand_id: str, user: dict = Depends(get_current_user)
         items=[BrandItemResponse(**i) for i in items],
         notes=notes,
         events=events,
-        assignment_history=assignment_history
+        assignment_history=assignment_history,
+        contacts=contacts
     )
 
 @api_router.post("/brands/claim")
