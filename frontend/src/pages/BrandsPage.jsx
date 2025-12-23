@@ -178,6 +178,7 @@ const BrandsPage = () => {
 
   // Bulk actions (super_admin only)
   const toggleSelectBrand = (brandId) => {
+    setSelectAllPages(false);
     const newSelected = new Set(selectedBrands);
     if (newSelected.has(brandId)) {
       newSelected.delete(brandId);
@@ -188,6 +189,7 @@ const BrandsPage = () => {
   };
 
   const toggleSelectAll = () => {
+    setSelectAllPages(false);
     if (selectedBrands.size === brands.length) {
       setSelectedBrands(new Set());
     } else {
@@ -195,8 +197,32 @@ const BrandsPage = () => {
     }
   };
 
+  const handleSelectAllPages = async () => {
+    if (selectAllPages) {
+      setSelectAllPages(false);
+      setSelectedBrands(new Set());
+      setAllBrandIds([]);
+    } else {
+      try {
+        const params = new URLSearchParams();
+        if (filters.status) params.append("status", filters.status);
+        if (filters.pipeline_stage) params.append("pipeline_stage", filters.pipeline_stage);
+        if (filters.assigned_to) params.append("assigned_to", filters.assigned_to);
+        if (filters.search) params.append("search", filters.search);
+        
+        const res = await api.get(`/brands/ids?${params}`);
+        setAllBrandIds(res.data.ids);
+        setSelectedBrands(new Set(res.data.ids));
+        setSelectAllPages(true);
+        toast.success(`Выбрано ${res.data.total} брендов на всех страницах`);
+      } catch (error) {
+        toast.error("Ошибка получения списка");
+      }
+    }
+  };
+
   const handleBulkAction = async (action, params) => {
-    const brandIds = Array.from(selectedBrands);
+    const brandIds = selectAllPages ? allBrandIds : Array.from(selectedBrands);
     if (brandIds.length === 0) {
       toast.error("Выберите бренды");
       return;
@@ -229,6 +255,8 @@ const BrandsPage = () => {
       }
       setBulkModal({ open: false, action: null });
       setSelectedBrands(new Set());
+      setSelectAllPages(false);
+      setAllBrandIds([]);
       fetchBrands();
     } catch (error) {
       toast.error("Ошибка массовой операции");
