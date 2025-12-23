@@ -3073,9 +3073,171 @@ async def bulk_restore_brands(
     
     return {"status": "success", "restored_count": restored_count}
 
+# ============== FUZZY MATCHING ENDPOINTS ==============
+
+@api_router.get("/brands/search/fuzzy")
+async def fuzzy_search_brands(
+    query: str = Query(..., min_length=2),
+    threshold: float = Query(0.7, ge=0.5, le=1.0),
+    user: dict = Depends(get_current_user)
+):
+    """Поиск брендов с fuzzy matching"""
+    similar = await find_similar_brands(query, threshold)
+    return {
+        "query": query,
+        "threshold": threshold,
+        "results": similar,
+        "count": len(similar)
+    }
+
+@api_router.get("/brands/{brand_id}/similar")
+async def get_similar_brands(
+    brand_id: str,
+    threshold: float = Query(0.8, ge=0.5, le=1.0),
+    user: dict = Depends(get_current_user)
+):
+    """Найти бренды похожие на указанный"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    similar = await find_similar_brands(brand["name_original"], threshold)
+    # Исключаем сам бренд
+    similar = [s for s in similar if s["id"] != brand_id]
+    
+    return {
+        "brand": brand["name_original"],
+        "similar": similar,
+        "count": len(similar)
+    }
+
+# ============== EXPORT WITH WATERMARK ==============
+
+@api_router.get("/export/brands")
+async def export_brands_with_watermark(
+    status: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    format: str = Query("json", enum=["json", "csv"]),
+    user: dict = Depends(require_admin)
+):
+    """Экспорт брендов с водяным знаком"""
+    query = {"status": {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}}
+    if status:
+        query["status"] = status
+    if assigned_to:
+        query["assigned_to_user_id"] = assigned_to
+    
+    brands = await db.brands.find(query, {"_id": 0}).to_list(10000)
+    
+    # Добавляем водяной знак
+    watermark_info = generate_export_watermark_info(user["id"], user["nickname"])
+    brands = add_watermark_to_data(brands, user["id"], user["nickname"])
+    
+    # Логируем экспорт
+    await log_event(
+        EventType.EXPORT_CREATED,
+        user["id"],
+        metadata={
+            "count": len(brands),
+            "format": format,
+            "watermark_id": watermark_info["export_id"],
+            "status_filter": status,
+            "assigned_filter": assigned_to
+        }
+    )
+    
+    if format == "csv":
+        # Для CSV убираем служебные поля
+        for b in brands:
+            b.pop("_export_mark", None)
+            b.pop("_export_seq", None)
+    
+    return {
+        "brands": brands,
+        "total": len(brands),
+        "watermark": watermark_info,
+        "exported_at": datetime.now(timezone.utc).isoformat()
+    }
+
+# ============== REPROCESSING ENDPOINTS ==============
+
+@api_router.get("/super-admin/reprocessing/candidates")
+async def get_reprocessing_candidates(
+    months: int = Query(6, ge=1, le=24),
+    admin: dict = Depends(require_super_admin)
+):
+    """Получить бренды-кандидаты для повторной обработки"""
+    brands = await get_brands_for_reprocessing(months)
+    
+    return {
+        "brands": brands,
+        "count": len(brands),
+        "months_threshold": months
+    }
+
+@api_router.post("/super-admin/brands/{brand_id}/reprocess")
+async def reprocess_brand(
+    brand_id: str,
+    admin: dict = Depends(require_super_admin)
+):
+    """Запустить повторную обработку бренда"""
+    result = await mark_brand_for_reprocessing(brand_id, admin["id"])
+    if not result:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    return {"status": "success", "message": "Бренд возвращён в пул для повторной обработки"}
+
+@api_router.post("/super-admin/brands/bulk-reprocess")
+async def bulk_reprocess_brands(
+    brand_ids: List[str] = Body(...),
+    admin: dict = Depends(require_super_admin)
+):
+    """Массовый запуск повторной обработки"""
+    reprocessed = 0
+    for brand_id in brand_ids:
+        result = await mark_brand_for_reprocessing(brand_id, admin["id"])
+        if result:
+            reprocessed += 1
+    
+    return {"status": "success", "reprocessed_count": reprocessed}
+
+# ============== ADMIN VS SUPER_ADMIN PERMISSIONS ==============
+
+@api_router.get("/admin/permissions")
+async def get_admin_permissions(user: dict = Depends(require_admin)):
+    """Получить разрешения текущего админа"""
+    is_super = user["role"] == UserRole.SUPER_ADMIN
+    
+    permissions = {
+        "view_brands": True,
+        "view_users": True,
+        "view_dashboard": True,
+        "view_analytics": True,
+        "import_excel": True,
+        "export_brands": True,
+        "reassign_brands": True,
+        "release_brands": True,
+        # Супер-админ только
+        "delete_imports": is_super,
+        "bulk_archive": is_super,
+        "bulk_blacklist": is_super,
+        "bulk_assign": is_super,
+        "manage_settings": is_super,
+        "view_activity_logs": is_super,
+        "reprocess_brands": is_super,
+        "delete_users": is_super,
+        "restore_from_archive": is_super,
+    }
+    
+    return {
+        "role": user["role"],
+        "is_super_admin": is_super,
+        "permissions": permissions
+    }
+
 @api_router.get("/")
 async def root():
-    return {"message": "PROCTO 13 Brand Management API v4.0 - Super Admin Edition"}
+    return {"message": "PROCTO 13 Brand Management API v5.0 - Full Featured Edition"}
 
 app.include_router(api_router)
 
