@@ -2213,8 +2213,9 @@ async def get_kpi_report(
     period_days: int = Query(7, ge=1, le=90),
     admin: dict = Depends(require_admin)
 ):
-    """KPI отчёт по сёрчерам (закрывает дыры #23, #25)"""
+    """Новый KPI отчёт по сёрчерам с расчётом скорости"""
     period_start = (datetime.now(timezone.utc) - timedelta(days=period_days)).isoformat()
+    now = datetime.now(timezone.utc)
     
     searchers = await db.users.find({"role": UserRole.SEARCHER}, {"_id": 0}).to_list(100)
     kpi_data = []
@@ -2222,80 +2223,116 @@ async def get_kpi_report(
     for s in searchers:
         user_id = s["id"]
         
-        # Валидные действия с весами (закрывает дыру #23)
-        stage_events = await db.brand_events.count_documents({
+        # 1. Обработано брендов (любое действие)
+        processed_brand_ids = await db.brand_events.distinct("brand_id", {
             "user_id": user_id,
-            "event_type": EventType.STAGE_COMPLETED,
             "created_at": {"$gte": period_start}
         })
+        brands_processed = len(processed_brand_ids)
         
-        outcome_events = await db.brand_events.count_documents({
+        # 2. Бренды с контактами
+        brands_with_contacts = await db.brand_contacts.distinct("brand_id", {
+            "brand_id": {"$in": processed_brand_ids}
+        })
+        contacts_count = len(brands_with_contacts)
+        
+        # 3. Бренды с заметками
+        brands_with_notes = await db.brand_notes.distinct("brand_id", {
+            "user_id": user_id,
+            "brand_id": {"$in": processed_brand_ids},
+            "created_at": {"$gte": period_start}
+        })
+        notes_count = len(brands_with_notes)
+        
+        # 4. Исходы (одобрен/отклонён/ответил)
+        outcomes = await db.brand_events.count_documents({
             "user_id": user_id,
             "event_type": EventType.OUTCOME_SET,
             "created_at": {"$gte": period_start}
         })
         
-        info_updates = await db.brand_events.count_documents({
-            "user_id": user_id,
-            "event_type": EventType.INFO_UPDATED,
-            "created_at": {"$gte": period_start}
-        })
-        
-        notes_added = await db.brand_notes.count_documents({
-            "user_id": user_id,
-            "created_at": {"$gte": period_start},
-            "note_type": {"$in": [NoteType.GENERAL, NoteType.STAGE_DONE]}
-        })
-        
-        returns = await db.brand_events.count_documents({
-            "user_id": user_id,
-            "event_type": EventType.RETURNED_TO_POOL,
-            "created_at": {"$gte": period_start}
-        })
-        
-        quick_returns = await db.brand_events.count_documents({
-            "user_id": user_id,
-            "event_type": EventType.RETURNED_TO_POOL,
-            "created_at": {"$gte": period_start},
-            "metadata.quick_return": True
-        })
-        
-        # Высокое качество (health_score > 50)
-        high_quality = await db.brands.count_documents({
+        # 5. "Мёртвые" - назначены но не обработаны за период
+        assigned_brands = await db.brands.find({
             "assigned_to_user_id": user_id,
-            "health_score": {"$gte": 50}
-        })
+            "assigned_at": {"$lte": period_start}
+        }, {"id": 1}).to_list(1000)
+        assigned_ids = [b["id"] for b in assigned_brands]
         
-        # Веса для KPI
-        weighted_score = (
-            stage_events * 10 +      # Этапы - важно
-            outcome_events * 20 +     # Исходы - очень важно
-            info_updates * 5 +        # Обновления - полезно
-            notes_added * 3 +         # Заметки - полезно
-            high_quality * 2 -        # Бонус за качество
-            returns * 5 -             # Штраф за возвраты
-            quick_returns * 15        # Большой штраф за быстрые возвраты
-        )
+        if assigned_ids:
+            worked_on = await db.brand_events.distinct("brand_id", {
+                "user_id": user_id,
+                "brand_id": {"$in": assigned_ids},
+                "created_at": {"$gte": period_start}
+            })
+            dead_brands = len(assigned_ids) - len(worked_on)
+        else:
+            dead_brands = 0
+        
+        # 6. Скорость обработки (брендов в час)
+        # Получаем все события пользователя для расчёта
+        events = await db.brand_events.find({
+            "user_id": user_id,
+            "created_at": {"$gte": period_start}
+        }, {"created_at": 1, "brand_id": 1}).sort("created_at", 1).to_list(10000)
+        
+        speed_per_hour = 0
+        if len(events) >= 2:
+            # Группируем по сессиям (перерыв > 30 мин = новая сессия)
+            sessions = []
+            current_session = [events[0]]
+            
+            for i in range(1, len(events)):
+                prev_time = datetime.fromisoformat(events[i-1]["created_at"].replace("Z", "+00:00")) if isinstance(events[i-1]["created_at"], str) else events[i-1]["created_at"]
+                curr_time = datetime.fromisoformat(events[i]["created_at"].replace("Z", "+00:00")) if isinstance(events[i]["created_at"], str) else events[i]["created_at"]
+                
+                if (curr_time - prev_time).total_seconds() > 1800:  # 30 минут
+                    if len(current_session) > 1:
+                        sessions.append(current_session)
+                    current_session = [events[i]]
+                else:
+                    current_session.append(events[i])
+            
+            if len(current_session) > 1:
+                sessions.append(current_session)
+            
+            # Рассчитываем среднюю скорость по сессиям
+            total_brands = 0
+            total_hours = 0
+            for session in sessions:
+                session_brands = len(set(e["brand_id"] for e in session))
+                start = datetime.fromisoformat(session[0]["created_at"].replace("Z", "+00:00")) if isinstance(session[0]["created_at"], str) else session[0]["created_at"]
+                end = datetime.fromisoformat(session[-1]["created_at"].replace("Z", "+00:00")) if isinstance(session[-1]["created_at"], str) else session[-1]["created_at"]
+                session_hours = max((end - start).total_seconds() / 3600, 0.1)  # минимум 6 минут
+                
+                total_brands += session_brands
+                total_hours += session_hours
+            
+            if total_hours > 0:
+                speed_per_hour = round(total_brands / total_hours, 1)
+        
+        # Эффективность = (с контактами + с заметками + исходы) / обработано
+        efficiency = 0
+        if brands_processed > 0:
+            useful_work = contacts_count + notes_count + outcomes
+            efficiency = round((useful_work / brands_processed) * 100, 0)
         
         kpi_data.append({
             "user_id": user_id,
             "nickname": s["nickname"],
             "period_days": period_days,
             "metrics": {
-                "stages_completed": stage_events,
-                "outcomes_set": outcome_events,
-                "info_updates": info_updates,
-                "notes_added": notes_added,
-                "returns": returns,
-                "quick_returns": quick_returns,
-                "high_quality_brands": high_quality
+                "brands_processed": brands_processed,
+                "with_contacts": contacts_count,
+                "with_notes": notes_count,
+                "outcomes": outcomes,
+                "dead_brands": dead_brands,
+                "speed_per_hour": speed_per_hour
             },
-            "weighted_score": max(0, weighted_score),
-            "quality_ratio": round(high_quality / max(1, stage_events + outcome_events) * 100, 1)
+            "efficiency": efficiency
         })
     
-    # Сортируем по weighted_score
-    kpi_data.sort(key=lambda x: x["weighted_score"], reverse=True)
+    # Сортируем по эффективности
+    kpi_data.sort(key=lambda x: (x["efficiency"], x["metrics"]["brands_processed"]), reverse=True)
     
     return {"kpi": kpi_data, "period_days": period_days}
 
