@@ -477,7 +477,9 @@ async def get_global_settings():
             "holidays": [],
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        await db.system_settings.insert_one(settings)
+        await db.system_settings.insert_one(dict(settings))  # Copy to avoid _id mutation
+        # Re-fetch without _id
+        settings = await db.system_settings.find_one({"type": "global"}, {"_id": 0})
     return settings
 
 def is_working_time(settings: dict = None) -> bool:
