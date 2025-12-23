@@ -55,9 +55,11 @@ const BrandDetailPage = () => {
   const [onHoldModal, setOnHoldModal] = useState(false);
   const [noteModal, setNoteModal] = useState(false);
   const [infoModal, setInfoModal] = useState(false);
+  const [noResponseModal, setNoResponseModal] = useState(false);
 
   useEffect(() => {
     fetchBrand();
+    fetchUndoInfo();
   }, [brandId]);
 
   const fetchBrand = async () => {
@@ -72,6 +74,37 @@ const BrandDetailPage = () => {
     }
   };
 
+  const fetchUndoInfo = async () => {
+    try {
+      const response = await api.get(`/brands/${brandId}/last-action`);
+      setUndoInfo(response.data);
+    } catch (error) {
+      setUndoInfo(null);
+    }
+  };
+
+  const handleUndo = async () => {
+    try {
+      await api.post(`/brands/${brandId}/undo`);
+      toast.success("Действие отменено");
+      fetchBrand();
+      fetchUndoInfo();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка отмены");
+    }
+  };
+
+  const handleNoResponse = async (noteText) => {
+    try {
+      await api.post(`/brands/${brandId}/no-response`, { note_text: noteText });
+      toast.success("Статус 'Нет ответа' установлен");
+      setNoResponseModal(false);
+      fetchBrand();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -83,7 +116,7 @@ const BrandDetailPage = () => {
   if (!data) return null;
 
   const { brand, items, notes, events } = data;
-  const isAssigned = brand.assigned_to_user_id === user?.id || user?.role === "admin";
+  const isAssigned = brand.assigned_to_user_id === user?.id || user?.role === "admin" || user?.role === "super_admin";
   const canAct = brand.status !== "IN_POOL" && isAssigned;
 
   return (
