@@ -3883,6 +3883,7 @@ async def upload_bash_file(
                 "brand": brand,
                 "image_url": image_url,
                 "buy_box_price": buy_box_price,
+                "buy_box_90d": buy_box_90d,
                 "referral_fee": referral_fee,
                 "fba_fee": fba_fee,
                 "weight_grams": weight_grams,
@@ -3897,7 +3898,8 @@ async def upload_bash_file(
                 "monthly_sold": monthly_sold,
                 "bought_past_month": bought_past_month,
                 "category": category,
-                "notes": "",
+                "supplier_link": "",  # ссылка на поставщика
+                "supplier_sku": "",   # SKU у поставщика
                 "created_at": now
             }
             
