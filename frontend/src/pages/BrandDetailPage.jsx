@@ -1,0 +1,989 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { api, useAuth } from "../App";
+import { toast } from "sonner";
+import { 
+  ArrowLeft, 
+  ExternalLink, 
+  Globe, 
+  Users, 
+  Clock, 
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  Reply,
+  AlertTriangle,
+  PauseCircle,
+  RotateCcw,
+  Plus
+} from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
+import { Checkbox } from "../components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import StatusBadge from "../components/StatusBadge";
+
+const BrandDetailPage = () => {
+  const { brandId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Modal states
+  const [stageModal, setStageModal] = useState(false);
+  const [outcomeModal, setOutcomeModal] = useState(false);
+  const [returnModal, setReturnModal] = useState(false);
+  const [problematicModal, setProblematicModal] = useState(false);
+  const [onHoldModal, setOnHoldModal] = useState(false);
+  const [noteModal, setNoteModal] = useState(false);
+  const [infoModal, setInfoModal] = useState(false);
+
+  useEffect(() => {
+    fetchBrand();
+  }, [brandId]);
+
+  const fetchBrand = async () => {
+    try {
+      const response = await api.get(`/brands/${brandId}`);
+      setData(response.data);
+    } catch (error) {
+      toast.error("Ошибка загрузки бренда");
+      navigate(-1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-[#FF9900] font-mono">Загрузка...</div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const { brand, items, notes, events } = data;
+  const isAssigned = brand.assigned_to_user_id === user?.id || user?.role === "admin";
+  const canAct = brand.status !== "IN_POOL" && isAssigned;
+
+  return (
+    <div className="space-y-6 animate-fade-in" data-testid="brand-detail-page">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="text-[#94A3B8] hover:text-[#E6E6E6] p-2"
+            data-testid="back-btn"
+          >
+            <ArrowLeft size={20} />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-[#E6E6E6] font-mono">
+              {brand.name_original}
+            </h1>
+            <div className="flex items-center gap-3 mt-2">
+              <StatusBadge status={brand.status} />
+              <span className="text-[#94A3B8] text-sm">
+                Приоритет: <span className="text-[#FF9900] font-mono">{brand.priority_score}</span>
+              </span>
+              {brand.assigned_to_nickname && (
+                <span className="text-[#94A3B8] text-sm">
+                  Сёрчер: <span className="text-[#E6E6E6]">{brand.assigned_to_nickname}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        {canAct && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => setStageModal(true)}
+              className="btn-secondary"
+              data-testid="stage-btn"
+            >
+              <CheckCircle size={16} className="mr-2" />
+              Этап выполнен
+            </Button>
+            <Button
+              onClick={() => setOutcomeModal(true)}
+              className="btn-secondary"
+              data-testid="outcome-btn"
+            >
+              <Reply size={16} className="mr-2" />
+              Исход
+            </Button>
+            <Button
+              onClick={() => setOnHoldModal(true)}
+              className="btn-secondary"
+              data-testid="onhold-btn"
+            >
+              <PauseCircle size={16} className="mr-2" />
+              На паузу
+            </Button>
+            <Button
+              onClick={() => setProblematicModal(true)}
+              className="btn-secondary text-yellow-400"
+              data-testid="problematic-btn"
+            >
+              <AlertTriangle size={16} className="mr-2" />
+              Проблемный
+            </Button>
+            <Button
+              onClick={() => setReturnModal(true)}
+              className="btn-secondary text-red-400"
+              data-testid="return-btn"
+            >
+              <RotateCcw size={16} className="mr-2" />
+              Очистить
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Info Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Brand Info */}
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#E6E6E6] font-mono uppercase tracking-wider">
+              Информация
+            </h3>
+            {canAct && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setInfoModal(true)}
+                className="text-[#94A3B8] hover:text-[#FF9900]"
+                data-testid="edit-info-btn"
+              >
+                Изменить
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-y-4">
+            <InfoRow 
+              icon={Clock} 
+              label="Этап воронки" 
+              value={<StageBadge stage={brand.pipeline_stage} />} 
+            />
+            <InfoRow 
+              icon={Globe} 
+              label="Сайт" 
+              value={
+                brand.website_url ? (
+                  <a 
+                    href={brand.website_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[#FF9900] hover:underline flex items-center gap-1"
+                  >
+                    {brand.website_url}
+                    <ExternalLink size={12} />
+                  </a>
+                ) : "Не указан"
+              }
+            />
+            <InfoRow 
+              icon={CheckCircle} 
+              label="Сайт найден" 
+              value={brand.website_found ? "Да" : "Нет"} 
+              valueColor={brand.website_found ? "text-green-400" : "text-[#94A3B8]"}
+            />
+            <InfoRow 
+              icon={Users} 
+              label="Контакты найдены" 
+              value={brand.contacts_found ? "Да" : "Нет"}
+              valueColor={brand.contacts_found ? "text-green-400" : "text-[#94A3B8]"}
+            />
+            {brand.next_action_at && (
+              <InfoRow 
+                icon={Clock} 
+                label="След. действие" 
+                value={new Date(brand.next_action_at).toLocaleDateString('ru-RU')}
+                valueColor={new Date(brand.next_action_at) < new Date() ? "text-red-400" : "text-[#E6E6E6]"}
+              />
+            )}
+            {brand.on_hold_reason && (
+              <InfoRow 
+                icon={PauseCircle} 
+                label="Причина паузы" 
+                value={brand.on_hold_reason}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Items */}
+        <div className="lg:col-span-2 bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <h3 className="text-lg font-semibold text-[#E6E6E6] mb-4 font-mono uppercase tracking-wider">
+            Товары ({items.length})
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[400px] overflow-y-auto">
+            {items.map((item) => (
+              <div 
+                key={item.id} 
+                className="flex gap-3 p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px]"
+                data-testid={`item-${item.id}`}
+              >
+                {item.image_url ? (
+                  <img 
+                    src={item.image_url} 
+                    alt={item.title || "Product"} 
+                    className="w-16 h-16 object-cover rounded-[2px] flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-[#1A1D24] rounded-[2px] flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#475569] text-xs">Нет фото</span>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#E6E6E6] line-clamp-2">{item.title || "Без названия"}</p>
+                  {item.asin && (
+                    <p className="text-xs font-mono text-[#FF9900] mt-1">{item.asin}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Notes & Events */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Notes */}
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#E6E6E6] font-mono uppercase tracking-wider flex items-center gap-2">
+              <MessageSquare size={18} className="text-[#FF9900]" />
+              Заметки
+            </h3>
+            {canAct && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setNoteModal(true)}
+                className="text-[#94A3B8] hover:text-[#FF9900]"
+                data-testid="add-note-btn"
+              >
+                <Plus size={16} className="mr-1" />
+                Добавить
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            {notes.length === 0 ? (
+              <p className="text-[#94A3B8] text-center py-4">Нет заметок</p>
+            ) : (
+              notes.map((note) => (
+                <div 
+                  key={note.id} 
+                  className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px]"
+                  data-testid={`note-${note.id}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-[#E6E6E6]">{note.user_nickname}</span>
+                    <span className="text-xs text-[#94A3B8]">
+                      {new Date(note.created_at).toLocaleString('ru-RU')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#94A3B8]">{note.note_text}</p>
+                  {note.note_type !== "general" && (
+                    <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-[#1A1D24] text-[#94A3B8] rounded-full">
+                      {getNoteTypeLabel(note.note_type)}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Events Timeline */}
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <h3 className="text-lg font-semibold text-[#E6E6E6] mb-4 font-mono uppercase tracking-wider flex items-center gap-2">
+            <Clock size={18} className="text-[#FF9900]" />
+            История
+          </h3>
+          
+          <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            {events.length === 0 ? (
+              <p className="text-[#94A3B8] text-center py-4">Нет событий</p>
+            ) : (
+              events.map((event) => (
+                <div 
+                  key={event.id} 
+                  className="flex gap-3 py-2 border-l-2 border-[#2A2F3A] pl-4"
+                  data-testid={`event-${event.id}`}
+                >
+                  <div className="flex-1">
+                    <p className="text-sm text-[#E6E6E6]">{getEventLabel(event.event_type)}</p>
+                    <p className="text-xs text-[#94A3B8] mt-1">
+                      {event.user_nickname} • {new Date(event.created_at).toLocaleString('ru-RU')}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <StageModal 
+        open={stageModal} 
+        onClose={() => setStageModal(false)} 
+        brandId={brandId}
+        onSuccess={fetchBrand}
+      />
+      <OutcomeModal 
+        open={outcomeModal} 
+        onClose={() => setOutcomeModal(false)} 
+        brandId={brandId}
+        onSuccess={fetchBrand}
+      />
+      <ReturnModal 
+        open={returnModal} 
+        onClose={() => setReturnModal(false)} 
+        brandId={brandId}
+        onSuccess={() => { fetchBrand(); navigate(-1); }}
+      />
+      <ProblematicModal 
+        open={problematicModal} 
+        onClose={() => setProblematicModal(false)} 
+        brandId={brandId}
+        onSuccess={fetchBrand}
+      />
+      <OnHoldModal 
+        open={onHoldModal} 
+        onClose={() => setOnHoldModal(false)} 
+        brandId={brandId}
+        onSuccess={fetchBrand}
+      />
+      <NoteModal 
+        open={noteModal} 
+        onClose={() => setNoteModal(false)} 
+        brandId={brandId}
+        onSuccess={fetchBrand}
+      />
+      <InfoModal 
+        open={infoModal} 
+        onClose={() => setInfoModal(false)} 
+        brand={brand}
+        onSuccess={fetchBrand}
+      />
+    </div>
+  );
+};
+
+// Helper Components
+const InfoRow = ({ icon: Icon, label, value, valueColor = "text-[#E6E6E6]" }) => (
+  <div className="flex items-start gap-3">
+    <Icon size={16} className="text-[#94A3B8] mt-0.5 flex-shrink-0" />
+    <div>
+      <p className="text-xs text-[#94A3B8] uppercase tracking-wider">{label}</p>
+      <p className={`text-sm ${valueColor} mt-0.5`}>{value}</p>
+    </div>
+  </div>
+);
+
+const StageBadge = ({ stage }) => {
+  const stageConfig = {
+    REVIEW: { label: "Рассмотрение", color: "bg-gray-800 text-gray-400 border-gray-700" },
+    EMAIL_1_DONE: { label: "Письмо 1", color: "bg-blue-900/20 text-blue-400 border-blue-800" },
+    EMAIL_2_DONE: { label: "Письмо 2", color: "bg-indigo-900/20 text-indigo-400 border-indigo-800" },
+    MULTI_CHANNEL_DONE: { label: "Мультиканал", color: "bg-purple-900/20 text-purple-400 border-purple-800" },
+    CALL_OR_PUSH_RECOMMENDED: { label: "Звонок/Пуш", color: "bg-orange-900/20 text-orange-400 border-orange-800" },
+    CLOSED: { label: "Закрыт", color: "bg-green-900/20 text-green-400 border-green-800" },
+  };
+  const config = stageConfig[stage] || { label: stage, color: "bg-gray-800 text-gray-400" };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
+      {config.label}
+    </span>
+  );
+};
+
+const getNoteTypeLabel = (type) => {
+  const labels = {
+    stage_done: "Этап",
+    return_to_pool: "Возврат",
+    problematic: "Проблема",
+    general: "Общая",
+    admin_note: "От админа",
+    on_hold: "Пауза"
+  };
+  return labels[type] || type;
+};
+
+const getEventLabel = (type) => {
+  const labels = {
+    user_login: "Вход в систему",
+    user_logout: "Выход из системы",
+    brands_assigned: "Получены бренды",
+    status_changed: "Статус изменён",
+    stage_completed: "Этап завершён",
+    returned_to_pool: "Возвращён в пул",
+    marked_problematic: "Помечен как проблемный",
+    marked_on_hold: "Поставлен на паузу",
+    reassigned: "Переназначен",
+    admin_released: "Освобождён админом",
+    heartbeat: "Активность",
+    import_completed: "Импорт завершён"
+  };
+  return labels[type] || type;
+};
+
+// Modals
+const StageModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [stage, setStage] = useState("");
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const stages = [
+    { value: "EMAIL_1_DONE", label: "Первое письмо отправлено" },
+    { value: "EMAIL_2_DONE", label: "Второе письмо отправлено" },
+    { value: "MULTI_CHANNEL_DONE", label: "Соцсети/форма сайта" },
+    { value: "CALL_OR_PUSH_RECOMMENDED", label: "Звонок/пуш выполнен" },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stage || !note.trim()) {
+      toast.error("Заполните все поля");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/stage`, { stage, note_text: note });
+      toast.success("Этап завершён");
+      onSuccess();
+      onClose();
+      setStage("");
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Этап выполнен</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Этап</Label>
+            <Select value={stage} onValueChange={setStage}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]" data-testid="stage-select">
+                <SelectValue placeholder="Выберите этап" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                {stages.map(s => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Опишите результат..."
+              required
+              data-testid="stage-note"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-stage">
+              {loading ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const OutcomeModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [outcome, setOutcome] = useState("");
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const outcomes = [
+    { value: "OUTCOME_APPROVED", label: "Одобрил", icon: CheckCircle, color: "text-green-400" },
+    { value: "OUTCOME_DECLINED", label: "Отказал", icon: XCircle, color: "text-red-400" },
+    { value: "OUTCOME_REPLIED", label: "Ответил", icon: Reply, color: "text-blue-400" },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!outcome || !note.trim()) {
+      toast.error("Заполните все поля");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/outcome`, { outcome, note_text: note });
+      toast.success("Исход установлен");
+      onSuccess();
+      onClose();
+      setOutcome("");
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Установить исход</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Исход</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {outcomes.map(o => (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => setOutcome(o.value)}
+                  className={`p-3 rounded-[2px] border transition-all flex flex-col items-center gap-2 ${
+                    outcome === o.value 
+                      ? "border-[#FF9900] bg-[#FF9900]/10" 
+                      : "border-[#2A2F3A] hover:border-[#FF9900]/50"
+                  }`}
+                  data-testid={`outcome-${o.value}`}
+                >
+                  <o.icon size={24} className={o.color} />
+                  <span className="text-sm">{o.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Детали исхода..."
+              required
+              data-testid="outcome-note"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-outcome">
+              {loading ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const ReturnModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim() || !note.trim()) {
+      toast.error("Заполните все поля");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/return`, { reason, note_text: note });
+      toast.success("Бренд возвращён в пул");
+      onSuccess();
+      onClose();
+      setReason("");
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider text-red-400">Вернуть в пул</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Причина</Label>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="Краткая причина..."
+              required
+              data-testid="return-reason"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Подробное объяснение..."
+              required
+              data-testid="return-note"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700 text-white" data-testid="submit-return">
+              {loading ? "Возврат..." : "Вернуть в пул"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const ProblematicModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim() || !note.trim()) {
+      toast.error("Заполните все поля");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/problematic`, { reason, note_text: note });
+      toast.success("Бренд помечен как проблемный");
+      onSuccess();
+      onClose();
+      setReason("");
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider text-yellow-400">Проблемный бренд</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Причина</Label>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="Краткая причина..."
+              required
+              data-testid="problematic-reason"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Подробное описание проблемы..."
+              required
+              data-testid="problematic-note"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-yellow-600 hover:bg-yellow-700 text-black font-bold" data-testid="submit-problematic">
+              {loading ? "Сохранение..." : "Пометить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const OnHoldModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [reason, setReason] = useState("");
+  const [reviewDate, setReviewDate] = useState("");
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim() || !reviewDate || !note.trim()) {
+      toast.error("Заполните все поля");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/on-hold`, { reason, review_date: reviewDate, note_text: note });
+      toast.success("Бренд поставлен на паузу");
+      onSuccess();
+      onClose();
+      setReason("");
+      setReviewDate("");
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">На паузу</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Причина</Label>
+            <Input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="Сайт лежит, редизайн..."
+              required
+              data-testid="onhold-reason"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Дата пересмотра</Label>
+            <Input
+              type="date"
+              value={reviewDate}
+              onChange={(e) => setReviewDate(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              required
+              data-testid="onhold-date"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Подробности..."
+              required
+              data-testid="onhold-note"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-onhold">
+              {loading ? "Сохранение..." : "Поставить на паузу"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const NoteModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!note.trim()) {
+      toast.error("Введите текст заметки");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/note`, { note_text: note });
+      toast.success("Заметка добавлена");
+      onSuccess();
+      onClose();
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Новая заметка</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Текст заметки</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[120px]"
+              placeholder="Введите заметку..."
+              required
+              data-testid="note-text"
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-note">
+              {loading ? "Сохранение..." : "Добавить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const InfoModal = ({ open, onClose, brand, onSuccess }) => {
+  const [websiteUrl, setWebsiteUrl] = useState(brand?.website_url || "");
+  const [websiteFound, setWebsiteFound] = useState(brand?.website_found || false);
+  const [contactsFound, setContactsFound] = useState(brand?.contacts_found || false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (brand) {
+      setWebsiteUrl(brand.website_url || "");
+      setWebsiteFound(brand.website_found || false);
+      setContactsFound(brand.contacts_found || false);
+    }
+  }, [brand]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await api.put(`/brands/${brand.id}/info`, {
+        website_url: websiteUrl || null,
+        website_found: websiteFound,
+        contacts_found: contactsFound
+      });
+      toast.success("Информация обновлена");
+      onSuccess();
+      onClose();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Редактировать информацию</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">URL сайта</Label>
+            <Input
+              type="url"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="https://..."
+              data-testid="website-url"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="websiteFound"
+              checked={websiteFound}
+              onCheckedChange={setWebsiteFound}
+              className="border-[#2A2F3A] data-[state=checked]:bg-[#FF9900]"
+              data-testid="website-found"
+            />
+            <Label htmlFor="websiteFound" className="text-[#E6E6E6] cursor-pointer">
+              Официальный сайт найден
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="contactsFound"
+              checked={contactsFound}
+              onCheckedChange={setContactsFound}
+              className="border-[#2A2F3A] data-[state=checked]:bg-[#FF9900]"
+              data-testid="contacts-found"
+            />
+            <Label htmlFor="contactsFound" className="text-[#E6E6E6] cursor-pointer">
+              Контакты найдены
+            </Label>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-info">
+              {loading ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default BrandDetailPage;
