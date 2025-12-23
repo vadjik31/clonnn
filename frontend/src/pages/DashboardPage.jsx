@@ -255,11 +255,12 @@ const KPICard = ({ icon: Icon, label, value, color, testId }) => (
   </div>
 );
 
-const ActivityIndicator = ({ status }) => {
+const ActivityIndicator = ({ status, inWorkHours }) => {
   const statusConfig = {
     online: { color: "bg-green-500", label: "Онлайн" },
     idle: { color: "bg-yellow-500", label: "Неактивен" },
-    offline: { color: "bg-red-500", label: "Офлайн" }
+    offline: { color: "bg-red-500", label: "Офлайн" },
+    off_hours: { color: "bg-gray-500", label: "Не рабочее время" }
   };
 
   const config = statusConfig[status] || statusConfig.offline;
