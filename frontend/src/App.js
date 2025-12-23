@@ -13,6 +13,7 @@ import BrandDetailPage from "./pages/BrandDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import MyBrandsPage from "./pages/MyBrandsPage";
 import ProblematicPage from "./pages/ProblematicPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 
 // Components
 import Sidebar from "./components/Sidebar";
