@@ -14,7 +14,8 @@ import {
   BarChart3,
   Shield,
   UserCheck,
-  Boxes
+  Boxes,
+  Building2
 } from "lucide-react";
 
 const Sidebar = ({ user }) => {
