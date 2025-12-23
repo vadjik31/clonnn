@@ -7,8 +7,12 @@ import {
   Clock, 
   AlertTriangle,
   TrendingUp,
-  Users
+  Users,
+  Bell,
+  Activity,
+  ShieldAlert
 } from "lucide-react";
+import { Button } from "../components/ui/button";
 
 const DashboardPage = () => {
   const [data, setData] = useState(null);
@@ -26,6 +30,16 @@ const DashboardPage = () => {
       toast.error("Ошибка загрузки дашборда");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resolveAlert = async (alertId) => {
+    try {
+      await api.post(`/alerts/${alertId}/resolve`);
+      toast.success("Алерт закрыт");
+      fetchDashboard();
+    } catch (error) {
+      toast.error("Ошибка");
     }
   };
 
@@ -67,6 +81,37 @@ const DashboardPage = () => {
         </h1>
         <p className="text-[#94A3B8] mt-1">Обзор системы и активность сёрчеров</p>
       </div>
+
+      {/* Alerts Section */}
+      {data?.alerts?.length > 0 && (
+        <div className="bg-red-900/20 border border-red-800 rounded-[2px] p-4" data-testid="alerts-section">
+          <h3 className="text-lg font-semibold text-red-400 mb-3 flex items-center gap-2">
+            <Bell size={18} />
+            Алерты ({data.alerts.length})
+          </h3>
+          <div className="space-y-2">
+            {data.alerts.map((alert) => (
+              <div key={alert.id} className="flex items-center justify-between bg-[#0F1115] p-3 rounded-[2px]">
+                <div className="flex items-center gap-3">
+                  <ShieldAlert size={16} className={alert.severity === "warning" ? "text-yellow-400" : "text-red-400"} />
+                  <span className="text-sm text-[#E6E6E6]">{alert.message}</span>
+                  <span className="text-xs text-[#94A3B8]">
+                    {new Date(alert.created_at).toLocaleString('ru-RU')}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => resolveAlert(alert.id)}
+                  className="text-[#94A3B8] hover:text-[#E6E6E6]"
+                >
+                  Закрыть
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
