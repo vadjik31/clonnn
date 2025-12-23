@@ -2963,12 +2963,13 @@ async def log_user_activity(activity: UserActivityLog, user: dict = Depends(get_
     return {"status": "logged"}
 
 @api_router.get("/super-admin/user/{user_id}/activity")
+@api_router.get("/admin/user/{user_id}/activity")
 async def get_user_activity_logs(
     user_id: str,
     days: int = Query(7, ge=1, le=90),
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)
 ):
-    """Логи активности сёрчера для супер-админа"""
+    """Логи активности сёрчера для админа/супер-админа"""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     
     # Получаем пользователя
@@ -3034,9 +3035,10 @@ async def get_user_activity_logs(
     }
 
 @api_router.get("/super-admin/check-ins")
+@api_router.get("/admin/check-ins")
 async def get_all_check_ins(
     date: Optional[str] = None,
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)
 ):
     """Список всех отметок 'Зашёл' за дату"""
     target_date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
