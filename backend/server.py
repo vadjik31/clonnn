@@ -2935,7 +2935,26 @@ async def get_user_activity_logs(
         "created_at": {"$gte": cutoff}
     }, {"_id": 0}).sort("created_at", -1).to_list(500)
     
-    # Статистика по дням
+    # Добавляем русские названия и информацию о брендах
+    enriched_events = []
+    brand_ids = list(set(e.get("brand_id") for e in events if e.get("brand_id")))
+    brands_map = {}
+    if brand_ids:
+        brands = await db.brands.find({"id": {"$in": brand_ids}}, {"_id": 0, "id": 1, "name_original": 1}).to_list(len(brand_ids))
+        brands_map = {b["id"]: b.get("name_original", "Неизвестно") for b in brands}
+    
+    for event in events[:100]:
+        event_type = event.get("event_type", "unknown")
+        brand_id = event.get("brand_id")
+        brand_name = brands_map.get(brand_id, "")
+        
+        enriched_events.append({
+            **event,
+            "label_ru": EVENT_LABELS_RU.get(event_type, event_type),
+            "brand_name": brand_name
+        })
+    
+    # Статистика по дням с русскими названиями
     daily_stats = {}
     for event in events:
         date = event["created_at"][:10]
@@ -2943,13 +2962,14 @@ async def get_user_activity_logs(
             daily_stats[date] = {"events": 0, "types": {}}
         daily_stats[date]["events"] += 1
         event_type = event["event_type"]
-        daily_stats[date]["types"][event_type] = daily_stats[date]["types"].get(event_type, 0) + 1
+        label = EVENT_LABELS_RU.get(event_type, event_type)
+        daily_stats[date]["types"][label] = daily_stats[date]["types"].get(label, 0) + 1
     
     return {
         "user": target_user,
         "activities": activities,
         "check_ins": check_ins,
-        "events": events[:100],  # Последние 100 событий
+        "events": enriched_events,
         "daily_stats": daily_stats,
         "period_days": days
     }
