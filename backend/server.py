@@ -1098,7 +1098,11 @@ async def complete_stage(brand_id: str, req: StageCompleteRequest, user: dict = 
     }
     await db.brand_notes.insert_one(note)
     
-    await log_event(EventType.STAGE_COMPLETED, user["id"], brand_id, {"stage": req.stage, "channel": req.channel})
+    await log_event(EventType.STAGE_COMPLETED, user["id"], brand_id, {
+        "stage": req.stage, 
+        "channel": req.channel,
+        "prev_stage": current_stage  # Для Undo
+    })
     
     return {"status": "success"}
 
