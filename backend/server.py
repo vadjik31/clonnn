@@ -394,6 +394,21 @@ class UserActivityLog(BaseModel):
 class CheckInRequest(BaseModel):
     message: Optional[str] = None
 
+# Модели для контактов бренда
+class ContactInfo(BaseModel):
+    contact_type: str  # email, phone, linkedin, etc.
+    value: str
+    is_primary: bool = False
+    notes: Optional[str] = None
+
+class AddContactRequest(BaseModel):
+    contacts: List[ContactInfo]
+
+class RepliedStatusRequest(BaseModel):
+    sub_status: str  # need_action, waiting, approved, declined
+    note_text: str
+    next_action_date: Optional[str] = None
+
 # Idempotency tracking (закрывает дыру #2)
 claim_requests_in_progress = set()
 
