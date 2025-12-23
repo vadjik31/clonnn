@@ -51,6 +51,7 @@ class BrandStatus:
     IN_WORK = "IN_WORK"
     WAITING = "WAITING"
     ON_HOLD = "ON_HOLD"
+    NO_RESPONSE = "NO_RESPONSE"  # Закрывает дыру #11 - отдельный статус "не ответил"
     OUTCOME_APPROVED = "OUTCOME_APPROVED"
     OUTCOME_DECLINED = "OUTCOME_DECLINED"
     OUTCOME_REPLIED = "OUTCOME_REPLIED"
