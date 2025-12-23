@@ -68,11 +68,15 @@ const DashboardPage = () => {
     ASSIGNED: "Назначен",
     IN_WORK: "В работе",
     WAITING: "Ожидание",
-    ON_HOLD: "Приостановлен",
+    ON_HOLD: "На паузе",
     NO_RESPONSE: "Нет ответа",
     OUTCOME_APPROVED: "Одобрен",
     OUTCOME_DECLINED: "Отклонён",
     OUTCOME_REPLIED: "Ответил",
+    REPLIED_NEED_ACTION: "Ждёт действия",
+    REPLIED_WAITING: "Ждём ответа",
+    REPLIED_APPROVED: "Одобрено",
+    REPLIED_DECLINED: "Отказано",
     PROBLEMATIC: "Проблемный",
     ARCHIVED: "В архиве",
     BLACKLISTED: "В ЧС"
@@ -85,22 +89,6 @@ const DashboardPage = () => {
     MULTI_CHANNEL_DONE: "Мультиканал",
     CALL_OR_PUSH_RECOMMENDED: "Звонок/Пуш",
     CLOSED: "Закрыт"
-  };
-
-  // Group alerts by type
-  const groupedAlerts = (data?.alerts || []).reduce((acc, alert) => {
-    const type = alert.alert_type || "other";
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(alert);
-    return acc;
-  }, {});
-
-  const alertTypeLabels = {
-    review_timeout: { label: "Вечный REVIEW", icon: Clock, color: "text-yellow-400" },
-    inactivity: { label: "Без активности", icon: Activity, color: "text-orange-400" },
-    quality_warning: { label: "Низкое качество", icon: AlertTriangle, color: "text-red-400" },
-    abuse_detected: { label: "Злоупотребление", icon: ShieldAlert, color: "text-red-500" },
-    other: { label: "Другое", icon: Bell, color: "text-[#94A3B8]" }
   };
 
   return (
@@ -118,6 +106,7 @@ const DashboardPage = () => {
         <KPICard
           icon={Package}
           label="Всего брендов"
+          tooltip={glossary["Всего брендов"]}
           value={data?.total_brands || 0}
           color="text-[#FF9900]"
           testId="total-brands"
