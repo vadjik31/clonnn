@@ -153,6 +153,18 @@ const BrandDetailPage = () => {
         {/* Actions */}
         {canAct && (
           <div className="flex flex-wrap gap-2">
+            {/* Undo Button */}
+            {undoInfo?.can_undo && (
+              <Button
+                onClick={handleUndo}
+                className="btn-secondary text-purple-400 border-purple-800"
+                data-testid="undo-btn"
+                title={`Отменить: осталось ${undoInfo.minutes_remaining} мин`}
+              >
+                <Undo2 size={16} className="mr-2" />
+                Отменить ({Math.round(undoInfo.minutes_remaining)}м)
+              </Button>
+            )}
             <Button
               onClick={() => setStageModal(true)}
               className="btn-secondary"
@@ -168,6 +180,14 @@ const BrandDetailPage = () => {
             >
               <Reply size={16} className="mr-2" />
               Исход
+            </Button>
+            <Button
+              onClick={() => setNoResponseModal(true)}
+              className="btn-secondary text-gray-400"
+              data-testid="no-response-btn"
+            >
+              <Ban size={16} className="mr-2" />
+              Нет ответа
             </Button>
             <Button
               onClick={() => setOnHoldModal(true)}
