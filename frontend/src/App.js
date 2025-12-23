@@ -232,7 +232,7 @@ function AppContent() {
           {/* Default redirect */}
           <Route path="/" element={
             <ProtectedRoute>
-              {user?.role === "admin" ? (
+              {user?.role === "admin" || user?.role === "super_admin" ? (
                 <Navigate to="/dashboard" replace />
               ) : (
                 <Navigate to="/my-brands" replace />
