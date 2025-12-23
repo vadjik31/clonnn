@@ -230,6 +230,13 @@ const BrandsPage = () => {
 
     try {
       switch (action) {
+        case "release":
+          await api.post("/admin/brands/bulk-release", {
+            brand_ids: brandIds,
+            reason: params.reason || "Массовый сброс в пул"
+          });
+          toast.success(`${brandIds.length} брендов возвращено в пул`);
+          break;
         case "archive":
           await api.post("/super-admin/brands/bulk-archive", {
             brand_ids: brandIds,
