@@ -915,19 +915,33 @@ async def get_brands(
     inactive_hours: Optional[int] = None,
     low_quality: Optional[bool] = None,
     search: Optional[str] = None,
+    include_archived: bool = Query(False, description="Включить архивные"),
+    include_blacklisted: bool = Query(False, description="Включить ЧС"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
     user: dict = Depends(get_current_user)
 ):
     query = {}
     
+    # По умолчанию исключаем архивные и ЧС
+    excluded_statuses = []
+    if not include_archived:
+        excluded_statuses.append(BrandStatus.ARCHIVED)
+    if not include_blacklisted:
+        excluded_statuses.append(BrandStatus.BLACKLISTED)
+    
     if user["role"] == UserRole.SEARCHER:
         query["assigned_to_user_id"] = user["id"]
+        # Сёрчеры никогда не видят архивные/ЧС
+        excluded_statuses = [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]
     elif assigned_to:
         query["assigned_to_user_id"] = assigned_to
     
     if status:
         query["status"] = status
+    elif excluded_statuses:
+        query["status"] = {"$nin": excluded_statuses}
+    
     if pipeline_stage:
         query["pipeline_stage"] = pipeline_stage
     if search:
@@ -938,7 +952,7 @@ async def get_brands(
         query["next_action_at"] = {"$lt": now, "$ne": None}
         query["status"] = {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
                                     BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED, 
-                                    BrandStatus.OUTCOME_REPLIED]}
+                                    BrandStatus.OUTCOME_REPLIED, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}
     
     if inactive_hours:
         cutoff = (datetime.now(timezone.utc) - timedelta(hours=inactive_hours)).isoformat()
@@ -946,7 +960,7 @@ async def get_brands(
             {"last_action_at": {"$lt": cutoff}},
             {"last_action_at": None}
         ]
-        query["status"] = {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD]}
+        query["status"] = {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}
     
     if low_quality:
         query["health_score"] = {"$lt": 30}
