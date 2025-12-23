@@ -373,9 +373,23 @@ const BrandsPage = () => {
       {/* Bulk Actions Bar (super_admin only) */}
       {isSuperAdmin && selectedBrands.size > 0 && (
         <div className="bg-[#FF9900]/10 border border-[#FF9900]/30 rounded-[2px] p-4 flex items-center justify-between">
-          <span className="text-[#FF9900] font-medium">
-            Выбрано: {selectedBrands.size} брендов
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-[#FF9900] font-medium">
+              Выбрано: {selectedBrands.size} брендов
+              {selectAllPages && <span className="text-xs ml-1">(все страницы)</span>}
+            </span>
+            {!selectAllPages && pages > 1 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSelectAllPages}
+                className="border-[#FF9900]/50 text-[#FF9900] hover:bg-[#FF9900]/10"
+              >
+                <CheckCircle size={14} className="mr-1" />
+                Выбрать все {total} брендов
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -404,7 +418,7 @@ const BrandsPage = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => setSelectedBrands(new Set())}
+              onClick={() => { setSelectedBrands(new Set()); setSelectAllPages(false); }}
               className="border-[#2A2F3A] text-[#94A3B8]"
             >
               Сбросить
