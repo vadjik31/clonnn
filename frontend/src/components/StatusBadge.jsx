@@ -9,7 +9,14 @@ const StatusBadge = ({ status }) => {
     OUTCOME_APPROVED: { label: "Одобрен", color: "bg-green-900/20 text-green-400 border-green-800" },
     OUTCOME_DECLINED: { label: "Отклонён", color: "bg-red-900/20 text-red-400 border-red-800" },
     OUTCOME_REPLIED: { label: "Ответил", color: "bg-emerald-900/20 text-emerald-400 border-emerald-800" },
+    // Подстатусы "Ответил"
+    REPLIED_NEED_ACTION: { label: "Ждёт действия", color: "bg-amber-900/20 text-amber-400 border-amber-800" },
+    REPLIED_WAITING: { label: "Ожидаем от них", color: "bg-sky-900/20 text-sky-400 border-sky-800" },
+    REPLIED_APPROVED: { label: "Одобрили", color: "bg-green-900/20 text-green-400 border-green-800" },
+    REPLIED_DECLINED: { label: "Отказали", color: "bg-red-900/20 text-red-400 border-red-800" },
     PROBLEMATIC: { label: "Проблемный", color: "bg-red-900/20 text-red-400 border-red-800" },
+    ARCHIVED: { label: "В архиве", color: "bg-slate-800 text-slate-400 border-slate-700" },
+    BLACKLISTED: { label: "В ЧС", color: "bg-black text-gray-500 border-gray-800" },
   };
 
   const config = statusConfig[status] || { label: status, color: "bg-gray-800 text-gray-400 border-gray-700" };
