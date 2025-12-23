@@ -4293,6 +4293,128 @@ async def track_batch(
     
     return tracking_result
 
+# Получить статусы товаров
+@api_router.get("/bash/item-statuses")
+async def get_item_statuses(admin: dict = Depends(require_admin)):
+    """Получить список доступных статусов товаров"""
+    return {"statuses": ITEM_STATUSES}
+
+# Получить перевозчиков для автокомплита
+@api_router.get("/bash/carriers")
+async def search_carriers(
+    q: str = Query("", description="Поисковый запрос"),
+    admin: dict = Depends(require_admin)
+):
+    """Поиск перевозчиков по названию"""
+    if not q:
+        return {"carriers": POPULAR_CARRIERS}
+    
+    # Поиск по названию
+    q_lower = q.lower()
+    matched = [c for c in POPULAR_CARRIERS if q_lower in c["name"].lower()]
+    return {"carriers": matched[:20]}
+
+# Массовое удаление товаров по статусу
+@api_router.delete("/bash/{batch_id}/items-by-status")
+async def delete_items_by_status(
+    batch_id: str,
+    statuses: List[str] = Query(..., description="Статусы для удаления"),
+    admin: dict = Depends(require_admin)
+):
+    """Удалить товары с указанными статусами"""
+    batch = await db.batches.find_one({"id": batch_id})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    # Удаляем товары с указанными статусами
+    result = await db.batch_items.delete_many({
+        "batch_id": batch_id,
+        "status": {"$in": statuses}
+    })
+    
+    # Обновляем счётчик в партии
+    remaining = await db.batch_items.count_documents({"batch_id": batch_id})
+    await db.batches.update_one(
+        {"id": batch_id},
+        {"$set": {"items_count": remaining}}
+    )
+    
+    return {
+        "status": "success",
+        "deleted_count": result.deleted_count,
+        "remaining_count": remaining
+    }
+
+# Импорт SKU + количество
+@api_router.post("/bash/{batch_id}/import-sku-quantity")
+async def import_sku_quantity(
+    batch_id: str,
+    data: SkuQuantityImport,
+    admin: dict = Depends(require_admin)
+):
+    """Импорт количества по артикулу поставщика"""
+    batch = await db.batches.find_one({"id": batch_id})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    updated_count = 0
+    not_found = []
+    
+    for item_data in data.items:
+        supplier_sku = item_data.get("supplier_sku", "").strip()
+        quantity = item_data.get("quantity", 0)
+        
+        if not supplier_sku:
+            continue
+        
+        # Ищем товар по supplier_sku
+        existing = await db.batch_items.find_one({
+            "batch_id": batch_id,
+            "supplier_sku": supplier_sku
+        })
+        
+        if existing:
+            # Обновляем количество и пересчитываем прибыль
+            new_item = {**existing, "quantity": quantity}
+            calcs = calculate_profit_roi(new_item)
+            
+            await db.batch_items.update_one(
+                {"id": existing["id"]},
+                {"$set": {"quantity": quantity, **calcs}}
+            )
+            updated_count += 1
+        else:
+            not_found.append(supplier_sku)
+    
+    return {
+        "status": "success",
+        "updated_count": updated_count,
+        "not_found": not_found
+    }
+
+# Массовое обновление статуса товаров
+@api_router.put("/bash/{batch_id}/items-status")
+async def bulk_update_items_status(
+    batch_id: str,
+    item_ids: List[str] = Body(...),
+    status: str = Body(...),
+    admin: dict = Depends(require_admin)
+):
+    """Массовое обновление статуса товаров"""
+    batch = await db.batches.find_one({"id": batch_id})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    result = await db.batch_items.update_many(
+        {"batch_id": batch_id, "id": {"$in": item_ids}},
+        {"$set": {"status": status}}
+    )
+    
+    return {
+        "status": "success",
+        "updated_count": result.modified_count
+    }
+
 @api_router.get("/")
 async def root():
     return {"message": "PROCTO 13 Brand Management API v5.0 - Full Featured Edition"}
