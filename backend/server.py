@@ -3163,19 +3163,45 @@ async def get_imports_list(admin: dict = Depends(require_super_admin)):
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
-    # Добавляем количество брендов для каждого импорта
-    for imp in imports:
-        brands_count = await db.brands.count_documents({
-            "import_id": imp["id"],
-            "status": {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}
-        })
-        imp["active_brands_count"] = brands_count
+    if not imports:
+        return {"imports": []}
+    
+    # Получаем все import_id одним списком
+    import_ids = [imp["id"] for imp in imports]
+    
+    # Агрегация для подсчёта брендов по импортам за один запрос
+    pipeline = [
+        {"$match": {"import_id": {"$in": import_ids}}},
+        {"$group": {
+            "_id": {
+                "import_id": "$import_id",
+                "is_archived": {"$eq": ["$status", BrandStatus.ARCHIVED]},
+                "is_blacklisted": {"$eq": ["$status", BrandStatus.BLACKLISTED]}
+            },
+            "count": {"$sum": 1}
+        }}
+    ]
+    
+    counts_cursor = db.brands.aggregate(pipeline)
+    counts = await counts_cursor.to_list(1000)
+    
+    # Собираем статистику в словарь
+    stats = {}
+    for c in counts:
+        imp_id = c["_id"]["import_id"]
+        if imp_id not in stats:
+            stats[imp_id] = {"active": 0, "archived": 0}
         
-        archived_count = await db.brands.count_documents({
-            "import_id": imp["id"],
-            "status": BrandStatus.ARCHIVED
-        })
-        imp["archived_brands_count"] = archived_count
+        if c["_id"]["is_archived"]:
+            stats[imp_id]["archived"] = c["count"]
+        elif not c["_id"]["is_blacklisted"]:
+            stats[imp_id]["active"] += c["count"]
+    
+    # Добавляем статистику к импортам
+    for imp in imports:
+        imp_stats = stats.get(imp["id"], {"active": 0, "archived": 0})
+        imp["active_brands_count"] = imp_stats["active"]
+        imp["archived_brands_count"] = imp_stats["archived"]
     
     return {"imports": imports}
 
