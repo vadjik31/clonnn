@@ -371,10 +371,10 @@ const BrandDetailPage = () => {
           </div>
           
           <div className="space-y-3 max-h-[200px] overflow-y-auto">
-            {!brand.contacts || brand.contacts.length === 0 ? (
+            {!contacts || contacts.length === 0 ? (
               <p className="text-[#94A3B8] text-center py-4">Нет контактов</p>
             ) : (
-              brand.contacts.map((contact) => (
+              contacts.map((contact) => (
                 <div 
                   key={contact.id} 
                   className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px]"
