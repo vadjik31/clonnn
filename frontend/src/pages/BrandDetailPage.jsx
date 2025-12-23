@@ -665,23 +665,33 @@ const OutcomeModal = ({ open, onClose, brandId, onSuccess }) => {
 };
 
 const ReturnModal = ({ open, onClose, brandId, onSuccess }) => {
-  const [reason, setReason] = useState("");
+  const [reasonCode, setReasonCode] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const reasons = [
+    { value: "invalid_brand", label: "Не является брендом" },
+    { value: "duplicate", label: "Дубликат другого бренда" },
+    { value: "wrong_category", label: "Не подходит по категории" },
+    { value: "no_contacts", label: "Невозможно найти контакты" },
+    { value: "site_down", label: "Сайт недоступен" },
+    { value: "language_barrier", label: "Языковой барьер" },
+    { value: "other", label: "Другая причина" },
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!reason.trim() || !note.trim()) {
+    if (!reasonCode || !note.trim()) {
       toast.error("Заполните все поля");
       return;
     }
     setLoading(true);
     try {
-      await api.post(`/brands/${brandId}/return`, { reason, note_text: note });
+      await api.post(`/brands/${brandId}/return`, { reason_code: reasonCode, note_text: note });
       toast.success("Бренд возвращён в пул");
       onSuccess();
       onClose();
-      setReason("");
+      setReasonCode("");
       setNote("");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ошибка");
@@ -698,15 +708,17 @@ const ReturnModal = ({ open, onClose, brandId, onSuccess }) => {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-[#94A3B8]">Причина</Label>
-            <Input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="bg-[#0F1115] border-[#2A2F3A]"
-              placeholder="Краткая причина..."
-              required
-              data-testid="return-reason"
-            />
+            <Label className="text-[#94A3B8]">Причина *</Label>
+            <Select value={reasonCode} onValueChange={setReasonCode}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]" data-testid="return-reason">
+                <SelectValue placeholder="Выберите причину" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                {reasons.map(r => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
