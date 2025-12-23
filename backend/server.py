@@ -4019,13 +4019,21 @@ async def search_carriers(
     q: str = Query("", description="Поисковый запрос"),
     admin: dict = Depends(require_admin)
 ):
-    """Поиск перевозчиков по названию"""
+    """Поиск перевозчиков по названию или коду"""
+    # Use ALL_CARRIERS if loaded from CSV, otherwise fallback to POPULAR_CARRIERS
+    carriers_list = ALL_CARRIERS if ALL_CARRIERS else POPULAR_CARRIERS
+    
     if not q:
-        return {"carriers": POPULAR_CARRIERS}
+        # Return popular carriers when no search query
+        return {"carriers": POPULAR_CARRIERS[:20]}
     
     q_lower = q.lower()
-    matched = [c for c in POPULAR_CARRIERS if q_lower in c["name"].lower()]
-    return {"carriers": matched[:20]}
+    # Search by name or key (code)
+    matched = [
+        c for c in carriers_list 
+        if q_lower in c["name"].lower() or q_lower in c["key"].lower()
+    ]
+    return {"carriers": matched[:30]}
 
 @api_router.get("/bash")
 async def get_batches(
