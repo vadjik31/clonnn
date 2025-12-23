@@ -553,6 +553,19 @@ const InfoRow = ({ icon: Icon, label, value, valueColor = "text-[#E6E6E6]" }) =>
   </div>
 );
 
+const ContactIcon = ({ type }) => {
+  const iconMap = {
+    email: <Mail size={14} className="text-blue-400" />,
+    phone: <Phone size={14} className="text-green-400" />,
+    linkedin: <span className="text-blue-500 text-xs font-bold">in</span>,
+    instagram: <span className="text-pink-400 text-xs">IG</span>,
+    facebook: <span className="text-blue-600 text-xs font-bold">f</span>,
+    website_form: <Globe size={14} className="text-[#FF9900]" />,
+    other: <MessageSquare size={14} className="text-[#94A3B8]" />,
+  };
+  return iconMap[type] || iconMap.other;
+};
+
 const StageBadge = ({ stage }) => {
   const stageConfig = {
     REVIEW: { label: "Рассмотрение", color: "bg-gray-800 text-gray-400 border-gray-700" },
