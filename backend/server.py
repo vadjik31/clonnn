@@ -4318,20 +4318,43 @@ async def track_shipment(
             # 2. Получаем информацию о треке
             info_payload = [{"number": tracking_number}]
             info_resp = await client.post(TRACK17_INFO_URL, json=info_payload, headers=headers)
-            )
             
-            if track_resp.status_code == 200:
-                data = track_resp.json()
-                return {
+            if info_resp.status_code == 200:
+                data = info_resp.json()
+                
+                # Парсим ответ
+                result = {
                     "tracking_number": tracking_number,
                     "status": "success",
-                    "data": data
+                    "carrier": "",
+                    "tracking_status": "Нет данных",
+                    "last_event": "",
+                    "last_time": "",
+                    "raw_data": data
                 }
+                
+                # Извлекаем информацию из accepted
+                accepted = data.get("data", {}).get("accepted", [])
+                if accepted:
+                    item = accepted[0]
+                    result["carrier"] = extract_carrier_from_response(item)
+                    result["tracking_status"] = extract_status_from_response(item)
+                    event = extract_latest_event(item)
+                    result["last_event"] = event["description"]
+                    result["last_time"] = event["time"]
+                
+                # Проверяем rejected
+                rejected = data.get("data", {}).get("rejected", [])
+                if rejected and not accepted:
+                    error_msg = rejected[0].get("error", {}).get("message", "Ошибка")
+                    result["tracking_status"] = error_msg
+                
+                return result
             else:
                 return {
                     "tracking_number": tracking_number,
                     "status": "error",
-                    "error": f"API error: {track_resp.status_code}"
+                    "error": f"API error: {info_resp.status_code}"
                 }
                 
     except Exception as e:
