@@ -15,7 +15,9 @@ import {
   AlertTriangle,
   PauseCircle,
   RotateCcw,
-  Plus
+  Plus,
+  Undo2,
+  Ban
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -43,6 +45,7 @@ const BrandDetailPage = () => {
   const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [undoInfo, setUndoInfo] = useState(null);
 
   // Modal states
   const [stageModal, setStageModal] = useState(false);
