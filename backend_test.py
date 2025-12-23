@@ -338,18 +338,232 @@ class PROCTO13APITester:
         if not success:
             return False
         
-        # Test stage completion
+        # Test stage completion with validation
         success, response = self.run_test(
-            "Complete Stage",
+            "Complete Stage (Valid Transition)",
             "POST",
             f"brands/{self.test_brand_id}/stage",
             200,
             data={
                 "stage": "EMAIL_1_DONE",
-                "note_text": "Completed first email stage in testing"
+                "note_text": "Completed first email stage in testing",
+                "channel": "email"
             },
             token=self.searcher_token
         )
+        
+        return success
+
+    def test_security_fixes(self) -> bool:
+        """Test specific security fixes mentioned in the request"""
+        self.log("=== TESTING SECURITY FIXES ===")
+        
+        if not self.searcher_token or not self.test_brand_id:
+            self.log("❌ Missing searcher token or brand ID")
+            return False
+        
+        # Test 1: Return reasons reference (закрывает дыру #33)
+        success, response = self.run_test(
+            "Get Return Reasons Reference",
+            "GET",
+            "references/return-reasons",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Validate return reasons structure
+        expected_reasons = ["invalid_brand", "duplicate", "wrong_category", "no_contacts", "site_down", "language_barrier", "other"]
+        for reason in expected_reasons:
+            if reason not in response:
+                self.log(f"❌ Missing return reason: {reason}")
+                return False
+        
+        # Test 2: Stage transitions matrix (закрывает дыру #17)
+        success, response = self.run_test(
+            "Get Stage Transitions Matrix",
+            "GET",
+            "references/stage-transitions",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 3: Invalid stage transition (should fail)
+        success, response = self.run_test(
+            "Invalid Stage Transition",
+            "POST",
+            f"brands/{self.test_brand_id}/stage",
+            400,  # Should fail with 400
+            data={
+                "stage": "CLOSED",  # Invalid transition from REVIEW
+                "note_text": "Trying invalid transition"
+            },
+            token=self.searcher_token
+        )
+        
+        if not success:
+            self.log("❌ Invalid stage transition was allowed (security hole)")
+            return False
+        
+        # Test 4: Return brand with reason code (закрывает дыру #33)
+        success, response = self.run_test(
+            "Return Brand with Reason Code",
+            "POST",
+            f"brands/{self.test_brand_id}/return",
+            200,
+            data={
+                "reason_code": "invalid_brand",
+                "note_text": "Testing return with valid reason code"
+            },
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 5: Outcome with required fields (закрывает дыры #12, #45)
+        # First need to claim a new brand and complete some stages
+        claim_success, claim_response = self.run_test(
+            "Claim New Brand for Outcome Test",
+            "POST",
+            "brands/claim",
+            200,
+            token=self.searcher_token
+        )
+        
+        if claim_success:
+            # Get the claimed brand
+            brands_success, brands_response = self.run_test(
+                "Get My Brands for Outcome Test",
+                "GET",
+                "brands",
+                200,
+                token=self.searcher_token
+            )
+            
+            if brands_success and brands_response.get('brands'):
+                outcome_brand_id = brands_response['brands'][0]['id']
+                
+                # Try outcome without required fields (should fail)
+                success, response = self.run_test(
+                    "Outcome Without Required Fields",
+                    "POST",
+                    f"brands/{outcome_brand_id}/outcome",
+                    400,  # Should fail
+                    data={
+                        "outcome": "OUTCOME_APPROVED",
+                        "note_text": "Testing outcome without required fields"
+                        # Missing channel and contact_date
+                    },
+                    token=self.searcher_token
+                )
+                
+                # Try outcome with required fields (should succeed)
+                success, response = self.run_test(
+                    "Outcome With Required Fields",
+                    "POST",
+                    f"brands/{outcome_brand_id}/outcome",
+                    200,
+                    data={
+                        "outcome": "OUTCOME_APPROVED",
+                        "note_text": "Testing outcome with required fields",
+                        "channel": "email",
+                        "contact_date": "2024-01-15"
+                    },
+                    token=self.searcher_token
+                )
+                
+                if not success:
+                    return False
+        
+        return True
+
+    def test_references_endpoints(self) -> bool:
+        """Test all reference endpoints"""
+        self.log("=== TESTING REFERENCE ENDPOINTS ===")
+        
+        # Test outcome channels reference
+        success, response = self.run_test(
+            "Get Outcome Channels Reference",
+            "GET",
+            "references/outcome-channels",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test problematic reasons reference
+        success, response = self.run_test(
+            "Get Problematic Reasons Reference",
+            "GET",
+            "references/problematic-reasons",
+            200,
+            token=self.searcher_token
+        )
+        
+        return success
+
+    def test_dashboard_alerts(self) -> bool:
+        """Test dashboard with alerts and extended statistics"""
+        self.log("=== TESTING DASHBOARD ALERTS ===")
+        
+        # Test dashboard includes alerts
+        success, response = self.run_test(
+            "Dashboard with Alerts",
+            "GET",
+            "dashboard",
+            200,
+            token=self.admin_token
+        )
+        
+        if success:
+            # Check for alerts field
+            if 'alerts' not in response:
+                self.log("❌ Dashboard missing alerts field")
+                return False
+            
+            # Check for searchers_activity with extended stats
+            if 'searchers_activity' not in response:
+                self.log("❌ Dashboard missing searchers_activity field")
+                return False
+            
+            self.log("✅ Dashboard includes alerts and extended statistics")
+        
+        return success
+
+    def test_brands_health_score(self) -> bool:
+        """Test brands include health_score and quality_warnings"""
+        self.log("=== TESTING BRANDS HEALTH SCORE ===")
+        
+        # Test brands list includes health_score
+        success, response = self.run_test(
+            "Brands with Health Score",
+            "GET",
+            "brands",
+            200,
+            token=self.admin_token
+        )
+        
+        if success:
+            brands = response.get('brands', [])
+            if brands:
+                brand = brands[0]
+                if 'health_score' not in brand:
+                    self.log("❌ Brand missing health_score field")
+                    return False
+                if 'quality_warnings' not in brand:
+                    self.log("❌ Brand missing quality_warnings field")
+                    return False
+                
+                self.log(f"✅ Brand health_score: {brand['health_score']}")
+                self.log(f"✅ Brand quality_warnings: {brand['quality_warnings']}")
         
         return success
 
