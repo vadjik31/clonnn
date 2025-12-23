@@ -4048,13 +4048,29 @@ async def get_batch(
     total_profit = sum(i.get("total_profit", 0) or 0 for i in items)
     total_revenue = sum((i.get("buy_box_price", 0) or 0) * (i.get("quantity", 1) or 1) for i in items)
     
+    # Правильный расчёт среднего ROI - только для товаров с ценой
+    items_with_cost = [i for i in items if (i.get("cost_price", 0) or 0) > 0]
+    avg_roi = 0.0
+    if items_with_cost:
+        total_investment = sum(
+            ((i.get("cost_price", 0) or 0) + (i.get("shipping_cost", 0) or 0) + (i.get("extra_costs", 0) or 0)) * (i.get("quantity", 1) or 1)
+            for i in items_with_cost
+        )
+        if total_investment > 0:
+            avg_roi = (total_profit / total_investment) * 100
+    
+    # Собираем уникальные статусы для этой партии
+    unique_statuses = list(set([i.get("status", "") for i in items if i.get("status")]))
+    
     batch["items"] = items
     batch["calculated_stats"] = {
         "total_cost": round(total_cost, 2),
         "total_profit": round(total_profit, 2),
         "total_revenue": round(total_revenue, 2),
-        "avg_roi": round(sum(i.get("roi", 0) for i in items if i.get("cost_price", 0) > 0) / max(len([i for i in items if i.get("cost_price", 0) > 0]), 1), 2)
+        "avg_roi": round(avg_roi, 1),
+        "items_with_cost": len(items_with_cost)
     }
+    batch["unique_statuses"] = unique_statuses
     
     return batch
 
