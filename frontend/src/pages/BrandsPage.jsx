@@ -484,6 +484,17 @@ const BrandsPage = () => {
         onSubmit={handleReassign}
         users={users}
       />
+
+      {/* Bulk Action Modal (super_admin) */}
+      {bulkModal.open && (
+        <BulkActionModal
+          action={bulkModal.action}
+          count={selectedBrands.size}
+          users={users}
+          onClose={() => setBulkModal({ open: false, action: null })}
+          onSubmit={(params) => handleBulkAction(bulkModal.action, params)}
+        />
+      )}
     </div>
   );
 };
