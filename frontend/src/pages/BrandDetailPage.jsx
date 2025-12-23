@@ -474,6 +474,18 @@ const BrandDetailPage = () => {
         onClose={() => setNoResponseModal(false)}
         onSubmit={handleNoResponse}
       />
+      <ContactModal
+        open={contactModal}
+        onClose={() => setContactModal(false)}
+        brandId={brandId}
+        onSuccess={fetchBrand}
+      />
+      <RepliedModal
+        open={repliedModal}
+        onClose={() => setRepliedModal(false)}
+        brandId={brandId}
+        onSuccess={fetchBrand}
+      />
     </div>
   );
 };
