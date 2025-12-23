@@ -617,7 +617,7 @@ const BashPage = () => {
           </SelectTrigger>
           <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
             <SelectItem value="all">Все ({items.length})</SelectItem>
-            <SelectItem value="">Без статуса ({statusCounts[""] || 0})</SelectItem>
+            <SelectItem value="__empty__">Без статуса ({statusCounts[""] || 0})</SelectItem>
             {uniqueStatuses.map(s => (
               <SelectItem key={s} value={s}>{s} ({statusCounts[s] || 0})</SelectItem>
             ))}
