@@ -176,12 +176,28 @@ const BrandDetailPage = () => {
               Этап выполнен
             </Button>
             <Button
+              onClick={() => setRepliedModal(true)}
+              className="btn-secondary text-blue-400"
+              data-testid="replied-btn"
+            >
+              <Reply size={16} className="mr-2" />
+              Ответил
+            </Button>
+            <Button
               onClick={() => setOutcomeModal(true)}
               className="btn-secondary"
               data-testid="outcome-btn"
             >
-              <Reply size={16} className="mr-2" />
-              Исход
+              <CheckCircle size={16} className="mr-2" />
+              Финальный исход
+            </Button>
+            <Button
+              onClick={() => setContactModal(true)}
+              className="btn-secondary text-green-400"
+              data-testid="contact-btn"
+            >
+              <Users size={16} className="mr-2" />
+              + Контакт
             </Button>
             <Button
               onClick={() => setNoResponseModal(true)}
