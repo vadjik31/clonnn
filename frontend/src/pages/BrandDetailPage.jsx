@@ -119,7 +119,7 @@ const BrandDetailPage = () => {
 
   if (!data) return null;
 
-  const { brand, items, notes, events } = data;
+  const { brand, items, notes, events, contacts = [] } = data;
   const isAssigned = brand.assigned_to_user_id === user?.id || user?.role === "admin" || user?.role === "super_admin";
   const canAct = brand.status !== "IN_POOL" && isAssigned;
 
