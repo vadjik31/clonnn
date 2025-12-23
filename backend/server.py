@@ -175,6 +175,7 @@ class EventType:
     ADMIN_BULK_ARCHIVE = "admin_bulk_archive"  # Массовое архивирование
     ADMIN_BULK_BLACKLIST = "admin_bulk_blacklist"  # Массовое добавление в ЧС
     ADMIN_BULK_ASSIGN = "admin_bulk_assign"  # Массовое назначение
+    ADMIN_BULK_DELETE = "admin_bulk_delete"  # Массовое удаление
     IMPORT_DELETED = "import_deleted"  # Удаление импорта
     HEARTBEAT = "heartbeat"
     HEARTBEAT_AGGREGATED = "heartbeat_aggregated"  # Закрывает дыру #22
@@ -183,6 +184,45 @@ class EventType:
     EXPORT_CREATED = "export_created"
     SENSITIVE_VIEW = "sensitive_view"
     OUTCOME_SET = "outcome_set"
+    INFO_UPDATED = "info_updated"
+    CONTACT_ADDED = "contact_added"
+    NOTE_ADDED = "note_added"
+
+# Русские названия событий для UI
+EVENT_LABELS_RU = {
+    "user_login": "Вошёл в систему",
+    "user_logout": "Вышел из системы",
+    "user_check_in": "Отметился",
+    "brands_assigned": "Получил бренды",
+    "status_changed": "Изменил статус",
+    "stage_completed": "Завершил этап",
+    "returned_to_pool": "Вернул в пул",
+    "marked_problematic": "Пометил проблемным",
+    "marked_on_hold": "Поставил на паузу",
+    "marked_no_response": "Нет ответа",
+    "marked_archived": "Архивировал",
+    "marked_blacklisted": "В чёрный список",
+    "restored_from_archive": "Восстановил из архива",
+    "removed_from_blacklist": "Убрал из ЧС",
+    "reassigned": "Переназначен",
+    "admin_released": "Админ освободил",
+    "admin_bulk_release": "Массовое освобождение",
+    "admin_bulk_archive": "Массовая архивация",
+    "admin_bulk_blacklist": "Массовый ЧС",
+    "admin_bulk_assign": "Массовое назначение",
+    "admin_bulk_delete": "Массовое удаление",
+    "import_deleted": "Удалён импорт",
+    "heartbeat": "Активность",
+    "heartbeat_aggregated": "Сводка активности",
+    "import_completed": "Импорт завершён",
+    "import_started": "Импорт начат",
+    "export_created": "Экспорт создан",
+    "sensitive_view": "Просмотр данных",
+    "outcome_set": "Установил исход",
+    "info_updated": "Обновил информацию",
+    "contact_added": "Добавил контакт",
+    "note_added": "Добавил заметку"
+}
     INFO_UPDATED = "info_updated"
     UNDO_ACTION = "undo_action"
     REVIEW_TIMEOUT = "review_timeout"  # Закрывает дыру #10
