@@ -56,6 +56,8 @@ const BrandDetailPage = () => {
   const [noteModal, setNoteModal] = useState(false);
   const [infoModal, setInfoModal] = useState(false);
   const [noResponseModal, setNoResponseModal] = useState(false);
+  const [contactModal, setContactModal] = useState(false);
+  const [repliedModal, setRepliedModal] = useState(false);
 
   useEffect(() => {
     fetchBrand();
