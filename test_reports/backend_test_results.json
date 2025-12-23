@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-12-23T11:28:16.170166",
+  "base_url": "https://brandsearch-1.preview.emergentagent.com",
+  "tests": {
+    "init_admin": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:16.226097"
+    },
+    "admin_login": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:16.277297"
+    },
+    "admin_dashboard": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:16.313831"
+    },
+    "user_management": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:16.389575"
+    },
+    "excel_import": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:16.820361"
+    },
+    "brand_operations": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:16.895670"
+    },
+    "searcher_claiming": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:16.968184"
+    },
+    "brand_workflow": {
+      "passed": true,
+      "timestamp": "2025-12-23T11:28:17.065463"
+    },
+    "authentication_security": {
+      "passed": false,
+      "timestamp": "2025-12-23T11:28:17.133066"
+    }
+  },
+  "summary": {
+    "total_tests": 14,
+    "passed_tests": 13,
+    "failed_tests": 1,
+    "success_rate": 92.85714285714286
+  },
+  "failed_tests": [
+    {
+      "test": "Unauthorized Access",
+      "expected": 401,
+      "actual": 403,
+      "response": "{\"detail\":\"Not authenticated\"}"
+    }
+  ]
+}
