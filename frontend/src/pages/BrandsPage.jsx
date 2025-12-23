@@ -114,6 +114,67 @@ const BrandsPage = () => {
     }
   };
 
+  // Bulk actions (super_admin only)
+  const toggleSelectBrand = (brandId) => {
+    const newSelected = new Set(selectedBrands);
+    if (newSelected.has(brandId)) {
+      newSelected.delete(brandId);
+    } else {
+      newSelected.add(brandId);
+    }
+    setSelectedBrands(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedBrands.size === brands.length) {
+      setSelectedBrands(new Set());
+    } else {
+      setSelectedBrands(new Set(brands.map(b => b.id)));
+    }
+  };
+
+  const handleBulkAction = async (action, params) => {
+    const brandIds = Array.from(selectedBrands);
+    if (brandIds.length === 0) {
+      toast.error("Выберите бренды");
+      return;
+    }
+
+    try {
+      switch (action) {
+        case "archive":
+          await api.post("/super-admin/brands/bulk-archive", {
+            brand_ids: brandIds,
+            reason: params.reason
+          });
+          toast.success(`${brandIds.length} брендов в архив`);
+          break;
+        case "blacklist":
+          await api.post("/super-admin/brands/bulk-blacklist", {
+            brand_ids: brandIds,
+            reason: params.reason
+          });
+          toast.success(`${brandIds.length} брендов в ЧС`);
+          break;
+        case "assign":
+          await api.post("/super-admin/brands/bulk-assign", {
+            brand_ids: brandIds,
+            user_id: params.userId,
+            reason: params.reason
+          });
+          toast.success(`${brandIds.length} брендов назначено`);
+          break;
+      }
+      setBulkModal({ open: false, action: null });
+      setSelectedBrands(new Set());
+      fetchBrands();
+    } catch (error) {
+      toast.error("Ошибка массовой операции");
+    }
+  };
+
+  const isSuperAdmin = user?.role === "super_admin";
+
   const statusOptions = [
     { value: "IN_POOL", label: "В пуле" },
     { value: "ASSIGNED", label: "Назначен" },
