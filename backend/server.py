@@ -3937,8 +3937,8 @@ async def upload_bash_file(
                 "fba_fee": fba_fee,
                 "weight_grams": weight_grams,
                 "shipping_cost": shipping_cost,
-                "cost_price": 0.0,  # пользователь вводит
-                "extra_costs": 0.0,  # пользователь вводит
+                "cost_price": 0.0,
+                "extra_costs": 0.0,
                 "quantity": 1,
                 "profit_per_unit": 0.0,
                 "total_profit": 0.0,
@@ -3947,8 +3947,9 @@ async def upload_bash_file(
                 "monthly_sold": monthly_sold,
                 "bought_past_month": bought_past_month,
                 "category": category,
-                "supplier_link": "",  # ссылка на поставщика
-                "supplier_sku": "",   # SKU у поставщика
+                "supplier_link": "",
+                "supplier_sku": "",
+                "status": "",  # Кастомный статус товара
                 "created_at": now
             }
             
