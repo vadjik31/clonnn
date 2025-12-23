@@ -4599,8 +4599,15 @@ async def create_supplier(
     await db.suppliers.insert_one(supplier_dict)
     
     # Log activity
-    await log_activity(admin.get("id"), admin.get("nickname"), admin.get("role"), 
-                       "create_supplier", f"Создан поставщик: {supplier.name}")
+    await db.user_activities.insert_one({
+        "id": str(uuid4()),
+        "user_id": admin.get("id"),
+        "user_nickname": admin.get("nickname"),
+        "role": admin.get("role"),
+        "action": "create_supplier",
+        "details": f"Создан поставщик: {supplier.name}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
     
     if "_id" in supplier_dict:
         del supplier_dict["_id"]
@@ -4626,8 +4633,15 @@ async def update_supplier(
     await db.suppliers.update_one({"id": supplier_id}, {"$set": update_data})
     
     # Log activity
-    await log_activity(admin.get("id"), admin.get("nickname"), admin.get("role"), 
-                       "update_supplier", f"Обновлён поставщик ID: {supplier_id}")
+    await db.user_activities.insert_one({
+        "id": str(uuid4()),
+        "user_id": admin.get("id"),
+        "user_nickname": admin.get("nickname"),
+        "role": admin.get("role"),
+        "action": "update_supplier",
+        "details": f"Обновлён поставщик ID: {supplier_id}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
     
     updated = await db.suppliers.find_one({"id": supplier_id}, {"_id": 0})
     return updated
@@ -4648,8 +4662,15 @@ async def delete_supplier(
     await db.suppliers.delete_one({"id": supplier_id})
     
     # Log activity
-    await log_activity(admin.get("id"), admin.get("nickname"), admin.get("role"), 
-                       "delete_supplier", f"Удалён поставщик: {existing.get('name')}")
+    await db.user_activities.insert_one({
+        "id": str(uuid4()),
+        "user_id": admin.get("id"),
+        "user_nickname": admin.get("nickname"),
+        "role": admin.get("role"),
+        "action": "delete_supplier",
+        "details": f"Удалён поставщик: {existing.get('name')}",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
     
     return {"status": "success", "message": "Поставщик удалён"}
 
