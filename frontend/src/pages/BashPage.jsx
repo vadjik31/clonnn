@@ -1,28 +1,29 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "../App";
+import { useAuth } from "../App";
 import { toast } from "sonner";
 import { 
   Boxes, 
-  Plus, 
   Upload, 
   Calculator,
   TrendingUp,
   Package,
   DollarSign,
   Percent,
-  Weight,
   Trash2,
-  Eye,
-  Edit,
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
   Search,
   FileSpreadsheet,
-  StickyNote,
   Truck,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  MessageSquare,
+  Link,
+  ChevronDown,
+  ChevronUp,
+  X
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -42,7 +43,56 @@ import {
   SelectValue,
 } from "../components/ui/select";
 
+// Debounce hook для предотвращения лишних запросов
+const useDebounce = (callback, delay) => {
+  const timeoutRef = useRef(null);
+  
+  return useCallback((...args) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  }, [callback, delay]);
+};
+
+// Компонент для редактируемого поля с debounce
+const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "" }) => {
+  const [localValue, setLocalValue] = useState(value || "");
+  const debouncedUpdate = useDebounce(onChange, 500);
+  
+  useEffect(() => {
+    setLocalValue(value || "");
+  }, [value]);
+  
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    
+    if (type === "number") {
+      const numValue = parseFloat(newValue) || 0;
+      debouncedUpdate(numValue);
+    } else {
+      debouncedUpdate(newValue);
+    }
+  };
+  
+  return (
+    <input
+      type={type}
+      step={type === "number" ? "0.01" : undefined}
+      min={type === "number" ? "0" : undefined}
+      value={localValue}
+      onChange={handleChange}
+      className={`px-1 py-0.5 bg-[#0F1115] border border-[#2A2F3A] rounded text-right font-mono text-xs text-[#E6E6E6] focus:border-[#FF9900] focus:outline-none ${className}`}
+      placeholder={placeholder}
+    />
+  );
+};
+
 const BashPage = () => {
+  const { user } = useAuth();
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [batchData, setBatchData] = useState(null);
@@ -54,10 +104,14 @@ const BashPage = () => {
   const [batchName, setBatchName] = useState("");
   const [batchSupplier, setBatchSupplier] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
-  const [editingItem, setEditingItem] = useState(null);
   const [trackingModal, setTrackingModal] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingData, setTrackingData] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [notesModal, setNotesModal] = useState(null); // item or null for batch
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState("");
+  const [expandedItem, setExpandedItem] = useState(null);
   
   // Фильтры и пагинация
   const [search, setSearch] = useState("");
@@ -71,10 +125,10 @@ const BashPage = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedBatch) {
+    if (selectedBatch?.id) {
       fetchBatchData(selectedBatch.id);
     }
-  }, [selectedBatch]);
+  }, [selectedBatch?.id]);
 
   const fetchBatches = async () => {
     try {
@@ -94,6 +148,10 @@ const BashPage = () => {
     try {
       const res = await api.get(`/bash/${batchId}`);
       setBatchData(res.data);
+      // Загружаем трекинг номер
+      if (res.data.tracking_number) {
+        setTrackingNumber(res.data.tracking_number);
+      }
     } catch (error) {
       toast.error("Ошибка загрузки партии");
     }
@@ -121,7 +179,6 @@ const BashPage = () => {
       setBatchName("");
       setBatchSupplier("");
       setSelectedFile(null);
-      // Выбираем новую партию
       setSelectedBatch({ id: res.data.batch_id });
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ошибка загрузки файла");
@@ -130,15 +187,15 @@ const BashPage = () => {
     }
   };
 
-  const handleUpdateItem = useCallback(async (itemId, updates) => {
+  const handleUpdateItem = useCallback(async (itemId, field, value) => {
     try {
-      const res = await api.put(`/bash/item/${itemId}`, updates);
-      // Обновляем локально
+      const res = await api.put(`/bash/item/${itemId}`, { [field]: value });
+      // Обновляем локально без перезагрузки всей страницы
       if (batchData) {
-        setBatchData({
-          ...batchData,
-          items: batchData.items.map(i => i.id === itemId ? res.data : i)
-        });
+        setBatchData(prev => ({
+          ...prev,
+          items: prev.items.map(i => i.id === itemId ? res.data : i)
+        }));
       }
     } catch (error) {
       toast.error("Ошибка сохранения");
@@ -150,9 +207,9 @@ const BashPage = () => {
     try {
       await api.delete(`/bash/${batchId}`);
       toast.success("Партия удалена");
-      setBatches(batches.filter(b => b.id !== batchId));
+      const remaining = batches.filter(b => b.id !== batchId);
+      setBatches(remaining);
       if (selectedBatch?.id === batchId) {
-        const remaining = batches.filter(b => b.id !== batchId);
         setSelectedBatch(remaining[0] || null);
         setBatchData(null);
       }
@@ -161,7 +218,7 @@ const BashPage = () => {
     }
   };
 
-  const handleTrackBatch = async () => {
+  const handleSaveTracking = async () => {
     if (!trackingNumber.trim()) {
       toast.error("Введите трекинг номер");
       return;
@@ -170,16 +227,70 @@ const BashPage = () => {
     try {
       // Сохраняем трекинг номер
       await api.put(`/bash/${selectedBatch.id}`, { tracking_number: trackingNumber });
-      
-      // Получаем статус
-      const res = await api.post(`/bash/${selectedBatch.id}/track`);
-      setTrackingData(res.data);
-      
-      // Обновляем данные партии
+      toast.success("Трекинг номер сохранён");
       fetchBatchData(selectedBatch.id);
     } catch (error) {
-      toast.error("Ошибка отслеживания");
+      toast.error("Ошибка сохранения");
     }
+  };
+
+  const handleTrackShipment = async () => {
+    if (!batchData?.tracking_number) {
+      toast.error("Сначала сохраните трекинг номер");
+      return;
+    }
+    
+    setTrackingLoading(true);
+    try {
+      const res = await api.post(`/bash/${selectedBatch.id}/track`);
+      setTrackingData(res.data);
+    } catch (error) {
+      toast.error("Ошибка отслеживания");
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  const fetchNotes = async (itemId = null) => {
+    try {
+      const url = itemId 
+        ? `/bash/${selectedBatch.id}/notes?item_id=${itemId}`
+        : `/bash/${selectedBatch.id}/notes`;
+      const res = await api.get(url);
+      setNotes(res.data.notes || []);
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) return;
+    
+    try {
+      await api.post(`/bash/${selectedBatch.id}/notes`, {
+        text: newNote,
+        item_id: notesModal?.id || null
+      });
+      toast.success("Заметка добавлена");
+      setNewNote("");
+      fetchNotes(notesModal?.id);
+    } catch (error) {
+      toast.error("Ошибка");
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      await api.delete(`/bash/notes/${noteId}`);
+      setNotes(notes.filter(n => n.id !== noteId));
+    } catch (error) {
+      toast.error("Ошибка удаления");
+    }
+  };
+
+  const openNotesModal = (item = null) => {
+    setNotesModal(item || { batch: true });
+    fetchNotes(item?.id);
   };
 
   // Фильтрация и сортировка
@@ -189,13 +300,13 @@ const BashPage = () => {
       !search || 
       item.asin?.toLowerCase().includes(search.toLowerCase()) ||
       item.title?.toLowerCase().includes(search.toLowerCase()) ||
-      item.brand?.toLowerCase().includes(search.toLowerCase())
+      item.brand?.toLowerCase().includes(search.toLowerCase()) ||
+      item.supplier_sku?.toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
       let aVal = a[sortBy] || 0;
       let bVal = b[sortBy] || 0;
       
-      // Для ROI сортируем только товары с cost_price > 0
       if (sortBy === "roi") {
         if ((a.cost_price || 0) <= 0) aVal = sortOrder === "desc" ? -Infinity : Infinity;
         if ((b.cost_price || 0) <= 0) bVal = sortOrder === "desc" ? -Infinity : Infinity;
@@ -235,61 +346,79 @@ const BashPage = () => {
         </Button>
       </div>
 
-      {/* Batches Tabs */}
+      {/* Batches List */}
       {batches.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
-          {batches.map(batch => (
-            <button
-              key={batch.id}
-              onClick={() => { setSelectedBatch(batch); setPage(1); setBatchData(null); }}
-              className={`px-4 py-2 rounded-[2px] font-mono text-sm transition-colors flex items-center gap-2 ${
-                selectedBatch?.id === batch.id 
-                  ? "bg-[#FF9900] text-black font-bold" 
-                  : "bg-[#13161B] text-[#E6E6E6] hover:bg-[#1A1D24] border border-[#2A2F3A]"
-              }`}
-            >
-              <FileSpreadsheet size={14} />
-              {batch.name}
-              <span className="text-xs opacity-70">({batch.items_count || 0})</span>
-            </button>
-          ))}
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-4">
+          <h3 className="text-sm font-medium text-[#94A3B8] mb-3 uppercase tracking-wider">Выберите партию</h3>
+          <div className="flex gap-3 flex-wrap">
+            {batches.map(batch => (
+              <button
+                key={batch.id}
+                onClick={() => { 
+                  setSelectedBatch(batch); 
+                  setPage(1); 
+                  setBatchData(null);
+                  setTrackingData(null);
+                }}
+                className={`px-4 py-3 rounded-[2px] transition-all flex flex-col items-start min-w-[180px] ${
+                  selectedBatch?.id === batch.id 
+                    ? "bg-[#FF9900] text-black" 
+                    : "bg-[#0F1115] text-[#E6E6E6] hover:bg-[#1A1D24] border border-[#2A2F3A]"
+                }`}
+              >
+                <div className="flex items-center gap-2 font-mono text-sm font-bold">
+                  <FileSpreadsheet size={14} />
+                  {batch.name}
+                </div>
+                <div className={`text-xs mt-1 ${selectedBatch?.id === batch.id ? 'text-black/70' : 'text-[#94A3B8]'}`}>
+                  {batch.items_count || 0} товаров • {batch.supplier || "Без поставщика"}
+                </div>
+                {batch.tracking_number && (
+                  <div className={`text-xs mt-1 flex items-center gap-1 ${selectedBatch?.id === batch.id ? 'text-black/70' : 'text-green-400'}`}>
+                    <Truck size={10} />
+                    {batch.tracking_number}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {selectedBatch && batchData && (
         <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Summary & Tracking */}
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Package size={16} className="text-blue-400" />
-                <span className="text-[#94A3B8] text-sm">Товаров</span>
+                <span className="text-[#94A3B8] text-xs">Товаров</span>
               </div>
-              <p className="text-2xl font-mono font-bold text-[#E6E6E6]">{batchData.items_count}</p>
+              <p className="text-xl font-mono font-bold text-[#E6E6E6]">{batchData.items_count}</p>
             </div>
 
             <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-4">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign size={16} className="text-yellow-400" />
-                <span className="text-[#94A3B8] text-sm">Затраты</span>
+                <span className="text-[#94A3B8] text-xs">Затраты</span>
               </div>
-              <p className="text-2xl font-mono font-bold text-[#E6E6E6]">${stats.total_cost?.toFixed(2) || "0.00"}</p>
+              <p className="text-xl font-mono font-bold text-[#E6E6E6]">${stats.total_cost?.toFixed(2) || "0.00"}</p>
             </div>
 
             <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-4">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp size={16} className="text-blue-400" />
-                <span className="text-[#94A3B8] text-sm">Выручка (потенц.)</span>
+                <span className="text-[#94A3B8] text-xs">Выручка</span>
               </div>
-              <p className="text-2xl font-mono font-bold text-blue-400">${stats.total_revenue?.toFixed(2) || "0.00"}</p>
+              <p className="text-xl font-mono font-bold text-blue-400">${stats.total_revenue?.toFixed(2) || "0.00"}</p>
             </div>
 
             <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Calculator size={16} className="text-green-400" />
-                <span className="text-[#94A3B8] text-sm">Профит (потенц.)</span>
+                <span className="text-[#94A3B8] text-xs">Профит</span>
               </div>
-              <p className={`text-2xl font-mono font-bold ${(stats.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <p className={`text-xl font-mono font-bold ${(stats.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                 ${stats.total_profit?.toFixed(2) || "0.00"}
               </p>
             </div>
@@ -297,11 +426,37 @@ const BashPage = () => {
             <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Percent size={16} className="text-purple-400" />
-                <span className="text-[#94A3B8] text-sm">Средний ROI</span>
+                <span className="text-[#94A3B8] text-xs">Ср. ROI</span>
               </div>
-              <p className={`text-2xl font-mono font-bold ${(stats.avg_roi || 0) >= 30 ? 'text-green-400' : (stats.avg_roi || 0) >= 15 ? 'text-yellow-400' : 'text-[#94A3B8]'}`}>
+              <p className={`text-xl font-mono font-bold ${(stats.avg_roi || 0) >= 30 ? 'text-green-400' : (stats.avg_roi || 0) >= 15 ? 'text-yellow-400' : 'text-[#94A3B8]'}`}>
                 {stats.avg_roi?.toFixed(1) || "0.0"}%
               </p>
+            </div>
+
+            {/* Tracking Card */}
+            <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Truck size={16} className="text-orange-400" />
+                <span className="text-[#94A3B8] text-xs">Трекинг</span>
+              </div>
+              {batchData.tracking_number ? (
+                <div>
+                  <p className="text-sm font-mono text-orange-400">{batchData.tracking_number}</p>
+                  <button 
+                    onClick={() => setTrackingModal(true)}
+                    className="text-xs text-[#FF9900] hover:underline mt-1"
+                  >
+                    Отследить →
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setTrackingModal(true)}
+                  className="text-sm text-[#94A3B8] hover:text-[#FF9900]"
+                >
+                  + Добавить трекинг
+                </button>
+              )}
             </div>
           </div>
 
@@ -312,7 +467,7 @@ const BashPage = () => {
               <Input
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Поиск по ASIN, названию, бренду..."
+                placeholder="Поиск по ASIN, названию, бренду, SKU..."
                 className="pl-10 bg-[#0F1115] border-[#2A2F3A]"
               />
             </div>
@@ -323,7 +478,8 @@ const BashPage = () => {
               </SelectTrigger>
               <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
                 <SelectItem value="roi">ROI</SelectItem>
-                <SelectItem value="profit_per_unit">Профит</SelectItem>
+                <SelectItem value="profit_per_unit">Профит/шт</SelectItem>
+                <SelectItem value="total_profit">Профит (всего)</SelectItem>
                 <SelectItem value="buy_box_price">Buy Box</SelectItem>
                 <SelectItem value="cost_price">Себестоимость</SelectItem>
                 <SelectItem value="monthly_sold">Продажи/мес</SelectItem>
@@ -343,11 +499,11 @@ const BashPage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setTrackingModal(true)}
+              onClick={() => openNotesModal()}
               className="border-[#2A2F3A] text-[#E6E6E6]"
             >
-              <Truck size={14} className="mr-1" />
-              Отслеживание
+              <MessageSquare size={14} className="mr-1" />
+              Заметки
             </Button>
 
             <Button
@@ -367,123 +523,175 @@ const BashPage = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-[#0F1115] text-[#94A3B8] text-xs uppercase tracking-wider">
+                    <th className="py-3 px-2 text-left w-12"></th>
                     <th className="py-3 px-2 text-left">Фото</th>
-                    <th className="py-3 px-2 text-left">ASIN</th>
-                    <th className="py-3 px-2 text-left max-w-[200px]">Название</th>
+                    <th className="py-3 px-2 text-left">ASIN / Название</th>
                     <th className="py-3 px-2 text-right">Buy Box</th>
-                    <th className="py-3 px-2 text-right">Ref Fee</th>
-                    <th className="py-3 px-2 text-right">FBA Fee</th>
-                    <th className="py-3 px-2 text-right">Доставка</th>
+                    <th className="py-3 px-2 text-right">Fees</th>
                     <th className="py-3 px-2 text-right">Себест.</th>
                     <th className="py-3 px-2 text-right">Доп.</th>
                     <th className="py-3 px-2 text-right">Кол-во</th>
+                    <th className="py-3 px-2 text-right">Профит/шт</th>
                     <th className="py-3 px-2 text-right">Профит</th>
                     <th className="py-3 px-2 text-right">ROI</th>
-                    <th className="py-3 px-2 text-center">Прод/мес</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedItems.map(item => (
-                    <tr key={item.id} className="border-t border-[#2A2F3A] hover:bg-[#1A1D24]">
-                      <td className="py-2 px-2">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt="" className="w-10 h-10 object-cover rounded" />
-                        ) : (
-                          <div className="w-10 h-10 bg-[#2A2F3A] rounded flex items-center justify-center">
-                            <Package size={16} className="text-[#94A3B8]" />
+                    <>
+                      <tr key={item.id} className="border-t border-[#2A2F3A] hover:bg-[#1A1D24]">
+                        <td className="py-2 px-2">
+                          <button 
+                            onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
+                            className="text-[#94A3B8] hover:text-[#FF9900]"
+                          >
+                            {expandedItem === item.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </button>
+                        </td>
+                        <td className="py-2 px-2">
+                          {item.image_url ? (
+                            <img src={item.image_url} alt="" className="w-10 h-10 object-cover rounded" />
+                          ) : (
+                            <div className="w-10 h-10 bg-[#2A2F3A] rounded flex items-center justify-center">
+                              <Package size={16} className="text-[#94A3B8]" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 max-w-[300px]">
+                          <a 
+                            href={`https://www.amazon.com/dp/${item.asin}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="font-mono text-xs text-[#FF9900] hover:underline flex items-center gap-1"
+                          >
+                            {item.asin}
+                            <ExternalLink size={10} />
+                          </a>
+                          <div 
+                            className="text-xs text-[#E6E6E6] mt-0.5 line-clamp-2 cursor-pointer hover:line-clamp-none"
+                            title={item.title}
+                          >
+                            {item.title || "—"}
                           </div>
-                        )}
-                      </td>
-                      <td className="py-2 px-2">
-                        <a 
-                          href={`https://www.amazon.com/dp/${item.asin}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="font-mono text-xs text-[#FF9900] hover:underline flex items-center gap-1"
-                        >
-                          {item.asin}
-                          <ExternalLink size={10} />
-                        </a>
-                        {item.brand && (
-                          <div className="text-[10px] text-[#94A3B8] mt-0.5">{item.brand}</div>
-                        )}
-                      </td>
-                      <td className="py-2 px-2 max-w-[200px]">
-                        <div className="text-xs text-[#E6E6E6] truncate" title={item.title}>
-                          {item.title || "—"}
-                        </div>
-                      </td>
-                      <td className="py-2 px-2 text-right font-mono text-[#E6E6E6]">
-                        ${item.buy_box_price?.toFixed(2) || "0.00"}
-                      </td>
-                      <td className="py-2 px-2 text-right font-mono text-red-400 text-xs">
-                        ${item.referral_fee?.toFixed(2) || "0.00"}
-                      </td>
-                      <td className="py-2 px-2 text-right font-mono text-red-400 text-xs">
-                        ${item.fba_fee?.toFixed(2) || "0.00"}
-                      </td>
-                      <td className="py-2 px-2 text-right font-mono text-orange-400 text-xs">
-                        ${item.shipping_cost?.toFixed(2) || "0.00"}
-                      </td>
-                      <td className="py-2 px-2 text-right">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.cost_price || ""}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
-                            handleUpdateItem(item.id, { cost_price: val });
-                          }}
-                          className="w-16 px-1 py-0.5 bg-[#0F1115] border border-[#2A2F3A] rounded text-right font-mono text-xs text-[#E6E6E6]"
-                          placeholder="0.00"
-                        />
-                      </td>
-                      <td className="py-2 px-2 text-right">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.extra_costs || ""}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
-                            handleUpdateItem(item.id, { extra_costs: val });
-                          }}
-                          className="w-14 px-1 py-0.5 bg-[#0F1115] border border-[#2A2F3A] rounded text-right font-mono text-xs text-[#E6E6E6]"
-                          placeholder="0"
-                        />
-                      </td>
-                      <td className="py-2 px-2 text-right">
-                        <input
-                          type="number"
-                          step="1"
-                          min="1"
-                          value={item.quantity || 1}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 1;
-                            handleUpdateItem(item.id, { quantity: val });
-                          }}
-                          className="w-12 px-1 py-0.5 bg-[#0F1115] border border-[#2A2F3A] rounded text-right font-mono text-xs text-[#E6E6E6]"
-                        />
-                      </td>
-                      <td className={`py-2 px-2 text-right font-mono font-bold ${(item.profit_per_unit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        ${item.profit_per_unit?.toFixed(2) || "0.00"}
-                      </td>
-                      <td className={`py-2 px-2 text-right font-mono font-bold ${
-                        (item.cost_price || 0) <= 0 ? 'text-[#94A3B8]' :
-                        (item.roi || 0) >= 30 ? 'text-green-400' : 
-                        (item.roi || 0) >= 15 ? 'text-yellow-400' : 'text-red-400'
-                      }`}>
-                        {(item.cost_price || 0) > 0 ? `${item.roi?.toFixed(0) || "0"}%` : "—"}
-                      </td>
-                      <td className="py-2 px-2 text-center font-mono text-[#94A3B8] text-xs">
-                        {item.monthly_sold || item.bought_past_month || "—"}
-                      </td>
-                    </tr>
+                          {item.brand && (
+                            <div className="text-[10px] text-[#94A3B8] mt-0.5">{item.brand}</div>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <div className="font-mono text-[#E6E6E6]">${item.buy_box_price?.toFixed(2) || "0.00"}</div>
+                          {item.buy_box_90d && item.buy_box_90d !== item.buy_box_price && (
+                            <div className="text-[10px] text-[#94A3B8]">90d: ${item.buy_box_90d?.toFixed(2)}</div>
+                          )}
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <div className="text-xs text-red-400">
+                            <div>Ref: ${item.referral_fee?.toFixed(2) || "0"}</div>
+                            <div>FBA: ${item.fba_fee?.toFixed(2) || "0"}</div>
+                            <div className="text-orange-400">Ship: ${item.shipping_cost?.toFixed(2) || "0"}</div>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <EditableCell
+                            value={item.cost_price}
+                            onChange={(val) => handleUpdateItem(item.id, "cost_price", val)}
+                            className="w-16"
+                            placeholder="0.00"
+                          />
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <EditableCell
+                            value={item.extra_costs}
+                            onChange={(val) => handleUpdateItem(item.id, "extra_costs", val)}
+                            className="w-14"
+                            placeholder="0"
+                          />
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <EditableCell
+                            value={item.quantity}
+                            onChange={(val) => handleUpdateItem(item.id, "quantity", Math.max(1, parseInt(val) || 1))}
+                            className="w-12"
+                            placeholder="1"
+                          />
+                        </td>
+                        <td className={`py-2 px-2 text-right font-mono text-xs ${(item.profit_per_unit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ${item.profit_per_unit?.toFixed(2) || "0.00"}
+                        </td>
+                        <td className={`py-2 px-2 text-right font-mono font-bold ${(item.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ${item.total_profit?.toFixed(2) || "0.00"}
+                        </td>
+                        <td className={`py-2 px-2 text-right font-mono font-bold ${
+                          (item.cost_price || 0) <= 0 ? 'text-[#94A3B8]' :
+                          (item.roi || 0) >= 30 ? 'text-green-400' : 
+                          (item.roi || 0) >= 15 ? 'text-yellow-400' : 'text-red-400'
+                        }`}>
+                          {(item.cost_price || 0) > 0 ? `${item.roi?.toFixed(0) || "0"}%` : "—"}
+                        </td>
+                      </tr>
+                      {/* Expanded Row */}
+                      {expandedItem === item.id && (
+                        <tr className="bg-[#0F1115]">
+                          <td colSpan={11} className="p-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div>
+                                <Label className="text-[#94A3B8] text-xs">Ссылка на поставщика</Label>
+                                <Input
+                                  value={item.supplier_link || ""}
+                                  onChange={(e) => handleUpdateItem(item.id, "supplier_link", e.target.value)}
+                                  placeholder="https://..."
+                                  className="bg-[#13161B] border-[#2A2F3A] mt-1 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[#94A3B8] text-xs">SKU/Название у поставщика</Label>
+                                <Input
+                                  value={item.supplier_sku || ""}
+                                  onChange={(e) => handleUpdateItem(item.id, "supplier_sku", e.target.value)}
+                                  placeholder="Артикул или название"
+                                  className="bg-[#13161B] border-[#2A2F3A] mt-1 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-[#94A3B8] text-xs">Категория</Label>
+                                <p className="text-xs text-[#E6E6E6] mt-1">{item.category || "—"}</p>
+                              </div>
+                              <div>
+                                <Label className="text-[#94A3B8] text-xs">Продажи</Label>
+                                <p className="text-xs text-[#E6E6E6] mt-1">
+                                  {item.monthly_sold || item.bought_past_month || "—"} / мес
+                                </p>
+                              </div>
+                              <div className="lg:col-span-4">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openNotesModal(item)}
+                                  className="border-[#2A2F3A] text-xs"
+                                >
+                                  <MessageSquare size={12} className="mr-1" />
+                                  Заметки к товару
+                                </Button>
+                                {item.supplier_link && (
+                                  <a 
+                                    href={item.supplier_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="ml-2 text-xs text-[#FF9900] hover:underline inline-flex items-center gap-1"
+                                  >
+                                    <Link size={12} />
+                                    Открыть у поставщика
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                   {paginatedItems.length === 0 && (
                     <tr>
-                      <td colSpan={13} className="text-center py-8 text-[#94A3B8]">
+                      <td colSpan={11} className="text-center py-8 text-[#94A3B8]">
                         {items.length === 0 ? "Нет товаров в партии" : "Ничего не найдено"}
                       </td>
                     </tr>
@@ -496,7 +704,7 @@ const BashPage = () => {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t border-[#2A2F3A]">
                 <span className="text-sm text-[#94A3B8]">
-                  Показано {(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, filteredItems.length)} из {filteredItems.length}
+                  {(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, filteredItems.length)} из {filteredItems.length}
                 </span>
                 <div className="flex gap-2">
                   <Button
@@ -574,7 +782,7 @@ const BashPage = () => {
             </div>
             
             <div>
-              <Label className="text-[#94A3B8]">Название партии (опционально)</Label>
+              <Label className="text-[#94A3B8]">Название партии</Label>
               <Input
                 value={batchName}
                 onChange={(e) => setBatchName(e.target.value)}
@@ -584,7 +792,7 @@ const BashPage = () => {
             </div>
             
             <div>
-              <Label className="text-[#94A3B8]">Поставщик (опционально)</Label>
+              <Label className="text-[#94A3B8]">Поставщик</Label>
               <Input
                 value={batchSupplier}
                 onChange={(e) => setBatchSupplier(e.target.value)}
@@ -631,30 +839,131 @@ const BashPage = () => {
           <div className="space-y-4">
             <div>
               <Label className="text-[#94A3B8]">Трекинг номер</Label>
-              <Input
-                value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="Введите трекинг номер..."
-                className="bg-[#0F1115] border-[#2A2F3A] mt-1"
-              />
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="Введите трекинг номер..."
+                  className="bg-[#0F1115] border-[#2A2F3A]"
+                />
+                <Button 
+                  onClick={handleSaveTracking}
+                  variant="outline"
+                  className="border-[#2A2F3A]"
+                >
+                  Сохранить
+                </Button>
+              </div>
             </div>
             
-            <Button 
-              onClick={handleTrackBatch}
-              className="w-full bg-[#FF9900] hover:bg-[#E68A00] text-black font-bold"
-            >
-              <Search size={16} className="mr-2" />
-              Отследить
-            </Button>
+            {batchData?.tracking_number && (
+              <Button 
+                onClick={handleTrackShipment}
+                disabled={trackingLoading}
+                className="w-full bg-[#FF9900] hover:bg-[#E68A00] text-black font-bold"
+              >
+                {trackingLoading ? (
+                  <>
+                    <RefreshCw size={16} className="mr-2 animate-spin" />
+                    Отслеживание...
+                  </>
+                ) : (
+                  <>
+                    <Search size={16} className="mr-2" />
+                    Отследить через 17track
+                  </>
+                )}
+              </Button>
+            )}
             
             {trackingData && (
               <div className="mt-4 p-4 bg-[#0F1115] rounded-[2px] border border-[#2A2F3A]">
-                <h4 className="text-sm font-medium text-[#FF9900] mb-2">Результат</h4>
-                <pre className="text-xs text-[#94A3B8] overflow-auto max-h-[200px]">
-                  {JSON.stringify(trackingData, null, 2)}
-                </pre>
+                <h4 className="text-sm font-medium text-[#FF9900] mb-2">Статус отправления</h4>
+                {trackingData.status === "success" ? (
+                  <div className="text-xs text-[#E6E6E6]">
+                    {trackingData.data?.data?.accepted?.length > 0 ? (
+                      <pre className="overflow-auto max-h-[200px] whitespace-pre-wrap">
+                        {JSON.stringify(trackingData.data.data.accepted[0], null, 2)}
+                      </pre>
+                    ) : trackingData.data?.data?.rejected?.length > 0 ? (
+                      <p className="text-yellow-400">
+                        {trackingData.data.data.rejected[0]?.error?.message || "Нет информации об отправлении"}
+                      </p>
+                    ) : (
+                      <p className="text-[#94A3B8]">Нет данных</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-red-400 text-sm">{trackingData.error || "Ошибка отслеживания"}</p>
+                )}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notes Modal */}
+      <Dialog open={!!notesModal} onOpenChange={() => setNotesModal(null)}>
+        <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6] max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-mono uppercase tracking-wider text-[#FF9900] flex items-center gap-2">
+              <MessageSquare size={20} />
+              Заметки {notesModal?.asin ? `— ${notesModal.asin}` : "к партии"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Textarea
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Добавить заметку..."
+                className="bg-[#0F1115] border-[#2A2F3A] min-h-[80px]"
+              />
+              <Button 
+                onClick={handleAddNote}
+                disabled={!newNote.trim()}
+                className="mt-2 bg-[#FF9900] hover:bg-[#E68A00] text-black font-bold"
+              >
+                Добавить
+              </Button>
+            </div>
+            
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {notes.length === 0 ? (
+                <p className="text-center text-[#94A3B8] py-4">Нет заметок</p>
+              ) : (
+                notes.map(note => (
+                  <div 
+                    key={note.id} 
+                    className={`p-3 rounded-[2px] border ${
+                      note.created_by_role === 'super_admin' 
+                        ? 'bg-purple-900/20 border-purple-500/30' 
+                        : 'bg-[#0F1115] border-[#2A2F3A]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-medium ${
+                        note.created_by_role === 'super_admin' ? 'text-purple-400' : 'text-[#FF9900]'
+                      }`}>
+                        {note.created_by_nickname} ({note.created_by_role === 'super_admin' ? 'Супер-админ' : 'Админ'})
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-[#94A3B8]">
+                          {new Date(note.created_at).toLocaleString('ru-RU')}
+                        </span>
+                        <button 
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="text-[#94A3B8] hover:text-red-400"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-[#E6E6E6]">{note.text}</p>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
