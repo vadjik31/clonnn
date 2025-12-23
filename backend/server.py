@@ -1126,6 +1126,20 @@ async def get_brands(
         brand["items_count"] = await db.brand_items.count_documents({"brand_id": brand["id"]})
         brand["health_score"] = calculate_health_score(brand)
         brand["quality_warnings"] = get_quality_warnings(brand)
+        
+        # Добавляем последнюю заметку и количество контактов
+        last_note = await db.brand_notes.find_one(
+            {"brand_id": brand["id"]},
+            {"_id": 0, "note_text": 1, "created_at": 1, "note_type": 1}
+        )
+        if last_note:
+            brand["last_note"] = last_note.get("note_text", "")[:100]  # Первые 100 символов
+            brand["last_note_at"] = last_note.get("created_at")
+        else:
+            brand["last_note"] = None
+            brand["last_note_at"] = None
+        
+        brand["contacts_count"] = await db.brand_contacts.count_documents({"brand_id": brand["id"]})
     
     return {
         "brands": brands,
