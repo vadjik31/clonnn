@@ -350,6 +350,55 @@ const BrandDetailPage = () => {
 
       {/* Notes & Events */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Contacts */}
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#E6E6E6] font-mono uppercase tracking-wider flex items-center gap-2">
+              <Phone size={18} className="text-green-400" />
+              Контакты ({brand.contacts?.length || 0})
+            </h3>
+            {canAct && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setContactModal(true)}
+                className="text-green-400 hover:text-green-300"
+                data-testid="add-contact-btn"
+              >
+                <Plus size={16} className="mr-1" />
+                Добавить
+              </Button>
+            )}
+          </div>
+          
+          <div className="space-y-3 max-h-[200px] overflow-y-auto">
+            {!brand.contacts || brand.contacts.length === 0 ? (
+              <p className="text-[#94A3B8] text-center py-4">Нет контактов</p>
+            ) : (
+              brand.contacts.map((contact) => (
+                <div 
+                  key={contact.id} 
+                  className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ContactIcon type={contact.contact_type} />
+                      <span className="text-sm font-medium text-[#E6E6E6]">{contact.value}</span>
+                      {contact.is_primary && (
+                        <span className="px-1.5 py-0.5 text-xs bg-green-900/30 text-green-400 rounded">★</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-[#94A3B8] capitalize">{contact.contact_type}</span>
+                  </div>
+                  {contact.notes && (
+                    <p className="text-xs text-[#94A3B8] mt-1">{contact.notes}</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Notes */}
         <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
           <div className="flex items-center justify-between mb-4">
