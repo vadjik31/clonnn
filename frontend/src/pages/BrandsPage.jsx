@@ -487,7 +487,14 @@ const BrandsPage = () => {
                           />
                         </td>
                       )}
-                      <td className="table-cell font-medium">{brand.name_original}</td>
+                      <td className="table-cell font-medium">
+                        <BrandTooltip brandId={brand.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{brand.name_original}</span>
+                            <Info size={12} className="text-[#94A3B8] opacity-50" />
+                          </div>
+                        </BrandTooltip>
+                      </td>
                       <td className="table-cell text-center font-mono text-[#FF9900]">{brand.priority_score}</td>
                       <td className="table-cell text-center font-mono">{brand.items_count}</td>
                       <td className="table-cell">
