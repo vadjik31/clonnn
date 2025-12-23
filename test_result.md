@@ -190,3 +190,38 @@ agent_communication:
       Credentials:
       - Super Admin: admin@procto13.com / admin123 / PROCTO13
       - Searcher: searcher@procto13.com / searcher123 / PROCTO13
+
+# Bug Fix - Replied Status Feature
+
+bug_fix:
+  - task: "Replied Status Modal Bug Fix"
+    fixed: true
+    working: true
+    file: "/app/backend/server.py"
+    priority: "P0 - Critical"
+    issue: "При использовании модального окна 'Ответил' для сёрчера появлялась ошибка без сохранения"
+    root_cause: "NoteType.STATUS_CHANGE не был определён в классе NoteType"
+    fix_applied: "Добавлено STATUS_CHANGE = 'status_change' в класс NoteType (строка 155)"
+    testing:
+      - method: "curl API test"
+        result: "SUCCESS - POST /api/brands/{id}/replied возвращает 200"
+      - method: "Screenshot UI test"  
+        result: "SUCCESS - Модальное окно работает, статус обновляется, заметка сохраняется"
+    verified_by: "main_agent"
+    date: "2025-12-23"
+
+agent_communication:
+  - agent: "main_fork"
+    message: |
+      БАГ ИСПРАВЛЕН: Функция "Ответил" для Сёрчера
+      
+      Проблема: При выборе подстатуса в модальном окне появлялась ошибка
+      Причина: В классе NoteType отсутствовал атрибут STATUS_CHANGE
+      Решение: Добавлен NoteType.STATUS_CHANGE = "status_change"
+      
+      Протестировано:
+      - API endpoint через curl: OK
+      - UI через screenshot: OK
+      - Статус обновляется: OK
+      - Заметка сохраняется: OK
+      - Toast "Статус обновлён": OK
