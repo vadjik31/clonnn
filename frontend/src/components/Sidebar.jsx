@@ -8,7 +8,8 @@ import {
   Settings, 
   LogOut,
   AlertTriangle,
-  Briefcase
+  Briefcase,
+  BarChart3
 } from "lucide-react";
 
 const Sidebar = ({ user }) => {
@@ -22,6 +23,7 @@ const Sidebar = ({ user }) => {
 
   const adminLinks = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
+    { to: "/analytics", icon: BarChart3, label: "Аналитика" },
     { to: "/users", icon: Users, label: "Пользователи" },
     { to: "/import", icon: Upload, label: "Импорт" },
     { to: "/brands", icon: Package, label: "Все бренды" },
