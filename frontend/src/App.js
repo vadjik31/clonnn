@@ -205,6 +205,11 @@ function AppContent() {
               <Layout><SettingsPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/analytics" element={
+            <ProtectedRoute adminOnly>
+              <Layout><AnalyticsPage /></Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Searcher Routes */}
           <Route path="/my-brands" element={
