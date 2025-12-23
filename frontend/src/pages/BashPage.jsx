@@ -3,66 +3,18 @@ import { api } from "../App";
 import { useAuth } from "../App";
 import { toast } from "sonner";
 import { 
-  Boxes, 
-  Upload, 
-  Calculator,
-  TrendingUp,
-  Package,
-  DollarSign,
-  Percent,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
-  Search,
-  FileSpreadsheet,
-  Truck,
-  RefreshCw,
-  ExternalLink,
-  MessageSquare,
-  Link,
-  ChevronDown,
-  ChevronUp,
-  X,
-  Filter,
-  Plus,
-  Eye,
-  Check,
-  Clock,
-  AlertTriangle,
-  Download
+  Boxes, Upload, Calculator, TrendingUp, Package, DollarSign, Percent, Trash2,
+  ChevronLeft, ChevronRight, ArrowUpDown, Search, FileSpreadsheet, Truck, RefreshCw,
+  ExternalLink, MessageSquare, Link, ChevronDown, ChevronUp, X, Filter, Plus, Eye,
+  Download, ZoomIn
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Checkbox } from "../components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
-
-// Статусы товаров
-const ITEM_STATUSES = [
-  { value: "", label: "Без статуса", color: "#94A3B8" },
-  { value: "out_of_stock", label: "Аут оф сток", color: "#EF4444" },
-  { value: "no_stock", label: "Нет в наличии", color: "#F97316" },
-  { value: "not_found", label: "Не нашёл", color: "#8B5CF6" },
-  { value: "heavy", label: "Тяжелый", color: "#6366F1" },
-  { value: "low_sales", label: "Мало продаж", color: "#EAB308" },
-  { value: "low_traffic", label: "Слабый трафик", color: "#14B8A6" },
-  { value: "approved", label: "Одобрено", color: "#22C55E" },
-  { value: "ordered", label: "Заказано", color: "#3B82F6" },
-];
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 
 // Debounce hook
 const useDebounce = (callback, delay) => {
@@ -73,12 +25,12 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-// Editable cell component
+// Editable cell with local state and debounced update
 const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "" }) => {
-  const [localValue, setLocalValue] = useState(value || "");
-  const debouncedUpdate = useDebounce(onChange, 500);
+  const [localValue, setLocalValue] = useState(value ?? "");
+  const debouncedUpdate = useDebounce(onChange, 600);
   
-  useEffect(() => { setLocalValue(value || ""); }, [value]);
+  useEffect(() => { setLocalValue(value ?? ""); }, [value]);
   
   const handleChange = (e) => {
     const newValue = e.target.value;
@@ -103,23 +55,55 @@ const EditableCell = ({ value, onChange, type = "number", placeholder = "", clas
   );
 };
 
-// Status badge component
-const StatusBadge = ({ status, onClick }) => {
-  const statusObj = ITEM_STATUSES.find(s => s.value === status) || ITEM_STATUSES[0];
+// Image with zoom on hover
+const ZoomableImage = ({ src, alt = "" }) => {
+  const [showZoom, setShowZoom] = useState(false);
+  
+  if (!src) {
+    return (
+      <div className="w-8 h-8 bg-[#2A2F3A] rounded flex items-center justify-center">
+        <Package size={12} className="text-[#94A3B8]" />
+      </div>
+    );
+  }
+  
   return (
-    <button
-      onClick={onClick}
-      className="px-2 py-0.5 rounded text-[10px] font-medium whitespace-nowrap transition-colors hover:opacity-80"
-      style={{ backgroundColor: `${statusObj.color}20`, color: statusObj.color, border: `1px solid ${statusObj.color}40` }}
-    >
-      {statusObj.label}
+    <div className="relative">
+      <img 
+        src={src} 
+        alt={alt} 
+        className="w-8 h-8 object-cover rounded cursor-pointer hover:ring-2 hover:ring-[#FF9900]" 
+        onMouseEnter={() => setShowZoom(true)}
+        onMouseLeave={() => setShowZoom(false)}
+      />
+      {showZoom && (
+        <div className="absolute z-50 left-10 top-0 bg-[#13161B] border border-[#2A2F3A] rounded-lg shadow-2xl p-1">
+          <img src={src} alt={alt} className="w-48 h-48 object-contain" />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Status badge - теперь просто текст
+const StatusBadge = ({ status, onClick }) => {
+  if (!status) {
+    return (
+      <button onClick={onClick} className="px-2 py-0.5 rounded text-[10px] text-[#94A3B8] border border-dashed border-[#2A2F3A] hover:border-[#FF9900]">
+        + статус
+      </button>
+    );
+  }
+  return (
+    <button onClick={onClick} className="px-2 py-0.5 rounded text-[10px] bg-[#FF9900]/20 text-[#FF9900] border border-[#FF9900]/40 hover:bg-[#FF9900]/30 whitespace-nowrap max-w-[100px] truncate">
+      {status}
     </button>
   );
 };
 
 const BashPage = () => {
   const { user } = useAuth();
-  const [view, setView] = useState("list"); // "list" or "detail"
+  const [view, setView] = useState("list");
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState(null);
   const [batchData, setBatchData] = useState(null);
@@ -142,10 +126,11 @@ const BashPage = () => {
   const [newNote, setNewNote] = useState("");
   const [expandedItem, setExpandedItem] = useState(null);
   const [statusModal, setStatusModal] = useState(null);
+  const [customStatus, setCustomStatus] = useState("");
   const [deleteByStatusModal, setDeleteByStatusModal] = useState(false);
   const [selectedStatuses, setSelectedStatuses] = useState([]);
-  const [importSkuModal, setImportSkuModal] = useState(false);
-  const [skuImportText, setSkuImportText] = useState("");
+  const [exportSkuModal, setExportSkuModal] = useState(false);
+  const [exportedItems, setExportedItems] = useState([]);
   
   // Filters
   const [search, setSearch] = useState("");
@@ -153,7 +138,6 @@ const BashPage = () => {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState("roi");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [selectedItems, setSelectedItems] = useState([]);
   const itemsPerPage = 25;
 
   useEffect(() => { fetchBatches(); }, []);
@@ -212,13 +196,38 @@ const BashPage = () => {
     }
   };
 
+  // Обновление товара с пересчётом статистики
   const handleUpdateItem = useCallback(async (itemId, field, value) => {
     try {
       const res = await api.put(`/bash/item/${itemId}`, { [field]: value });
+      // Обновляем локально
       if (batchData) {
+        const newItems = batchData.items.map(i => i.id === itemId ? res.data : i);
+        
+        // Пересчитываем статистику локально
+        const itemsWithCost = newItems.filter(i => (i.cost_price || 0) > 0);
+        const total_cost = newItems.reduce((sum, i) => sum + ((i.cost_price || 0) * (i.quantity || 1)), 0);
+        const total_profit = newItems.reduce((sum, i) => sum + (i.total_profit || 0), 0);
+        const total_revenue = newItems.reduce((sum, i) => sum + ((i.buy_box_price || 0) * (i.quantity || 1)), 0);
+        
+        let avg_roi = 0;
+        if (itemsWithCost.length > 0) {
+          const total_investment = itemsWithCost.reduce((sum, i) => 
+            sum + ((i.cost_price || 0) + (i.shipping_cost || 0) + (i.extra_costs || 0)) * (i.quantity || 1), 0
+          );
+          if (total_investment > 0) avg_roi = (total_profit / total_investment) * 100;
+        }
+        
         setBatchData(prev => ({
           ...prev,
-          items: prev.items.map(i => i.id === itemId ? res.data : i)
+          items: newItems,
+          calculated_stats: {
+            total_cost: Math.round(total_cost * 100) / 100,
+            total_profit: Math.round(total_profit * 100) / 100,
+            total_revenue: Math.round(total_revenue * 100) / 100,
+            avg_roi: Math.round(avg_roi * 10) / 10,
+            items_with_cost: itemsWithCost.length
+          }
         }));
       }
     } catch (error) {
@@ -251,32 +260,25 @@ const BashPage = () => {
       });
       toast.success("Трекинг сохранён");
       fetchBatchData(selectedBatch.id);
-    } catch (error) {
-      toast.error("Ошибка");
-    }
+    } catch (error) { toast.error("Ошибка"); }
   };
 
   const handleTrackShipment = async () => {
     if (!batchData?.tracking_number) { toast.error("Сначала сохраните трекинг"); return; }
     setTrackingLoading(true);
     try {
-      const res = await api.post(`/bash/${selectedBatch.id}/track`);
-      fetchBatchData(selectedBatch.id);
+      await api.post(`/bash/${selectedBatch.id}/track`);
+      await fetchBatchData(selectedBatch.id);
       toast.success("Трекинг обновлён");
-    } catch (error) {
-      toast.error("Ошибка");
-    } finally {
-      setTrackingLoading(false);
-    }
+    } catch (error) { toast.error("Ошибка"); }
+    finally { setTrackingLoading(false); }
   };
 
   const searchCarriers = async (q) => {
     try {
       const res = await api.get(`/bash/carriers?q=${encodeURIComponent(q)}`);
       setCarriers(res.data.carriers || []);
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
   const fetchNotes = async (itemId = null) => {
@@ -304,12 +306,19 @@ const BashPage = () => {
     } catch (error) { toast.error("Ошибка"); }
   };
 
+  const handleSetStatus = async (status) => {
+    if (!statusModal) return;
+    await handleUpdateItem(statusModal.id, "status", status);
+    setStatusModal(null);
+    setCustomStatus("");
+  };
+
   const handleDeleteByStatus = async () => {
     if (selectedStatuses.length === 0) { toast.error("Выберите статусы"); return; }
-    if (!window.confirm(`Удалить все товары со статусами: ${selectedStatuses.map(s => ITEM_STATUSES.find(st => st.value === s)?.label).join(", ")}?`)) return;
+    if (!window.confirm(`Удалить все товары со статусами: ${selectedStatuses.join(", ")}?`)) return;
     
     try {
-      const res = await api.delete(`/bash/${selectedBatch.id}/items-by-status?${selectedStatuses.map(s => `statuses=${s}`).join("&")}`);
+      const res = await api.delete(`/bash/${selectedBatch.id}/items-by-status?${selectedStatuses.map(s => `statuses=${encodeURIComponent(s)}`).join("&")}`);
       toast.success(`Удалено ${res.data.deleted_count} товаров`);
       fetchBatchData(selectedBatch.id);
       setDeleteByStatusModal(false);
@@ -317,21 +326,11 @@ const BashPage = () => {
     } catch (error) { toast.error("Ошибка"); }
   };
 
-  const handleImportSkuQuantity = async () => {
-    const lines = skuImportText.trim().split("\n").filter(l => l.trim());
-    const items = lines.map(line => {
-      const parts = line.split(/[\t,;]/).map(p => p.trim());
-      return { supplier_sku: parts[0], quantity: parseInt(parts[1]) || 1 };
-    }).filter(i => i.supplier_sku);
-    
-    if (items.length === 0) { toast.error("Нет данных для импорта"); return; }
-    
+  const handleExportSku = async () => {
     try {
-      const res = await api.post(`/bash/${selectedBatch.id}/import-sku-quantity`, { items });
-      toast.success(`Обновлено ${res.data.updated_count} товаров${res.data.not_found.length ? `, не найдено: ${res.data.not_found.length}` : ""}`);
-      fetchBatchData(selectedBatch.id);
-      setImportSkuModal(false);
-      setSkuImportText("");
+      const res = await api.get(`/bash/${selectedBatch.id}/export-sku-quantity`);
+      setExportedItems(res.data.items || []);
+      setExportSkuModal(true);
     } catch (error) { toast.error("Ошибка"); }
   };
 
@@ -340,14 +339,17 @@ const BashPage = () => {
 
   // Filter and sort items
   const items = batchData?.items || [];
+  const uniqueStatuses = batchData?.unique_statuses || [];
+  
   const filteredItems = items
     .filter(item => {
-      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (statusFilter !== "all" && (item.status || "") !== statusFilter) return false;
       if (!search) return true;
-      return item.asin?.toLowerCase().includes(search.toLowerCase()) ||
-        item.title?.toLowerCase().includes(search.toLowerCase()) ||
-        item.brand?.toLowerCase().includes(search.toLowerCase()) ||
-        item.supplier_sku?.toLowerCase().includes(search.toLowerCase());
+      const s = search.toLowerCase();
+      return item.asin?.toLowerCase().includes(s) ||
+        item.title?.toLowerCase().includes(s) ||
+        item.brand?.toLowerCase().includes(s) ||
+        item.supplier_sku?.toLowerCase().includes(s);
     })
     .sort((a, b) => {
       let aVal = a[sortBy] || 0;
@@ -363,12 +365,41 @@ const BashPage = () => {
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
   const stats = batchData?.calculated_stats || {};
 
-  // Status counts for filter
+  // Status counts
   const statusCounts = items.reduce((acc, item) => {
     const st = item.status || "";
     acc[st] = (acc[st] || 0) + 1;
     return acc;
   }, {});
+
+  // Tracking info parser
+  const getTrackingDisplay = () => {
+    if (!batchData?.tracking_parsed) return null;
+    const p = batchData.tracking_parsed;
+    
+    // Статус коды 17track: 0=нет инфо, 10=в пути, 20=истёк срок, 30=неудачная доставка, 35=ожидание, 40=доставлено, 50=нет информации
+    const statusMap = {
+      0: { text: "Нет информации", color: "text-[#94A3B8]" },
+      10: { text: "В пути", color: "text-blue-400" },
+      20: { text: "Истёк срок", color: "text-red-400" },
+      30: { text: "Неудачная доставка", color: "text-red-400" },
+      35: { text: "Ожидание получения", color: "text-yellow-400" },
+      40: { text: "Доставлено", color: "text-green-400" },
+      50: { text: "Нет информации", color: "text-[#94A3B8]" },
+    };
+    
+    const statusInfo = statusMap[p.status_code] || statusMap[0];
+    
+    return {
+      statusText: statusInfo.text,
+      statusColor: statusInfo.color,
+      lastEvent: p.last_event,
+      lastTime: p.last_time,
+      carrier: p.carrier
+    };
+  };
+
+  const trackingDisplay = getTrackingDisplay();
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="text-[#FF9900] font-mono">Загрузка...</div></div>;
@@ -381,40 +412,36 @@ const BashPage = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#E6E6E6] font-mono uppercase tracking-wider flex items-center gap-3">
-              <Boxes className="text-[#FF9900]" />
-              BASH — Партии товаров
+              <Boxes className="text-[#FF9900]" /> BASH — Партии
             </h1>
-            <p className="text-[#94A3B8] mt-1">Управление партиями, расчёт прибыли, отслеживание</p>
+            <p className="text-[#94A3B8] mt-1">Управление партиями товаров</p>
           </div>
           <Button onClick={() => setUploadModal(true)} className="bg-[#FF9900] hover:bg-[#E68A00] text-black font-bold">
-            <Plus size={16} className="mr-2" />
-            Новая партия
+            <Plus size={16} className="mr-2" /> Новая партия
           </Button>
         </div>
 
         {batches.length === 0 ? (
-          <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-12 text-center">
+          <div className="bg-[#13161B] border border-[#2A2F3A] rounded p-12 text-center">
             <Boxes size={48} className="mx-auto text-[#FF9900] mb-4" />
             <h3 className="text-lg font-medium text-[#E6E6E6] mb-2">Нет партий</h3>
             <p className="text-[#94A3B8] mb-4">Загрузите Excel файл из Keepa</p>
             <Button onClick={() => setUploadModal(true)} className="bg-[#FF9900] hover:bg-[#E68A00] text-black font-bold">
-              <Upload size={16} className="mr-2" />
-              Загрузить Excel
+              <Upload size={16} className="mr-2" /> Загрузить Excel
             </Button>
           </div>
         ) : (
-          <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] overflow-hidden">
+          <div className="bg-[#13161B] border border-[#2A2F3A] rounded overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="bg-[#0F1115] text-[#94A3B8] text-xs uppercase tracking-wider">
+                <tr className="bg-[#0F1115] text-[#94A3B8] text-xs uppercase">
                   <th className="py-3 px-4 text-left">Название</th>
                   <th className="py-3 px-4 text-left">Поставщик</th>
                   <th className="py-3 px-4 text-center">Товаров</th>
-                  <th className="py-3 px-4 text-right">Затраты</th>
                   <th className="py-3 px-4 text-right">Профит</th>
                   <th className="py-3 px-4 text-center">Трекинг</th>
                   <th className="py-3 px-4 text-center">Дата</th>
-                  <th className="py-3 px-4 text-center">Действия</th>
+                  <th className="py-3 px-4 text-center w-20"></th>
                 </tr>
               </thead>
               <tbody>
@@ -428,28 +455,25 @@ const BashPage = () => {
                     </td>
                     <td className="py-3 px-4 text-[#94A3B8]">{batch.supplier || "—"}</td>
                     <td className="py-3 px-4 text-center font-mono text-[#E6E6E6]">{batch.items_count || 0}</td>
-                    <td className="py-3 px-4 text-right font-mono text-[#E6E6E6]">${(batch.total_cost || 0).toFixed(2)}</td>
                     <td className={`py-3 px-4 text-right font-mono font-bold ${(batch.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       ${(batch.total_profit || 0).toFixed(2)}
                     </td>
                     <td className="py-3 px-4 text-center">
                       {batch.tracking_number ? (
                         <span className="text-xs text-green-400 flex items-center justify-center gap-1">
-                          <Truck size={12} /> {batch.tracking_number.slice(0, 10)}...
+                          <Truck size={12} /> {batch.tracking_number.slice(0, 12)}...
                         </span>
-                      ) : (
-                        <span className="text-xs text-[#94A3B8]">—</span>
-                      )}
+                      ) : <span className="text-xs text-[#94A3B8]">—</span>}
                     </td>
                     <td className="py-3 px-4 text-center text-xs text-[#94A3B8]">
                       {new Date(batch.created_at).toLocaleDateString('ru-RU')}
                     </td>
                     <td className="py-3 px-4 text-center" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openBatchDetail(batch)} className="text-[#FF9900]">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openBatchDetail(batch)} className="text-[#FF9900] h-7 w-7 p-0">
                           <Eye size={14} />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteBatch(batch.id)} className="text-red-400">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteBatch(batch.id)} className="text-red-400 h-7 w-7 p-0">
                           <Trash2 size={14} />
                         </Button>
                       </div>
@@ -465,36 +489,24 @@ const BashPage = () => {
         <Dialog open={uploadModal} onOpenChange={setUploadModal}>
           <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
             <DialogHeader>
-              <DialogTitle className="font-mono uppercase tracking-wider text-[#FF9900]">Новая партия</DialogTitle>
+              <DialogTitle className="text-[#FF9900]">Новая партия</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label className="text-[#94A3B8]">Excel файл (Keepa Export)</Label>
+                <Label className="text-[#94A3B8]">Excel файл (Keepa)</Label>
                 <label className="block mt-2">
                   <input type="file" accept=".xlsx,.xls" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="hidden" />
-                  <div className={`border-2 border-dashed border-[#2A2F3A] rounded-[2px] p-6 text-center cursor-pointer hover:border-[#FF9900]/50 ${selectedFile ? 'border-[#FF9900]' : ''}`}>
-                    {selectedFile ? (
-                      <div className="flex items-center justify-center gap-2 text-[#FF9900]">
-                        <FileSpreadsheet size={20} /><span>{selectedFile.name}</span>
-                      </div>
-                    ) : (
-                      <div className="text-[#94A3B8]"><Upload size={24} className="mx-auto mb-2" /><span className="text-sm">Выберите .xlsx файл</span></div>
-                    )}
+                  <div className={`border-2 border-dashed border-[#2A2F3A] rounded p-6 text-center cursor-pointer hover:border-[#FF9900]/50 ${selectedFile ? 'border-[#FF9900]' : ''}`}>
+                    {selectedFile ? <span className="text-[#FF9900]">{selectedFile.name}</span> : <span className="text-[#94A3B8]"><Upload size={24} className="mx-auto mb-2" />Выберите .xlsx</span>}
                   </div>
                 </label>
               </div>
-              <div>
-                <Label className="text-[#94A3B8]">Название партии</Label>
-                <Input value={batchName} onChange={(e) => setBatchName(e.target.value)} placeholder="Партия #1" className="bg-[#0F1115] border-[#2A2F3A] mt-1" />
-              </div>
-              <div>
-                <Label className="text-[#94A3B8]">Поставщик</Label>
-                <Input value={batchSupplier} onChange={(e) => setBatchSupplier(e.target.value)} placeholder="Название" className="bg-[#0F1115] border-[#2A2F3A] mt-1" />
-              </div>
-              <div className="flex justify-end gap-3">
+              <Input value={batchName} onChange={(e) => setBatchName(e.target.value)} placeholder="Название партии" className="bg-[#0F1115] border-[#2A2F3A]" />
+              <Input value={batchSupplier} onChange={(e) => setBatchSupplier(e.target.value)} placeholder="Поставщик" className="bg-[#0F1115] border-[#2A2F3A]" />
+              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setUploadModal(false)} className="border-[#2A2F3A]">Отмена</Button>
-                <Button onClick={handleUploadFile} disabled={!selectedFile || uploading} className="bg-[#FF9900] hover:bg-[#E68A00] text-black font-bold">
-                  {uploading ? <><RefreshCw size={16} className="mr-2 animate-spin" />Загрузка...</> : <><Upload size={16} className="mr-2" />Создать</>}
+                <Button onClick={handleUploadFile} disabled={!selectedFile || uploading} className="bg-[#FF9900] hover:bg-[#E68A00] text-black">
+                  {uploading ? "Загрузка..." : "Создать"}
                 </Button>
               </div>
             </div>
@@ -527,60 +539,67 @@ const BashPage = () => {
         </Button>
       </div>
 
-      {/* Stats + Tracking Row */}
+      {/* Stats Row */}
       <div className="grid grid-cols-6 gap-3">
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-3">
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded p-3">
           <div className="text-[#94A3B8] text-xs mb-1">Товаров</div>
           <p className="text-lg font-mono font-bold text-[#E6E6E6]">{batchData?.items_count || 0}</p>
         </div>
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-3">
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded p-3">
           <div className="text-[#94A3B8] text-xs mb-1">Затраты</div>
           <p className="text-lg font-mono font-bold text-[#E6E6E6]">${stats.total_cost?.toFixed(2) || "0"}</p>
         </div>
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-3">
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded p-3">
           <div className="text-[#94A3B8] text-xs mb-1">Выручка</div>
           <p className="text-lg font-mono font-bold text-blue-400">${stats.total_revenue?.toFixed(2) || "0"}</p>
         </div>
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-3">
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded p-3">
           <div className="text-[#94A3B8] text-xs mb-1">Профит</div>
           <p className={`text-lg font-mono font-bold ${(stats.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             ${stats.total_profit?.toFixed(2) || "0"}
           </p>
         </div>
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-3">
-          <div className="text-[#94A3B8] text-xs mb-1">ROI</div>
-          <p className="text-lg font-mono font-bold text-purple-400">{stats.avg_roi?.toFixed(0) || "0"}%</p>
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded p-3">
+          <div className="text-[#94A3B8] text-xs mb-1">ROI ({stats.items_with_cost || 0} тов.)</div>
+          <p className={`text-lg font-mono font-bold ${(stats.avg_roi || 0) >= 30 ? 'text-green-400' : (stats.avg_roi || 0) >= 15 ? 'text-yellow-400' : 'text-[#94A3B8]'}`}>
+            {stats.avg_roi?.toFixed(1) || "0"}%
+          </p>
         </div>
         
         {/* Tracking Card */}
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-3">
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded p-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[#94A3B8] text-xs flex items-center gap-1"><Truck size={12} /> Трекинг</span>
-            <button onClick={() => setTrackingModal(true)} className="text-[#FF9900] text-xs hover:underline">
-              {batchData?.tracking_number ? "Изменить" : "+ Добавить"}
+            <span className="text-[#94A3B8] text-xs flex items-center gap-1"><Truck size={12} /></span>
+            <button onClick={() => setTrackingModal(true)} className="text-[#FF9900] text-[10px] hover:underline">
+              {batchData?.tracking_number ? "⚙" : "+ трекинг"}
             </button>
           </div>
           {batchData?.tracking_number ? (
             <div>
-              <p className="font-mono text-xs text-[#E6E6E6] truncate">{batchData.tracking_number}</p>
-              {batchData.tracking_parsed ? (
-                <p className="text-[10px] text-green-400 mt-1 truncate">
-                  {batchData.tracking_parsed.last_event || "Статус получен"}
-                </p>
+              <p className="font-mono text-[10px] text-[#94A3B8] truncate">{batchData.tracking_number}</p>
+              {trackingDisplay ? (
+                <div className="mt-1">
+                  <p className={`text-xs font-medium ${trackingDisplay.statusColor}`}>
+                    {trackingDisplay.statusText}
+                  </p>
+                  {trackingDisplay.lastEvent && (
+                    <p className="text-[9px] text-[#94A3B8] truncate" title={trackingDisplay.lastEvent}>
+                      {trackingDisplay.lastEvent}
+                    </p>
+                  )}
+                </div>
               ) : (
                 <button onClick={handleTrackShipment} disabled={trackingLoading} className="text-[10px] text-[#FF9900] hover:underline mt-1">
-                  {trackingLoading ? "Загрузка..." : "Обновить статус"}
+                  {trackingLoading ? "..." : "Обновить"}
                 </button>
               )}
             </div>
-          ) : (
-            <p className="text-xs text-[#94A3B8]">Не указан</p>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* Filters Row */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
           <Input
@@ -591,25 +610,22 @@ const BashPage = () => {
           />
         </div>
 
-        {/* Status Filter */}
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="w-[180px] bg-[#0F1115] border-[#2A2F3A] h-8 text-sm">
             <Filter size={14} className="mr-1" />
-            <SelectValue placeholder="Все статусы" />
+            <SelectValue placeholder="Все" />
           </SelectTrigger>
           <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
-            <SelectItem value="all">Все статусы ({items.length})</SelectItem>
-            {ITEM_STATUSES.map(s => (
-              <SelectItem key={s.value || "empty"} value={s.value || "empty"}>
-                <span style={{ color: s.color }}>{s.label}</span>
-                <span className="text-[#94A3B8] ml-1">({statusCounts[s.value] || 0})</span>
-              </SelectItem>
+            <SelectItem value="all">Все ({items.length})</SelectItem>
+            <SelectItem value="">Без статуса ({statusCounts[""] || 0})</SelectItem>
+            {uniqueStatuses.map(s => (
+              <SelectItem key={s} value={s}>{s} ({statusCounts[s] || 0})</SelectItem>
             ))}
           </SelectContent>
         </Select>
 
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[140px] bg-[#0F1115] border-[#2A2F3A] h-8 text-sm">
+          <SelectTrigger className="w-[120px] bg-[#0F1115] border-[#2A2F3A] h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
@@ -620,89 +636,87 @@ const BashPage = () => {
           </SelectContent>
         </Select>
 
-        <Button variant="outline" size="sm" onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")} className="border-[#2A2F3A] h-8">
-          <ArrowUpDown size={14} /> {sortOrder === "desc" ? "↓" : "↑"}
+        <Button variant="outline" size="sm" onClick={() => setSortOrder(o => o === "desc" ? "asc" : "desc")} className="border-[#2A2F3A] h-8 px-2">
+          <ArrowUpDown size={14} />
         </Button>
 
         <div className="flex-1" />
 
-        <Button variant="outline" size="sm" onClick={() => setImportSkuModal(true)} className="border-[#2A2F3A] h-8 text-xs">
-          <Download size={14} className="mr-1" /> Импорт SKU
+        <Button variant="outline" size="sm" onClick={handleExportSku} className="border-[#2A2F3A] h-8 text-xs">
+          <Download size={14} className="mr-1" /> Экспорт SKU
         </Button>
         
         <Button variant="outline" size="sm" onClick={() => setDeleteByStatusModal(true)} className="border-red-500/30 text-red-400 h-8 text-xs">
-          <Trash2 size={14} className="mr-1" /> Удалить по статусу
+          <Trash2 size={14} className="mr-1" /> По статусу
         </Button>
       </div>
 
       {/* Items Table */}
-      <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] overflow-hidden">
+      <div className="bg-[#13161B] border border-[#2A2F3A] rounded overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-[#0F1115] text-[#94A3B8] text-[10px] uppercase tracking-wider">
-                <th className="py-2 px-2 w-8"></th>
-                <th className="py-2 px-2 text-left">Товар</th>
+              <tr className="bg-[#0F1115] text-[#94A3B8] text-[10px] uppercase">
+                <th className="py-2 px-2 w-6"></th>
+                <th className="py-2 px-1 w-10">Фото</th>
+                <th className="py-2 px-2 text-left w-[280px]">Товар</th>
                 <th className="py-2 px-2 text-right">Buy Box</th>
                 <th className="py-2 px-2 text-right">Fees</th>
-                <th className="py-2 px-2 text-right">Себест.</th>
-                <th className="py-2 px-2 text-right">Доп.</th>
-                <th className="py-2 px-2 text-right">Кол-во</th>
+                <th className="py-2 px-2 text-right w-16">Себест.</th>
+                <th className="py-2 px-2 text-right w-14">Доп.</th>
+                <th className="py-2 px-2 text-right w-12">Кол.</th>
                 <th className="py-2 px-2 text-right">Профит</th>
                 <th className="py-2 px-2 text-right">ROI</th>
-                <th className="py-2 px-2 text-center">Статус</th>
+                <th className="py-2 px-2 text-center w-24">Статус</th>
               </tr>
             </thead>
             <tbody>
               {paginatedItems.map(item => (
                 <>
                   <tr key={item.id} className="border-t border-[#2A2F3A] hover:bg-[#1A1D24]">
-                    <td className="py-2 px-2">
+                    <td className="py-1 px-2">
                       <button onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)} className="text-[#94A3B8] hover:text-[#FF9900]">
                         {expandedItem === item.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
                     </td>
-                    <td className="py-2 px-2">
-                      <div className="flex items-center gap-2">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt="" className="w-8 h-8 object-cover rounded" />
-                        ) : (
-                          <div className="w-8 h-8 bg-[#2A2F3A] rounded flex items-center justify-center"><Package size={12} className="text-[#94A3B8]" /></div>
-                        )}
-                        <div className="min-w-0">
-                          <a href={`https://amazon.com/dp/${item.asin}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#FF9900] hover:underline flex items-center gap-0.5">
-                            {item.asin} <ExternalLink size={8} />
-                          </a>
-                          <div className="text-[10px] text-[#E6E6E6] truncate max-w-[200px]" title={item.title}>{item.title || "—"}</div>
-                        </div>
-                      </div>
+                    <td className="py-1 px-1">
+                      <ZoomableImage src={item.image_url} alt={item.title} />
                     </td>
-                    <td className="py-2 px-2 text-right font-mono text-xs text-[#E6E6E6]">${item.buy_box_price?.toFixed(2) || "0"}</td>
-                    <td className="py-2 px-2 text-right text-[10px] text-red-400">
+                    <td className="py-1 px-2 w-[280px]">
+                      <a href={`https://amazon.com/dp/${item.asin}`} target="_blank" rel="noopener noreferrer" className="font-mono text-[10px] text-[#FF9900] hover:underline flex items-center gap-0.5">
+                        {item.asin} <ExternalLink size={8} />
+                      </a>
+                      <div className="text-[11px] text-[#E6E6E6] leading-tight line-clamp-2 hover:line-clamp-none cursor-help" title={item.title}>
+                        {item.title || "—"}
+                      </div>
+                      {item.brand && <span className="text-[9px] text-[#94A3B8]">{item.brand}</span>}
+                    </td>
+                    <td className="py-1 px-2 text-right font-mono text-xs text-[#E6E6E6]">${item.buy_box_price?.toFixed(2) || "0"}</td>
+                    <td className="py-1 px-2 text-right text-[10px] text-red-400">
                       ${((item.referral_fee || 0) + (item.fba_fee || 0) + (item.shipping_cost || 0)).toFixed(2)}
                     </td>
-                    <td className="py-2 px-2 text-right">
+                    <td className="py-1 px-2 text-right">
                       <EditableCell value={item.cost_price} onChange={(v) => handleUpdateItem(item.id, "cost_price", v)} className="w-14" placeholder="0" />
                     </td>
-                    <td className="py-2 px-2 text-right">
+                    <td className="py-1 px-2 text-right">
                       <EditableCell value={item.extra_costs} onChange={(v) => handleUpdateItem(item.id, "extra_costs", v)} className="w-12" placeholder="0" />
                     </td>
-                    <td className="py-2 px-2 text-right">
+                    <td className="py-1 px-2 text-right">
                       <EditableCell value={item.quantity} onChange={(v) => handleUpdateItem(item.id, "quantity", Math.max(1, parseInt(v) || 1))} className="w-10" />
                     </td>
-                    <td className={`py-2 px-2 text-right font-mono text-xs font-bold ${(item.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <td className={`py-1 px-2 text-right font-mono text-xs font-bold ${(item.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       ${item.total_profit?.toFixed(2) || "0"}
                     </td>
-                    <td className={`py-2 px-2 text-right font-mono text-xs font-bold ${(item.cost_price || 0) <= 0 ? 'text-[#94A3B8]' : (item.roi || 0) >= 30 ? 'text-green-400' : (item.roi || 0) >= 15 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    <td className={`py-1 px-2 text-right font-mono text-xs font-bold ${(item.cost_price || 0) <= 0 ? 'text-[#94A3B8]' : (item.roi || 0) >= 30 ? 'text-green-400' : (item.roi || 0) >= 15 ? 'text-yellow-400' : 'text-red-400'}`}>
                       {(item.cost_price || 0) > 0 ? `${item.roi?.toFixed(0)}%` : "—"}
                     </td>
-                    <td className="py-2 px-2 text-center">
-                      <StatusBadge status={item.status} onClick={() => setStatusModal(item)} />
+                    <td className="py-1 px-2 text-center">
+                      <StatusBadge status={item.status} onClick={() => { setStatusModal(item); setCustomStatus(item.status || ""); }} />
                     </td>
                   </tr>
                   {expandedItem === item.id && (
                     <tr className="bg-[#0F1115]">
-                      <td colSpan={10} className="p-3">
+                      <td colSpan={11} className="p-3">
                         <div className="grid grid-cols-4 gap-3 text-xs">
                           <div>
                             <Label className="text-[#94A3B8] text-[10px]">SKU поставщика</Label>
@@ -714,11 +728,11 @@ const BashPage = () => {
                           </div>
                           <div>
                             <Label className="text-[#94A3B8] text-[10px]">Категория</Label>
-                            <p className="text-[#E6E6E6] mt-1">{item.category || "—"}</p>
+                            <p className="text-[#E6E6E6] mt-2 text-xs">{item.category || "—"}</p>
                           </div>
                           <div>
                             <Label className="text-[#94A3B8] text-[10px]">Продаж/мес</Label>
-                            <p className="text-[#E6E6E6] mt-1">{item.monthly_sold || item.bought_past_month || "—"}</p>
+                            <p className="text-[#E6E6E6] mt-2 text-xs">{item.monthly_sold || item.bought_past_month || "—"}</p>
                           </div>
                         </div>
                         <div className="flex gap-2 mt-2">
@@ -727,7 +741,7 @@ const BashPage = () => {
                           </Button>
                           {item.supplier_link && (
                             <a href={item.supplier_link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#FF9900] hover:underline flex items-center gap-1">
-                              <Link size={10} /> Открыть у поставщика
+                              <Link size={10} /> Поставщик
                             </a>
                           )}
                         </div>
@@ -740,7 +754,6 @@ const BashPage = () => {
           </table>
         </div>
         
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-2 border-t border-[#2A2F3A] text-xs">
             <span className="text-[#94A3B8]">{(page - 1) * itemsPerPage + 1}-{Math.min(page * itemsPerPage, filteredItems.length)} из {filteredItems.length}</span>
@@ -757,23 +770,43 @@ const BashPage = () => {
         )}
       </div>
 
-      {/* Status Modal */}
-      <Dialog open={!!statusModal} onOpenChange={() => setStatusModal(null)}>
-        <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6] max-w-xs">
+      {/* Status Modal - КАСТОМНЫЙ ВВОД */}
+      <Dialog open={!!statusModal} onOpenChange={() => { setStatusModal(null); setCustomStatus(""); }}>
+        <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6] max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-sm">Статус товара</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2">
-            {ITEM_STATUSES.map(s => (
-              <button
-                key={s.value || "empty"}
-                onClick={() => { handleUpdateItem(statusModal?.id, "status", s.value); setStatusModal(null); }}
-                className="p-2 rounded text-xs text-left transition-colors hover:opacity-80"
-                style={{ backgroundColor: `${s.color}20`, color: s.color, border: `1px solid ${s.color}40` }}
-              >
-                {s.label}
-              </button>
-            ))}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-[#94A3B8] text-xs">Введите статус</Label>
+              <Input 
+                value={customStatus} 
+                onChange={(e) => setCustomStatus(e.target.value)}
+                placeholder="Например: не нашёл, тяжелый..."
+                className="bg-[#0F1115] border-[#2A2F3A] mt-1"
+                onKeyDown={(e) => e.key === "Enter" && handleSetStatus(customStatus)}
+              />
+            </div>
+            {uniqueStatuses.length > 0 && (
+              <div>
+                <Label className="text-[#94A3B8] text-xs">Или выберите:</Label>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {uniqueStatuses.map(s => (
+                    <button key={s} onClick={() => handleSetStatus(s)} className="px-2 py-1 rounded text-xs bg-[#FF9900]/20 text-[#FF9900] hover:bg-[#FF9900]/30">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button onClick={() => handleSetStatus(customStatus)} className="flex-1 bg-[#FF9900] hover:bg-[#E68A00] text-black">
+                Сохранить
+              </Button>
+              <Button variant="outline" onClick={() => handleSetStatus("")} className="border-[#2A2F3A]">
+                Очистить
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -785,21 +818,24 @@ const BashPage = () => {
             <DialogTitle className="text-[#FF9900]">Удалить по статусу</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-sm text-[#94A3B8]">Выберите статусы для удаления:</p>
-            <div className="grid grid-cols-2 gap-2">
-              {ITEM_STATUSES.filter(s => s.value).map(s => (
-                <label key={s.value} className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#1A1D24]" style={{ border: `1px solid ${s.color}40` }}>
+            <p className="text-sm text-[#94A3B8]">Выберите статусы:</p>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {uniqueStatuses.map(s => (
+                <label key={s} className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-[#1A1D24] border border-[#2A2F3A]">
                   <Checkbox
-                    checked={selectedStatuses.includes(s.value)}
+                    checked={selectedStatuses.includes(s)}
                     onCheckedChange={(checked) => {
-                      if (checked) setSelectedStatuses([...selectedStatuses, s.value]);
-                      else setSelectedStatuses(selectedStatuses.filter(v => v !== s.value));
+                      if (checked) setSelectedStatuses([...selectedStatuses, s]);
+                      else setSelectedStatuses(selectedStatuses.filter(v => v !== s));
                     }}
                   />
-                  <span style={{ color: s.color }} className="text-sm">{s.label}</span>
-                  <span className="text-[#94A3B8] text-xs ml-auto">({statusCounts[s.value] || 0})</span>
+                  <span className="text-sm text-[#FF9900]">{s}</span>
+                  <span className="text-[#94A3B8] text-xs ml-auto">({statusCounts[s] || 0})</span>
                 </label>
               ))}
+              {uniqueStatuses.length === 0 && (
+                <p className="text-center text-[#94A3B8] py-4">Нет товаров со статусами</p>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => { setDeleteByStatusModal(false); setSelectedStatuses([]); }} className="border-[#2A2F3A]">Отмена</Button>
@@ -811,24 +847,24 @@ const BashPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Import SKU Modal */}
-      <Dialog open={importSkuModal} onOpenChange={setImportSkuModal}>
+      {/* Export SKU Modal */}
+      <Dialog open={exportSkuModal} onOpenChange={setExportSkuModal}>
         <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
           <DialogHeader>
-            <DialogTitle className="text-[#FF9900]">Импорт SKU + Количество</DialogTitle>
+            <DialogTitle className="text-[#FF9900]">Экспорт SKU + Количество</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <p className="text-xs text-[#94A3B8]">Формат: SKU TAB/запятая Количество (по строкам)</p>
-            <Textarea
-              value={skuImportText}
-              onChange={(e) => setSkuImportText(e.target.value)}
-              placeholder="ALI-123	5&#10;SUPPLIER-456	10&#10;SKU-789	3"
-              className="bg-[#0F1115] border-[#2A2F3A] min-h-[150px] font-mono text-xs"
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setImportSkuModal(false)} className="border-[#2A2F3A]">Отмена</Button>
-              <Button onClick={handleImportSkuQuantity} className="bg-[#FF9900] hover:bg-[#E68A00] text-black">Импортировать</Button>
-            </div>
+            <p className="text-xs text-[#94A3B8]">Товары с заполненным артикулом поставщика и количеством &gt; 0:</p>
+            {exportedItems.length > 0 ? (
+              <Textarea
+                readOnly
+                value={exportedItems.map(i => `${i.supplier_sku}\t${i.quantity}`).join("\n")}
+                className="bg-[#0F1115] border-[#2A2F3A] min-h-[200px] font-mono text-xs"
+              />
+            ) : (
+              <p className="text-center text-[#94A3B8] py-8">Нет товаров с заполненными данными</p>
+            )}
+            <p className="text-xs text-[#94A3B8]">Всего: {exportedItems.length}</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -842,24 +878,21 @@ const BashPage = () => {
           <div className="space-y-3">
             <div>
               <Label className="text-[#94A3B8] text-xs">Трекинг номер</Label>
-              <Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} placeholder="Номер отслеживания" className="bg-[#0F1115] border-[#2A2F3A] mt-1" />
+              <Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} placeholder="Номер" className="bg-[#0F1115] border-[#2A2F3A] mt-1" />
             </div>
             <div>
               <Label className="text-[#94A3B8] text-xs">Перевозчик</Label>
               <Input
                 value={carrierName}
                 onChange={(e) => { setCarrierName(e.target.value); searchCarriers(e.target.value); }}
-                placeholder="Начните вводить название..."
+                placeholder="Начните вводить..."
                 className="bg-[#0F1115] border-[#2A2F3A] mt-1"
               />
               {carriers.length > 0 && carrierName && (
-                <div className="mt-1 bg-[#0F1115] border border-[#2A2F3A] rounded max-h-[150px] overflow-y-auto">
+                <div className="mt-1 bg-[#0F1115] border border-[#2A2F3A] rounded max-h-[120px] overflow-y-auto">
                   {carriers.map(c => (
-                    <button
-                      key={c.key}
-                      onClick={() => { setCarrierName(c.name); setCarrierCode(c.key); setCarriers([]); }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-[#1A1D24] text-[#E6E6E6]"
-                    >
+                    <button key={c.key} onClick={() => { setCarrierName(c.name); setCarrierCode(c.key); setCarriers([]); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[#1A1D24] text-[#E6E6E6]">
                       {c.name}
                     </button>
                   ))}
@@ -874,12 +907,11 @@ const BashPage = () => {
                 </Button>
               )}
             </div>
-            {batchData?.tracking_parsed && (
+            {trackingDisplay && (
               <div className="p-3 bg-[#0F1115] rounded border border-[#2A2F3A]">
-                <p className="text-xs text-green-400 font-medium">{batchData.tracking_parsed.last_event || "Статус получен"}</p>
-                {batchData.tracking_parsed.last_time && (
-                  <p className="text-[10px] text-[#94A3B8] mt-1">{batchData.tracking_parsed.last_time}</p>
-                )}
+                <p className={`text-sm font-medium ${trackingDisplay.statusColor}`}>{trackingDisplay.statusText}</p>
+                {trackingDisplay.lastEvent && <p className="text-xs text-[#E6E6E6] mt-1">{trackingDisplay.lastEvent}</p>}
+                {trackingDisplay.lastTime && <p className="text-[10px] text-[#94A3B8] mt-1">{trackingDisplay.lastTime}</p>}
               </div>
             )}
           </div>
@@ -919,28 +951,25 @@ const BashPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Upload Modal (for new batch from detail view) */}
+      {/* Upload Modal */}
       <Dialog open={uploadModal} onOpenChange={setUploadModal}>
         <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
           <DialogHeader>
-            <DialogTitle className="font-mono uppercase tracking-wider text-[#FF9900]">Новая партия</DialogTitle>
+            <DialogTitle className="text-[#FF9900]">Новая партия</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label className="text-[#94A3B8]">Excel файл</Label>
-              <label className="block mt-2">
-                <input type="file" accept=".xlsx,.xls" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="hidden" />
-                <div className={`border-2 border-dashed border-[#2A2F3A] rounded p-4 text-center cursor-pointer hover:border-[#FF9900]/50 ${selectedFile ? 'border-[#FF9900]' : ''}`}>
-                  {selectedFile ? <span className="text-[#FF9900]">{selectedFile.name}</span> : <span className="text-[#94A3B8]">Выберите файл</span>}
-                </div>
-              </label>
-            </div>
-            <Input value={batchName} onChange={(e) => setBatchName(e.target.value)} placeholder="Название партии" className="bg-[#0F1115] border-[#2A2F3A]" />
+            <label className="block">
+              <input type="file" accept=".xlsx,.xls" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="hidden" />
+              <div className={`border-2 border-dashed border-[#2A2F3A] rounded p-4 text-center cursor-pointer ${selectedFile ? 'border-[#FF9900]' : ''}`}>
+                {selectedFile ? <span className="text-[#FF9900]">{selectedFile.name}</span> : <span className="text-[#94A3B8]">Выберите файл</span>}
+              </div>
+            </label>
+            <Input value={batchName} onChange={(e) => setBatchName(e.target.value)} placeholder="Название" className="bg-[#0F1115] border-[#2A2F3A]" />
             <Input value={batchSupplier} onChange={(e) => setBatchSupplier(e.target.value)} placeholder="Поставщик" className="bg-[#0F1115] border-[#2A2F3A]" />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setUploadModal(false)} className="border-[#2A2F3A]">Отмена</Button>
               <Button onClick={handleUploadFile} disabled={!selectedFile || uploading} className="bg-[#FF9900] hover:bg-[#E68A00] text-black">
-                {uploading ? "Загрузка..." : "Создать"}
+                {uploading ? "..." : "Создать"}
               </Button>
             </div>
           </div>
