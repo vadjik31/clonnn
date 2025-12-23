@@ -56,6 +56,8 @@ class BrandStatus:
     OUTCOME_DECLINED = "OUTCOME_DECLINED"
     OUTCOME_REPLIED = "OUTCOME_REPLIED"
     PROBLEMATIC = "PROBLEMATIC"
+    ARCHIVED = "ARCHIVED"  # Новый статус для архива
+    BLACKLISTED = "BLACKLISTED"  # Новый статус для чёрного списка
 
 class PipelineStage:
     REVIEW = "REVIEW"
