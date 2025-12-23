@@ -272,6 +272,8 @@ class BrandResponse(BaseModel):
     health_score: int = 0
     quality_warnings: List[str] = []
     assignment_count: int = 0
+    contacts: List[Dict[str, Any]] = []
+    contacts_count: int = 0
     created_at: str
 
 class BrandItemResponse(BaseModel):
@@ -288,6 +290,7 @@ class BrandDetailResponse(BaseModel):
     notes: List[Dict[str, Any]]
     events: List[Dict[str, Any]]
     assignment_history: List[Dict[str, Any]]
+    contacts: List[Dict[str, Any]] = []
 
 class StageCompleteRequest(BaseModel):
     stage: str
