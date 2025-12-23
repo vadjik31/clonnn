@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api } from "../App";
+import { api, useAuth } from "../App";
 import { toast } from "sonner";
 import { 
   BarChart3, 
@@ -8,8 +8,13 @@ import {
   TrendingUp, 
   Users,
   Trophy,
-  Activity,
-  RefreshCw
+  Zap,
+  MessageSquare,
+  Phone,
+  Target,
+  Skull,
+  Trash2,
+  HelpCircle
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -20,14 +25,34 @@ import {
   SelectValue,
 } from "../components/ui/select";
 
+// Глоссарий терминов
+const glossary = {
+  "Обработано": "Количество брендов, с которыми сёрчер взаимодействовал за период",
+  "С контактами": "Бренды, для которых найдены и добавлены контакты",
+  "С заметками": "Бренды с добавленными заметками о ходе работы",
+  "Исходы": "Бренды с финальным результатом (одобрен/отказ/ответил)",
+  "Мёртвые": "Назначенные бренды без активности за период",
+  "Скорость": "Среднее количество обработанных брендов в час",
+  "Эффективность": "% полезных действий от общего числа обработанных"
+};
+
+const Tooltip = ({ text, children }) => (
+  <div className="relative group inline-flex items-center gap-1">
+    {children}
+    <HelpCircle size={12} className="text-[#94A3B8] opacity-50 group-hover:opacity-100 cursor-help" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[#1A1D23] border border-[#FF9900]/30 rounded text-xs text-[#E6E6E6] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+      {text}
+    </div>
+  </div>
+);
+
 const AnalyticsPage = () => {
+  const { user } = useAuth();
   const [kpiData, setKpiData] = useState(null);
-  const [reviewTimeout, setReviewTimeout] = useState(null);
   const [inactiveBrands, setInactiveBrands] = useState(null);
-  const [sharedContacts, setSharedContacts] = useState(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("7");
-  const [checking, setChecking] = useState(false);
+  const [deletingInactive, setDeletingInactive] = useState(false);
 
   useEffect(() => {
     fetchAllData();
@@ -36,16 +61,12 @@ const AnalyticsPage = () => {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [kpi, review, inactive, shared] = await Promise.all([
+      const [kpi, inactive] = await Promise.all([
         api.get(`/analytics/kpi?period_days=${period}`),
-        api.get("/analytics/review-timeout"),
-        api.get("/analytics/inactive-brands"),
-        api.get("/analytics/shared-contacts")
+        api.get("/analytics/inactive-brands")
       ]);
       setKpiData(kpi.data);
-      setReviewTimeout(review.data);
       setInactiveBrands(inactive.data);
-      setSharedContacts(shared.data);
     } catch (error) {
       toast.error("Ошибка загрузки аналитики");
     } finally {
@@ -53,16 +74,28 @@ const AnalyticsPage = () => {
     }
   };
 
-  const checkTimeouts = async () => {
-    setChecking(true);
+  const handleDeleteInactive = async (brandIds) => {
+    if (!window.confirm(`Удалить ${brandIds.length} неактивных брендов?`)) return;
+    setDeletingInactive(true);
     try {
-      const response = await api.post("/system/check-timeouts");
-      toast.success(`Проверка завершена. Создано алертов: ${response.data.alerts_created}`);
+      await api.delete("/super-admin/brands/bulk-delete", { data: brandIds });
+      toast.success(`Удалено ${brandIds.length} брендов`);
       fetchAllData();
     } catch (error) {
-      toast.error("Ошибка проверки");
+      toast.error("Ошибка удаления");
     } finally {
-      setChecking(false);
+      setDeletingInactive(false);
+    }
+  };
+
+  const handleCleanupTest = async () => {
+    if (!window.confirm("Удалить все тестовые бренды (Test*)?")) return;
+    try {
+      const res = await api.delete("/super-admin/brands/cleanup-test");
+      toast.success(`Удалено тестовых брендов: ${res.data.deleted_count}`);
+      fetchAllData();
+    } catch (error) {
+      toast.error("Ошибка удаления");
     }
   };
 
@@ -83,7 +116,7 @@ const AnalyticsPage = () => {
             <BarChart3 className="text-[#FF9900]" />
             Аналитика
           </h1>
-          <p className="text-[#94A3B8] mt-1">KPI, таймауты и контроль качества</p>
+          <p className="text-[#94A3B8] mt-1">KPI сёрчеров и контроль качества</p>
         </div>
         <div className="flex items-center gap-4">
           <Select value={period} onValueChange={setPeriod}>
@@ -96,19 +129,10 @@ const AnalyticsPage = () => {
               <SelectItem value="30">30 дней</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            onClick={checkTimeouts}
-            disabled={checking}
-            className="btn-secondary flex items-center gap-2"
-            data-testid="check-timeouts-btn"
-          >
-            {checking ? <RefreshCw size={16} className="animate-spin" /> : <Clock size={16} />}
-            Проверить таймауты
-          </Button>
         </div>
       </div>
 
-      {/* KPI Leaderboard */}
+      {/* KPI Leaderboard - New Design */}
       <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
         <h2 className="text-lg font-semibold text-[#E6E6E6] mb-4 font-mono uppercase tracking-wider flex items-center gap-2">
           <Trophy size={18} className="text-[#FF9900]" />
@@ -121,13 +145,41 @@ const AnalyticsPage = () => {
               <tr className="table-header">
                 <th className="py-3 px-4 text-left">#</th>
                 <th className="py-3 px-4 text-left">Сёрчер</th>
-                <th className="py-3 px-4 text-center">Этапов</th>
-                <th className="py-3 px-4 text-center">Исходов</th>
-                <th className="py-3 px-4 text-center">Обновлений</th>
-                <th className="py-3 px-4 text-center">Возвратов</th>
-                <th className="py-3 px-4 text-center">Быстрых</th>
-                <th className="py-3 px-4 text-center">Качество</th>
-                <th className="py-3 px-4 text-center">Балл</th>
+                <th className="py-3 px-4 text-center">
+                  <Tooltip text={glossary["Обработано"]}>
+                    <span>Обработано</span>
+                  </Tooltip>
+                </th>
+                <th className="py-3 px-4 text-center">
+                  <Tooltip text={glossary["С контактами"]}>
+                    <span>Контакты</span>
+                  </Tooltip>
+                </th>
+                <th className="py-3 px-4 text-center">
+                  <Tooltip text={glossary["С заметками"]}>
+                    <span>Заметки</span>
+                  </Tooltip>
+                </th>
+                <th className="py-3 px-4 text-center">
+                  <Tooltip text={glossary["Исходы"]}>
+                    <span>Исходы</span>
+                  </Tooltip>
+                </th>
+                <th className="py-3 px-4 text-center">
+                  <Tooltip text={glossary["Мёртвые"]}>
+                    <span>Мёртвые</span>
+                  </Tooltip>
+                </th>
+                <th className="py-3 px-4 text-center">
+                  <Tooltip text={glossary["Скорость"]}>
+                    <span>Скор/час</span>
+                  </Tooltip>
+                </th>
+                <th className="py-3 px-4 text-center">
+                  <Tooltip text={glossary["Эффективность"]}>
+                    <span>Эфф-ть</span>
+                  </Tooltip>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -143,23 +195,36 @@ const AnalyticsPage = () => {
                     </span>
                   </td>
                   <td className="table-cell font-medium">{item.nickname}</td>
-                  <td className="table-cell text-center font-mono text-green-400">{item.metrics.stages_completed}</td>
-                  <td className="table-cell text-center font-mono text-blue-400">{item.metrics.outcomes_set}</td>
-                  <td className="table-cell text-center font-mono">{item.metrics.info_updates}</td>
-                  <td className="table-cell text-center font-mono text-yellow-400">{item.metrics.returns}</td>
+                  <td className="table-cell text-center font-mono text-[#E6E6E6]">
+                    {item.metrics.brands_processed}
+                  </td>
+                  <td className="table-cell text-center font-mono text-green-400">
+                    {item.metrics.with_contacts}
+                  </td>
+                  <td className="table-cell text-center font-mono text-blue-400">
+                    {item.metrics.with_notes}
+                  </td>
+                  <td className="table-cell text-center font-mono text-purple-400">
+                    {item.metrics.outcomes}
+                  </td>
                   <td className="table-cell text-center font-mono">
-                    <span className={item.metrics.quick_returns > 5 ? "text-red-400 font-bold" : ""}>
-                      {item.metrics.quick_returns}
+                    <span className={item.metrics.dead_brands > 5 ? "text-red-400 font-bold" : "text-[#94A3B8]"}>
+                      {item.metrics.dead_brands}
                     </span>
                   </td>
                   <td className="table-cell text-center font-mono">
-                    <span className={item.quality_ratio >= 50 ? "text-green-400" : "text-yellow-400"}>
-                      {item.quality_ratio}%
+                    <span className="flex items-center justify-center gap-1">
+                      <Zap size={12} className="text-yellow-400" />
+                      {item.metrics.speed_per_hour}
                     </span>
                   </td>
                   <td className="table-cell text-center">
-                    <span className="px-3 py-1 bg-[#FF9900]/20 text-[#FF9900] rounded-full font-mono font-bold">
-                      {item.weighted_score}
+                    <span className={`px-3 py-1 rounded-full font-mono font-bold ${
+                      item.efficiency >= 100 ? "bg-green-900/30 text-green-400" :
+                      item.efficiency >= 50 ? "bg-yellow-900/30 text-yellow-400" :
+                      "bg-red-900/30 text-red-400"
+                    }`}>
+                      {item.efficiency}%
                     </span>
                   </td>
                 </tr>
@@ -169,93 +234,67 @@ const AnalyticsPage = () => {
         </div>
       </div>
 
-      {/* Alerts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Review Timeout */}
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
-          <h3 className="text-lg font-semibold text-[#E6E6E6] mb-4 flex items-center gap-2">
-            <Clock size={18} className="text-yellow-400" />
-            Вечный REVIEW ({reviewTimeout?.count || 0})
-          </h3>
-          <p className="text-sm text-[#94A3B8] mb-4">
-            Бренды в статусе REVIEW более {reviewTimeout?.threshold_days} дней
-          </p>
-          
-          <div className="space-y-2 max-h-[300px] overflow-y-auto">
-            {reviewTimeout?.brands?.length === 0 ? (
-              <p className="text-[#94A3B8] text-center py-4">Нет проблемных брендов</p>
-            ) : (
-              reviewTimeout?.brands?.slice(0, 10).map((brand) => (
-                <div key={brand.id} className="flex items-center justify-between p-3 bg-[#0F1115] rounded-[2px]">
-                  <div>
-                    <p className="text-sm text-[#E6E6E6]">{brand.name_original}</p>
-                    <p className="text-xs text-[#94A3B8]">{brand.assigned_to_nickname}</p>
-                  </div>
-                  <span className="px-2 py-1 bg-yellow-900/20 text-yellow-400 rounded text-xs font-mono">
-                    {brand.days_in_review} дней
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Inactive Brands */}
-        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
-          <h3 className="text-lg font-semibold text-[#E6E6E6] mb-4 flex items-center gap-2">
-            <AlertTriangle size={18} className="text-red-400" />
+      {/* Inactive Brands with Delete Option */}
+      <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
+            <AlertTriangle size={18} className="text-orange-400" />
             Без активности ({inactiveBrands?.count || 0})
           </h3>
-          <p className="text-sm text-[#94A3B8] mb-4">
-            Бренды без действий более {inactiveBrands?.threshold_days} дней
-          </p>
-          
-          <div className="space-y-2 max-h-[300px] overflow-y-auto">
-            {inactiveBrands?.brands?.length === 0 ? (
-              <p className="text-[#94A3B8] text-center py-4">Нет неактивных брендов</p>
-            ) : (
-              inactiveBrands?.brands?.slice(0, 10).map((brand) => (
-                <div key={brand.id} className="flex items-center justify-between p-3 bg-[#0F1115] rounded-[2px]">
-                  <div>
-                    <p className="text-sm text-[#E6E6E6]">{brand.name_original}</p>
-                    <p className="text-xs text-[#94A3B8]">{brand.assigned_to_nickname}</p>
-                  </div>
-                  <span className="px-2 py-1 bg-red-900/20 text-red-400 rounded text-xs font-mono">
-                    {brand.days_inactive} дней
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
+          {user?.role === "super_admin" && (
+            <div className="flex gap-2">
+              <Button
+                onClick={handleCleanupTest}
+                variant="outline"
+                size="sm"
+                className="text-yellow-400 border-yellow-400/30 hover:bg-yellow-900/20"
+              >
+                <Trash2 size={14} className="mr-1" />
+                Удалить Test*
+              </Button>
+              {inactiveBrands?.brands?.length > 0 && (
+                <Button
+                  onClick={() => handleDeleteInactive(inactiveBrands.brands.map(b => b.id))}
+                  disabled={deletingInactive}
+                  variant="outline"
+                  size="sm"
+                  className="text-red-400 border-red-400/30 hover:bg-red-900/20"
+                >
+                  <Trash2 size={14} className="mr-1" />
+                  Удалить все
+                </Button>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Shared Contacts */}
-      <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
-        <h3 className="text-lg font-semibold text-[#E6E6E6] mb-4 flex items-center gap-2">
-          <Users size={18} className="text-purple-400" />
-          Общие контакты ({sharedContacts?.total_found || 0})
-        </h3>
         <p className="text-sm text-[#94A3B8] mb-4">
-          Бренды с одинаковыми доменами сайтов (возможные дубликаты)
+          Бренды без действий более {inactiveBrands?.threshold_days} дней
         </p>
         
-        <div className="space-y-3 max-h-[400px] overflow-y-auto">
-          {sharedContacts?.shared_contacts?.length === 0 ? (
-            <p className="text-[#94A3B8] text-center py-4">Дубликаты не найдены</p>
+        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          {inactiveBrands?.brands?.length === 0 ? (
+            <p className="text-[#94A3B8] text-center py-4">Нет неактивных брендов</p>
           ) : (
-            sharedContacts?.shared_contacts?.slice(0, 20).map((item, idx) => (
-              <div key={idx} className="p-4 bg-[#0F1115] rounded-[2px]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[#FF9900]">{item.domain}</span>
-                  <span className="text-xs text-[#94A3B8]">{item.brands_count} брендов</span>
+            inactiveBrands?.brands?.slice(0, 20).map((brand) => (
+              <div key={brand.id} className="flex items-center justify-between p-3 bg-[#0F1115] rounded-[2px] group">
+                <div className="flex-1">
+                  <p className="text-sm text-[#E6E6E6]">{brand.name_original}</p>
+                  <p className="text-xs text-[#94A3B8]">{brand.assigned_to_nickname || "Не назначен"}</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {item.brands.map((b, i) => (
-                    <span key={i} className="px-2 py-1 bg-[#1A1D24] text-[#E6E6E6] rounded text-xs">
-                      {b.brand_name}
-                    </span>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-1 bg-orange-900/20 text-orange-400 rounded text-xs font-mono">
+                    {brand.days_inactive} дней
+                  </span>
+                  {user?.role === "super_admin" && (
+                    <Button
+                      onClick={() => handleDeleteInactive([brand.id])}
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1 h-auto"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))
