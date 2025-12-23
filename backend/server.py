@@ -4115,7 +4115,7 @@ async def add_batch_note(
     }
     
     await db.batch_notes.insert_one(note_record)
-    del note_record["_id"] if "_id" in note_record else None
+    note_record.pop("_id", None)
     
     return note_record
 
