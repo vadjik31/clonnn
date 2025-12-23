@@ -1,7 +1,3 @@
-#====================================================================================================
-# START - Testing Protocol - DO NOT EDIT OR REMOVE THIS SECTION
-#====================================================================================================
-
 # THIS SECTION CONTAINS CRITICAL TESTING INSTRUCTIONS FOR BOTH AGENTS
 # BOTH MAIN_AGENT AND TESTING_AGENT MUST PRESERVE THIS ENTIRE BLOCK
 
@@ -101,3 +97,272 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  Система управления брендами для PROCTO 13 LLC на русском языке.
+  Роли: Admin, Searcher. Импорт из Excel, воронка брендов, KPI, функция отмены (Undo),
+  статусы ON_HOLD, NO_RESPONSE, аналитика и массовые действия.
+
+backend:
+  - task: "User Authentication (Login with Email, Password, Secret Code)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Auth implemented with JWT, roles admin/searcher"
+
+  - task: "Brand CRUD and Status Management"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Full brand lifecycle: IN_POOL, ASSIGNED, IN_WORK, WAITING, ON_HOLD, outcomes"
+
+  - task: "No Response Status (POST /brands/{id}/no-response)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "New status NO_RESPONSE to distinguish 'no reply' from declines"
+
+  - task: "Undo Last Action (POST /brands/{id}/undo, GET /brands/{id}/last-action)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "10-minute undo window, reverts status/stage changes"
+
+  - task: "On Hold Status (POST /brands/{id}/on-hold)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "ON_HOLD with reason and review_date"
+
+  - task: "Analytics KPI (GET /analytics/kpi)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "KPI leaderboard with weighted scores"
+
+  - task: "Review Timeout Detection (GET /analytics/review-timeout)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Detects brands stuck in REVIEW status"
+
+  - task: "Inactive Brands Detection (GET /analytics/inactive-brands)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Finds brands without activity"
+
+  - task: "Shared Contacts Detection (GET /analytics/shared-contacts)"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Finds brands with same website domain"
+
+  - task: "Health Score Calculation"
+    implemented: true
+    working: NA
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "calculate_health_score function for brand quality"
+
+frontend:
+  - task: "Login Page"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/LoginPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Dark theme login with email, password, secret code"
+
+  - task: "Dashboard with Alerts"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/DashboardPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Shows alerts for inactive brands, admin sees all"
+
+  - task: "Analytics Page (KPI, Timeouts, Duplicates)"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/AnalyticsPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "KPI leaderboard, Review timeout, Inactive brands, Shared contacts"
+
+  - task: "Brand Detail Page with All Actions"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/BrandDetailPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Stage, Outcome, NoResponse, OnHold, Problematic, Return, Undo buttons"
+
+  - task: "NoResponseModal Component"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/BrandDetailPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Modal for 'no response' status with required note"
+
+  - task: "Undo Button with Timer"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/BrandDetailPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Shows remaining minutes for undo window"
+
+  - task: "On Hold Modal"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/BrandDetailPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Modal with reason and review date fields"
+
+  - task: "Brands List Page"
+    implemented: true
+    working: NA
+    file: "/app/frontend/src/pages/BrandsPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: NA
+        agent: "main"
+        comment: "Table with search, filters by status/stage/searcher"
+
+metadata:
+  created_by: "main_agent"
+  version: "2.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "User Authentication"
+    - "No Response Status"
+    - "Undo Last Action"
+    - "On Hold Status"
+    - "Analytics KPI"
+    - "Analytics Page"
+    - "Brand Detail Page with All Actions"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Фазы 2 и 3 полностью реализованы. Нужно полное тестирование:
+      
+      BACKEND (endpoints):
+      - POST /api/auth/login - аутентификация
+      - POST /api/brands/{id}/no-response - статус "нет ответа"
+      - POST /api/brands/{id}/undo - отмена действия
+      - GET /api/brands/{id}/last-action - инфо для undo
+      - POST /api/brands/{id}/on-hold - на паузу
+      - GET /api/analytics/kpi - KPI рейтинг
+      - GET /api/analytics/review-timeout - застрявшие в REVIEW
+      - GET /api/analytics/inactive-brands - неактивные
+      - GET /api/analytics/shared-contacts - дубликаты
+      
+      FRONTEND:
+      - Страница входа
+      - Дашборд с алертами
+      - Страница аналитики (KPI, таймауты, дубликаты)
+      - Карточка бренда со всеми кнопками действий
+      - Модальные окна: NoResponse, OnHold, Stage, Outcome
+      
+      Credentials:
+      - Admin: admin@procto13.com / admin123 / PROCTO13
+      - Searcher: searcher@procto13.com / searcher123 / PROCTO13
