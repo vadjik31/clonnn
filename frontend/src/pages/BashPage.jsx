@@ -343,7 +343,8 @@ const BashPage = () => {
   
   const filteredItems = items
     .filter(item => {
-      if (statusFilter !== "all" && (item.status || "") !== statusFilter) return false;
+      if (statusFilter === "__empty__" && (item.status || "") !== "") return false;
+      else if (statusFilter !== "all" && statusFilter !== "__empty__" && (item.status || "") !== statusFilter) return false;
       if (!search) return true;
       const s = search.toLowerCase();
       return item.asin?.toLowerCase().includes(s) ||
