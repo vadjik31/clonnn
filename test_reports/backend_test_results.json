@@ -1,58 +1,58 @@
 {
-  "timestamp": "2025-12-23T11:44:34.261085",
+  "timestamp": "2025-12-23T12:03:12.604266",
   "base_url": "https://brandmanage.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:34.316474"
+      "timestamp": "2025-12-23T12:03:12.681577"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:34.356601"
+      "timestamp": "2025-12-23T12:03:12.720941"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:34.402540"
+      "timestamp": "2025-12-23T12:03:12.769973"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:34.479136"
+      "timestamp": "2025-12-23T12:03:12.844112"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:35.145653"
+      "timestamp": "2025-12-23T12:03:13.795389"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:35.274429"
+      "timestamp": "2025-12-23T12:03:13.958554"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:40.692554"
+      "timestamp": "2025-12-23T12:03:18.549035"
     },
     "brand_workflow": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:40.808070"
+      "timestamp": "2025-12-23T12:03:18.626573"
     },
     "security_fixes": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:45.821104"
+      "timestamp": "2025-12-23T12:03:22.778694"
     },
     "references_endpoints": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:45.889135"
+      "timestamp": "2025-12-23T12:03:22.848734"
     },
     "dashboard_alerts": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:45.937693"
+      "timestamp": "2025-12-23T12:03:22.899775"
     },
     "brands_health_score": {
       "passed": true,
-      "timestamp": "2025-12-23T11:44:46.049166"
+      "timestamp": "2025-12-23T12:03:23.022874"
     },
     "authentication_security": {
       "passed": false,
-      "timestamp": "2025-12-23T11:44:46.115380"
+      "timestamp": "2025-12-23T12:03:23.093537"
     }
   },
   "summary": {
