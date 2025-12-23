@@ -3650,6 +3650,524 @@ async def get_admin_permissions(user: dict = Depends(require_admin)):
         "permissions": permissions
     }
 
+# ============== BASH FEATURE: BATCH MANAGEMENT ==============
+
+class BatchStatus:
+    ACTIVE = "active"
+    SHIPPED = "shipped"
+    DELIVERED = "delivered"
+    ARCHIVED = "archived"
+
+class BatchItemUpdate(BaseModel):
+    cost_price: Optional[float] = None
+    extra_costs: Optional[float] = None
+    quantity: Optional[int] = None
+    notes: Optional[str] = None
+
+class BatchUpdate(BaseModel):
+    name: Optional[str] = None
+    supplier: Optional[str] = None
+    tracking_number: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+# Формула расчёта доставки (фунт * 0.8 на Амазон)
+def calculate_shipping_cost(weight_grams: float) -> float:
+    """Расчёт стоимости доставки: вес в фунтах * 0.8"""
+    if not weight_grams or weight_grams <= 0:
+        return 0.0
+    weight_pounds = weight_grams / 453.592  # конвертация граммы -> фунты
+    return round(weight_pounds * 0.8, 2)
+
+def calculate_profit_roi(item: dict) -> dict:
+    """
+    Расчёт Profit и ROI для товара
+    
+    Profit = Buy Box Price - Referral Fee - FBA Fee - Cost Price - Shipping Cost - Extra Costs
+    ROI = (Profit / Total Investment) * 100
+    """
+    buy_box_price = item.get("buy_box_price", 0) or 0
+    referral_fee = item.get("referral_fee", 0) or 0
+    fba_fee = item.get("fba_fee", 0) or 0
+    cost_price = item.get("cost_price", 0) or 0
+    extra_costs = item.get("extra_costs", 0) or 0
+    shipping_cost = item.get("shipping_cost", 0) or 0
+    quantity = item.get("quantity", 1) or 1
+    
+    # Profit на единицу
+    profit_per_unit = buy_box_price - referral_fee - fba_fee - cost_price - shipping_cost - extra_costs
+    
+    # Total investment (затраты)
+    total_investment = cost_price + shipping_cost + extra_costs
+    
+    # ROI
+    roi = 0.0
+    if total_investment > 0:
+        roi = (profit_per_unit / total_investment) * 100
+    
+    # Total profit
+    total_profit = profit_per_unit * quantity
+    
+    return {
+        "profit_per_unit": round(profit_per_unit, 2),
+        "total_profit": round(total_profit, 2),
+        "roi": round(roi, 2),
+        "total_investment": round(total_investment, 2)
+    }
+
+@api_router.post("/bash/upload")
+async def upload_bash_file(
+    file: UploadFile = File(...),
+    batch_name: Optional[str] = None,
+    supplier: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """Загрузка Excel файла Keepa для создания новой партии"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Только Excel файлы (.xlsx, .xls)")
+    
+    try:
+        contents = await file.read()
+        df = pd.read_excel(BytesIO(contents))
+        
+        # Создаём партию
+        batch_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        
+        batch = {
+            "id": batch_id,
+            "name": batch_name or file.filename.replace(".xlsx", "").replace(".xls", ""),
+            "file_name": file.filename,
+            "supplier": supplier or "",
+            "status": BatchStatus.ACTIVE,
+            "tracking_number": "",
+            "tracking_status": "",
+            "created_at": now,
+            "created_by": admin["id"],
+            "items_count": 0,
+            "total_cost": 0,
+            "total_profit": 0,
+            "notes": ""
+        }
+        
+        await db.batches.insert_one(batch)
+        
+        # Парсим товары из Excel
+        items = []
+        for idx, row in df.iterrows():
+            # Извлекаем данные из Keepa export
+            asin = str(row.get("ASIN", "")) if pd.notna(row.get("ASIN")) else ""
+            if not asin:
+                continue
+            
+            # Название товара (разные варианты колонок)
+            title = ""
+            for col in ["Buy Box 🚚: Current Title", "Buy Box: Current Title", "Title", "Name"]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    title = str(row.get(col))
+                    break
+            
+            # Цена Buy Box
+            buy_box_price = 0.0
+            for col in ["Buy Box 🚚: 90 days avg.", "Buy Box: 90 days avg.", "Buy Box 🚚: Current"]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    try:
+                        buy_box_price = float(row.get(col))
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Referral Fee
+            referral_fee = 0.0
+            for col in ["Referral Fee based on current Buy Box price", "Referral Fee"]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    try:
+                        referral_fee = float(row.get(col))
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            
+            # FBA Fee
+            fba_fee = 0.0
+            for col in ["FBA Pick&Pack Fee", "FBA Fee"]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    try:
+                        fba_fee = float(row.get(col))
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Вес (граммы)
+            weight_grams = 0.0
+            for col in ["Package: Weight (g)", "Item: Weight (g)", "Weight (g)"]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    try:
+                        weight_grams = float(row.get(col))
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Изображение
+            image_url = ""
+            if "Image" in df.columns and pd.notna(row.get("Image")):
+                img_data = str(row.get("Image"))
+                # Keepa может хранить несколько URL через ;
+                image_url = img_data.split(";")[0] if img_data else ""
+            
+            # Бренд
+            brand = ""
+            if "Brand" in df.columns and pd.notna(row.get("Brand")):
+                brand = str(row.get("Brand"))
+            
+            # Sales Rank
+            sales_rank = 0
+            for col in ["Sales Rank: Current", "Sales Rank"]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    try:
+                        sales_rank = int(float(row.get(col)))
+                        break
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Monthly sold
+            monthly_sold = 0
+            if "monthly sold" in df.columns and pd.notna(row.get("monthly sold")):
+                try:
+                    monthly_sold = int(float(row.get("monthly sold")))
+                except (ValueError, TypeError):
+                    pass
+            
+            # Bought in past month
+            bought_past_month = 0
+            if "Bought in past month" in df.columns and pd.notna(row.get("Bought in past month")):
+                try:
+                    bought_past_month = int(float(row.get("Bought in past month")))
+                except (ValueError, TypeError):
+                    pass
+            
+            # Категория
+            category = ""
+            for col in ["Sales Rank: Subcategory", "Categories: Sub", "Categories: Root"]:
+                if col in df.columns and pd.notna(row.get(col)):
+                    category = str(row.get(col))
+                    break
+            
+            # Расчёт стоимости доставки
+            shipping_cost = calculate_shipping_cost(weight_grams)
+            
+            item = {
+                "id": str(uuid.uuid4()),
+                "batch_id": batch_id,
+                "asin": asin,
+                "title": title[:500] if title else "",
+                "brand": brand,
+                "image_url": image_url,
+                "buy_box_price": buy_box_price,
+                "referral_fee": referral_fee,
+                "fba_fee": fba_fee,
+                "weight_grams": weight_grams,
+                "shipping_cost": shipping_cost,
+                "cost_price": 0.0,  # пользователь вводит
+                "extra_costs": 0.0,  # пользователь вводит
+                "quantity": 1,
+                "profit_per_unit": 0.0,
+                "total_profit": 0.0,
+                "roi": 0.0,
+                "sales_rank": sales_rank,
+                "monthly_sold": monthly_sold,
+                "bought_past_month": bought_past_month,
+                "category": category,
+                "notes": "",
+                "created_at": now
+            }
+            
+            # Рассчитываем начальные profit/ROI (будут 0 пока нет cost_price)
+            calcs = calculate_profit_roi(item)
+            item.update(calcs)
+            
+            items.append(item)
+        
+        if items:
+            await db.batch_items.insert_many(items)
+        
+        # Обновляем счётчик в партии
+        await db.batches.update_one(
+            {"id": batch_id},
+            {"$set": {"items_count": len(items)}}
+        )
+        
+        return {
+            "status": "success",
+            "batch_id": batch_id,
+            "items_count": len(items),
+            "batch_name": batch["name"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error uploading BASH file: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка обработки файла: {str(e)}")
+
+@api_router.get("/bash")
+async def get_batches(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """Получить список всех партий"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    batches = await db.batches.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.batches.count_documents(query)
+    
+    return {
+        "batches": batches,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+@api_router.get("/bash/{batch_id}")
+async def get_batch(
+    batch_id: str,
+    admin: dict = Depends(require_admin)
+):
+    """Получить партию с товарами"""
+    batch = await db.batches.find_one({"id": batch_id}, {"_id": 0})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    items = await db.batch_items.find(
+        {"batch_id": batch_id},
+        {"_id": 0}
+    ).to_list(10000)
+    
+    # Пересчитываем общую статистику
+    total_cost = sum((i.get("cost_price", 0) or 0) * (i.get("quantity", 1) or 1) for i in items)
+    total_profit = sum(i.get("total_profit", 0) or 0 for i in items)
+    total_revenue = sum((i.get("buy_box_price", 0) or 0) * (i.get("quantity", 1) or 1) for i in items)
+    
+    batch["items"] = items
+    batch["calculated_stats"] = {
+        "total_cost": round(total_cost, 2),
+        "total_profit": round(total_profit, 2),
+        "total_revenue": round(total_revenue, 2),
+        "avg_roi": round(sum(i.get("roi", 0) for i in items if i.get("cost_price", 0) > 0) / max(len([i for i in items if i.get("cost_price", 0) > 0]), 1), 2)
+    }
+    
+    return batch
+
+@api_router.put("/bash/{batch_id}")
+async def update_batch(
+    batch_id: str,
+    update: BatchUpdate,
+    admin: dict = Depends(require_admin)
+):
+    """Обновить партию"""
+    batch = await db.batches.find_one({"id": batch_id})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    update_data = {k: v for k, v in update.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.batches.update_one(
+        {"id": batch_id},
+        {"$set": update_data}
+    )
+    
+    return {"status": "success"}
+
+@api_router.delete("/bash/{batch_id}")
+async def delete_batch(
+    batch_id: str,
+    admin: dict = Depends(require_admin)
+):
+    """Удалить партию со всеми товарами"""
+    batch = await db.batches.find_one({"id": batch_id})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    # Удаляем товары
+    await db.batch_items.delete_many({"batch_id": batch_id})
+    
+    # Удаляем партию
+    await db.batches.delete_one({"id": batch_id})
+    
+    return {"status": "success"}
+
+@api_router.put("/bash/item/{item_id}")
+async def update_batch_item(
+    item_id: str,
+    update: BatchItemUpdate,
+    admin: dict = Depends(require_admin)
+):
+    """Обновить товар в партии (cost_price, extra_costs, quantity)"""
+    item = await db.batch_items.find_one({"id": item_id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    update_data = {k: v for k, v in update.dict().items() if v is not None}
+    
+    # Обновляем товар
+    if update_data:
+        # Применяем обновления
+        new_item = {**item, **update_data}
+        
+        # Пересчитываем profit/ROI
+        calcs = calculate_profit_roi(new_item)
+        update_data.update(calcs)
+        
+        await db.batch_items.update_one(
+            {"id": item_id},
+            {"$set": update_data}
+        )
+    
+    # Возвращаем обновлённый товар
+    updated = await db.batch_items.find_one({"id": item_id}, {"_id": 0})
+    return updated
+
+@api_router.put("/bash/items/bulk-update")
+async def bulk_update_batch_items(
+    item_ids: List[str] = Body(...),
+    cost_price: Optional[float] = Body(None),
+    extra_costs: Optional[float] = Body(None),
+    quantity: Optional[int] = Body(None),
+    admin: dict = Depends(require_admin)
+):
+    """Массовое обновление товаров"""
+    update_data = {}
+    if cost_price is not None:
+        update_data["cost_price"] = cost_price
+    if extra_costs is not None:
+        update_data["extra_costs"] = extra_costs
+    if quantity is not None:
+        update_data["quantity"] = quantity
+    
+    if not update_data:
+        return {"status": "no_changes", "updated_count": 0}
+    
+    updated_count = 0
+    for item_id in item_ids:
+        item = await db.batch_items.find_one({"id": item_id})
+        if item:
+            new_item = {**item, **update_data}
+            calcs = calculate_profit_roi(new_item)
+            update_data_with_calcs = {**update_data, **calcs}
+            
+            await db.batch_items.update_one(
+                {"id": item_id},
+                {"$set": update_data_with_calcs}
+            )
+            updated_count += 1
+    
+    return {"status": "success", "updated_count": updated_count}
+
+# 17track API Integration
+import httpx
+
+TRACK17_API_KEY = os.environ.get("TRACK17_API_KEY", "")
+TRACK17_API_URL = "https://api.17track.net/track/v2.2"
+
+@api_router.get("/tracking/{tracking_number}")
+async def track_shipment(
+    tracking_number: str,
+    carrier_code: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """Получить статус отправления через 17track API"""
+    if not TRACK17_API_KEY:
+        raise HTTPException(status_code=500, detail="17track API key not configured")
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Сначала регистрируем трек
+            register_payload = [{
+                "number": tracking_number,
+                "carrier": carrier_code if carrier_code else None
+            }]
+            
+            headers = {
+                "17token": TRACK17_API_KEY,
+                "Content-Type": "application/json"
+            }
+            
+            # Регистрируем трекинг номер
+            register_resp = await client.post(
+                f"{TRACK17_API_URL}/register",
+                json=register_payload,
+                headers=headers
+            )
+            
+            # Получаем статус
+            track_payload = [{"number": tracking_number}]
+            track_resp = await client.post(
+                f"{TRACK17_API_URL}/gettrackinfo",
+                json=track_payload,
+                headers=headers
+            )
+            
+            if track_resp.status_code == 200:
+                data = track_resp.json()
+                return {
+                    "tracking_number": tracking_number,
+                    "status": "success",
+                    "data": data
+                }
+            else:
+                return {
+                    "tracking_number": tracking_number,
+                    "status": "error",
+                    "error": f"API error: {track_resp.status_code}"
+                }
+                
+    except Exception as e:
+        logger.error(f"17track API error: {e}")
+        return {
+            "tracking_number": tracking_number,
+            "status": "error",
+            "error": str(e)
+        }
+
+@api_router.post("/bash/{batch_id}/track")
+async def track_batch(
+    batch_id: str,
+    admin: dict = Depends(require_admin)
+):
+    """Получить статус отслеживания партии"""
+    batch = await db.batches.find_one({"id": batch_id}, {"_id": 0})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    tracking_number = batch.get("tracking_number")
+    if not tracking_number:
+        return {
+            "batch_id": batch_id,
+            "status": "no_tracking",
+            "message": "Трекинг номер не указан"
+        }
+    
+    # Вызываем трекинг API
+    tracking_result = await track_shipment(tracking_number, admin=admin)
+    
+    # Сохраняем результат
+    await db.batches.update_one(
+        {"id": batch_id},
+        {"$set": {
+            "tracking_status": tracking_result.get("status"),
+            "tracking_data": tracking_result.get("data"),
+            "tracking_updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return tracking_result
+
 @api_router.get("/")
 async def root():
     return {"message": "PROCTO 13 Brand Management API v5.0 - Full Featured Edition"}
