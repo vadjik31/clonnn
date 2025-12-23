@@ -114,6 +114,7 @@ const DashboardPage = () => {
         <KPICard
           icon={Archive}
           label="В пуле"
+          tooltip={glossary["В пуле"]}
           value={data?.brands_in_pool || 0}
           color="text-blue-400"
           testId="brands-in-pool"
@@ -121,6 +122,7 @@ const DashboardPage = () => {
         <KPICard
           icon={TrendingUp}
           label="В работе"
+          tooltip={glossary["В работе"]}
           value={data?.brands_assigned || 0}
           color="text-green-400"
           testId="brands-assigned"
@@ -128,6 +130,7 @@ const DashboardPage = () => {
         <KPICard
           icon={AlertTriangle}
           label="Просрочено"
+          tooltip={glossary["Просрочено"]}
           value={data?.brands_overdue || 0}
           color="text-red-400"
           testId="brands-overdue"
@@ -160,8 +163,10 @@ const DashboardPage = () => {
           </h2>
           <div className="space-y-3">
             {Object.entries(data?.brands_by_stage || {}).map(([stage, count]) => (
-              <div key={stage} className="flex items-center justify-between">
-                <span className="text-[#94A3B8]">{stageLabels[stage] || stage}</span>
+              <div key={stage} className="flex items-center justify-between group cursor-help">
+                <Tooltip text={glossary[stageLabels[stage]] || "Этап воронки"}>
+                  <span className="text-[#94A3B8]">{stageLabels[stage] || stage}</span>
+                </Tooltip>
                 <span className="font-mono text-[#E6E6E6]">{count}</span>
               </div>
             ))}
