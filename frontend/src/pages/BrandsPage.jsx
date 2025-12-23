@@ -637,4 +637,95 @@ const ReassignModal = ({ open, onClose, onSubmit, users }) => {
   );
 };
 
+const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
+  const [reason, setReason] = useState("");
+  const [userId, setUserId] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const titles = {
+    archive: "Архивировать бренды",
+    blacklist: "В чёрный список",
+    assign: "Назначить бренды"
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason.trim()) {
+      toast.error("Укажите причину");
+      return;
+    }
+    if (action === "assign" && !userId) {
+      toast.error("Выберите сёрчера");
+      return;
+    }
+    setLoading(true);
+    await onSubmit({ reason, userId });
+    setLoading(false);
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className={`font-mono uppercase tracking-wider ${
+            action === "blacklist" ? "text-red-400" : 
+            action === "archive" ? "text-yellow-400" : "text-[#FF9900]"
+          }`}>
+            {titles[action]}
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-[#94A3B8]">
+            Выбрано брендов: <span className="text-[#FF9900] font-bold">{count}</span>
+          </p>
+          
+          {action === "assign" && (
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Сёрчер</Label>
+              <Select value={userId} onValueChange={setUserId}>
+                <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]">
+                  <SelectValue placeholder="Выберите сёрчера" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                  {users.map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.nickname}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Причина</Label>
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Укажите причину..."
+              required
+            />
+          </div>
+          
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className={
+                action === "blacklist" ? "bg-red-600 hover:bg-red-700" :
+                action === "archive" ? "bg-yellow-600 hover:bg-yellow-700" :
+                "btn-primary"
+              }
+            >
+              {loading ? "Обработка..." : "Подтвердить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default BrandsPage;
