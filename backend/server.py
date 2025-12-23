@@ -3652,6 +3652,49 @@ async def get_admin_permissions(user: dict = Depends(require_admin)):
 
 # ============== BASH FEATURE: BATCH MANAGEMENT ==============
 
+# Кастомные статусы товаров
+ITEM_STATUSES = [
+    {"value": "", "label": "Без статуса", "color": "#94A3B8"},
+    {"value": "out_of_stock", "label": "Аут оф сток", "color": "#EF4444"},
+    {"value": "no_stock", "label": "Нет в наличии", "color": "#F97316"},
+    {"value": "not_found", "label": "Не нашёл", "color": "#8B5CF6"},
+    {"value": "heavy", "label": "Тяжелый", "color": "#6366F1"},
+    {"value": "low_sales", "label": "Мало продаж", "color": "#EAB308"},
+    {"value": "low_traffic", "label": "Слабый трафик", "color": "#14B8A6"},
+    {"value": "approved", "label": "Одобрено", "color": "#22C55E"},
+    {"value": "ordered", "label": "Заказано", "color": "#3B82F6"},
+]
+
+# Популярные перевозчики для автокомплита
+POPULAR_CARRIERS = [
+    {"key": "100001", "name": "DHL Express"},
+    {"key": "100002", "name": "UPS"},
+    {"key": "100003", "name": "FedEx"},
+    {"key": "100006", "name": "Aramex"},
+    {"key": "100012", "name": "SF Express"},
+    {"key": "3013", "name": "China EMS"},
+    {"key": "3011", "name": "China Post"},
+    {"key": "21051", "name": "USPS"},
+    {"key": "11031", "name": "Royal Mail"},
+    {"key": "18031", "name": "Russian Post"},
+    {"key": "100030", "name": "CDEK"},
+    {"key": "100035", "name": "Nova Poshta"},
+    {"key": "100004", "name": "TNT"},
+    {"key": "7041", "name": "DHL Paket"},
+    {"key": "6051", "name": "La Poste (Colissimo)"},
+    {"key": "14041", "name": "PostNL"},
+    {"key": "100005", "name": "GLS"},
+    {"key": "7047", "name": "DHL eCommerce US"},
+    {"key": "7048", "name": "DHL eCommerce Asia"},
+    {"key": "100040", "name": "Sagawa (佐川急便)"},
+    {"key": "100062", "name": "Yamato (ヤマト運輸)"},
+    {"key": "10021", "name": "Japan Post"},
+    {"key": "100074", "name": "J&T Express (ID)"},
+    {"key": "100124", "name": "Ninjavan (SG)"},
+    {"key": "100391", "name": "BEST EXPRESS"},
+    {"key": "100590", "name": "SiCepat"},
+]
+
 class BatchStatus:
     ACTIVE = "active"
     SHIPPED = "shipped"
@@ -3662,18 +3705,24 @@ class BatchItemUpdate(BaseModel):
     cost_price: Optional[float] = None
     extra_costs: Optional[float] = None
     quantity: Optional[int] = None
-    supplier_link: Optional[str] = None  # Ссылка на товар у поставщика
-    supplier_sku: Optional[str] = None   # SKU/название у поставщика
+    supplier_link: Optional[str] = None
+    supplier_sku: Optional[str] = None
+    status: Optional[str] = None  # Кастомный статус товара
 
 class BatchUpdate(BaseModel):
     name: Optional[str] = None
     supplier: Optional[str] = None
     tracking_number: Optional[str] = None
+    carrier_code: Optional[str] = None  # Код перевозчика для 17track
+    carrier_name: Optional[str] = None  # Название перевозчика
     status: Optional[str] = None
 
 class BatchNoteCreate(BaseModel):
     text: str
-    item_id: Optional[str] = None  # Если заметка к товару
+    item_id: Optional[str] = None
+
+class SkuQuantityImport(BaseModel):
+    items: List[dict]  # [{"supplier_sku": "ABC123", "quantity": 5}, ...]
 
 # Формула расчёта доставки (фунт * 0.8 на Амазон)
 def calculate_shipping_cost(weight_grams: float) -> float:
