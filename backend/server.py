@@ -2413,9 +2413,541 @@ async def check_timeouts(admin: dict = Depends(require_admin)):
     
     return {"alerts_created": alerts_created, "checked_at": now.isoformat()}
 
+# ============== SUPER ADMIN ENDPOINTS ==============
+
+@api_router.post("/auth/check-in")
+async def user_check_in(request: CheckInRequest, user: dict = Depends(get_current_user)):
+    """Кнопка 'Зашёл' для сёрчеров - ежедневная отметка о присутствии"""
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    
+    # Проверяем, была ли уже отметка сегодня
+    existing = await db.check_ins.find_one({
+        "user_id": user["id"],
+        "date": today
+    })
+    
+    if existing:
+        return {"status": "already_checked_in", "checked_in_at": existing["created_at"]}
+    
+    # Создаём отметку
+    check_in = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_nickname": user["nickname"],
+        "date": today,
+        "message": sanitize_input(request.message) if request.message else None,
+        "created_at": now.isoformat()
+    }
+    await db.check_ins.insert_one(check_in)
+    
+    await log_event(EventType.USER_CHECK_IN, user["id"], metadata={"date": today})
+    
+    return {"status": "success", "checked_in_at": now.isoformat()}
+
+@api_router.get("/auth/check-in/status")
+async def get_check_in_status(user: dict = Depends(get_current_user)):
+    """Проверка статуса отметки на сегодня"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    existing = await db.check_ins.find_one({
+        "user_id": user["id"],
+        "date": today
+    }, {"_id": 0})
+    
+    return {
+        "checked_in": existing is not None,
+        "check_in": existing
+    }
+
+@api_router.post("/activity/log")
+async def log_user_activity(activity: UserActivityLog, user: dict = Depends(get_current_user)):
+    """Логирование активности пользователя (клики, действия)"""
+    activity_record = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_nickname": user["nickname"],
+        "action": sanitize_input(activity.action),
+        "details": activity.details,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.user_activities.insert_one(activity_record)
+    
+    return {"status": "logged"}
+
+@api_router.get("/super-admin/user/{user_id}/activity")
+async def get_user_activity_logs(
+    user_id: str,
+    days: int = Query(7, ge=1, le=90),
+    admin: dict = Depends(require_super_admin)
+):
+    """Логи активности сёрчера для супер-админа"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    
+    # Получаем пользователя
+    target_user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    
+    # Получаем логи активности
+    activities = await db.user_activities.find({
+        "user_id": user_id,
+        "created_at": {"$gte": cutoff}
+    }, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Получаем check-ins
+    check_ins = await db.check_ins.find({
+        "user_id": user_id,
+        "created_at": {"$gte": cutoff}
+    }, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Получаем события пользователя
+    events = await db.brand_events.find({
+        "user_id": user_id,
+        "created_at": {"$gte": cutoff}
+    }, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Статистика по дням
+    daily_stats = {}
+    for event in events:
+        date = event["created_at"][:10]
+        if date not in daily_stats:
+            daily_stats[date] = {"events": 0, "types": {}}
+        daily_stats[date]["events"] += 1
+        event_type = event["event_type"]
+        daily_stats[date]["types"][event_type] = daily_stats[date]["types"].get(event_type, 0) + 1
+    
+    return {
+        "user": target_user,
+        "activities": activities,
+        "check_ins": check_ins,
+        "events": events[:100],  # Последние 100 событий
+        "daily_stats": daily_stats,
+        "period_days": days
+    }
+
+@api_router.get("/super-admin/check-ins")
+async def get_all_check_ins(
+    date: Optional[str] = None,
+    admin: dict = Depends(require_super_admin)
+):
+    """Список всех отметок 'Зашёл' за дату"""
+    target_date = date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    check_ins = await db.check_ins.find({
+        "date": target_date
+    }, {"_id": 0}).to_list(1000)
+    
+    # Получаем всех активных сёрчеров
+    searchers = await db.users.find({
+        "role": UserRole.SEARCHER,
+        "status": "active"
+    }, {"_id": 0, "id": 1, "nickname": 1}).to_list(1000)
+    
+    checked_in_ids = {c["user_id"] for c in check_ins}
+    
+    not_checked_in = [s for s in searchers if s["id"] not in checked_in_ids]
+    
+    return {
+        "date": target_date,
+        "checked_in": check_ins,
+        "not_checked_in": not_checked_in,
+        "total_searchers": len(searchers),
+        "total_checked_in": len(check_ins)
+    }
+
+@api_router.post("/super-admin/brands/bulk-archive")
+async def bulk_archive_brands(
+    request: BulkArchiveRequest,
+    admin: dict = Depends(require_super_admin)
+):
+    """Массовое архивирование брендов"""
+    now = datetime.now(timezone.utc)
+    archived_count = 0
+    
+    for brand_id in request.brand_ids:
+        brand = await db.brands.find_one({"id": brand_id})
+        if brand and brand["status"] not in [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]:
+            await db.brands.update_one(
+                {"id": brand_id},
+                {"$set": {
+                    "status": BrandStatus.ARCHIVED,
+                    "archived_at": now.isoformat(),
+                    "archived_by": admin["id"],
+                    "archive_reason": sanitize_input(request.reason),
+                    "prev_status": brand["status"]
+                }}
+            )
+            archived_count += 1
+    
+    await log_event(
+        EventType.ADMIN_BULK_ARCHIVE, 
+        admin["id"], 
+        metadata={
+            "count": archived_count,
+            "reason": request.reason,
+            "brand_ids": request.brand_ids[:10]  # Первые 10 для лога
+        }
+    )
+    
+    return {"status": "success", "archived_count": archived_count}
+
+@api_router.post("/super-admin/brands/bulk-blacklist")
+async def bulk_blacklist_brands(
+    request: BulkBlacklistRequest,
+    admin: dict = Depends(require_super_admin)
+):
+    """Массовое добавление брендов в чёрный список"""
+    now = datetime.now(timezone.utc)
+    blacklisted_count = 0
+    
+    for brand_id in request.brand_ids:
+        brand = await db.brands.find_one({"id": brand_id})
+        if brand and brand["status"] != BrandStatus.BLACKLISTED:
+            await db.brands.update_one(
+                {"id": brand_id},
+                {"$set": {
+                    "status": BrandStatus.BLACKLISTED,
+                    "blacklisted_at": now.isoformat(),
+                    "blacklisted_by": admin["id"],
+                    "blacklist_reason": sanitize_input(request.reason),
+                    "prev_status": brand["status"],
+                    "assigned_to_user_id": None,
+                    "assigned_to_nickname": None
+                }}
+            )
+            blacklisted_count += 1
+    
+    await log_event(
+        EventType.ADMIN_BULK_BLACKLIST,
+        admin["id"],
+        metadata={
+            "count": blacklisted_count,
+            "reason": request.reason,
+            "brand_ids": request.brand_ids[:10]
+        }
+    )
+    
+    return {"status": "success", "blacklisted_count": blacklisted_count}
+
+@api_router.post("/super-admin/brands/bulk-assign")
+async def bulk_assign_brands(
+    request: BulkAssignRequest,
+    admin: dict = Depends(require_super_admin)
+):
+    """Массовое назначение брендов сёрчеру"""
+    now = datetime.now(timezone.utc)
+    
+    # Проверяем целевого пользователя
+    target_user = await db.users.find_one({"id": request.user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    if target_user["status"] != "active":
+        raise HTTPException(status_code=400, detail="Пользователь неактивен")
+    
+    assigned_count = 0
+    
+    for brand_id in request.brand_ids:
+        brand = await db.brands.find_one({"id": brand_id})
+        if brand and brand["status"] not in [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]:
+            await db.brands.update_one(
+                {"id": brand_id},
+                {"$set": {
+                    "status": BrandStatus.ASSIGNED,
+                    "assigned_to_user_id": target_user["id"],
+                    "assigned_to_nickname": target_user["nickname"],
+                    "assigned_at": now.isoformat(),
+                    "last_action_at": now.isoformat()
+                }}
+            )
+            assigned_count += 1
+            
+            # Логируем переназначение
+            await log_event(
+                EventType.REASSIGNED,
+                admin["id"],
+                brand_id,
+                metadata={
+                    "new_user_id": target_user["id"],
+                    "reason": request.reason,
+                    "bulk_operation": True
+                }
+            )
+    
+    await log_event(
+        EventType.ADMIN_BULK_ASSIGN,
+        admin["id"],
+        metadata={
+            "count": assigned_count,
+            "target_user_id": target_user["id"],
+            "target_nickname": target_user["nickname"],
+            "reason": request.reason
+        }
+    )
+    
+    return {"status": "success", "assigned_count": assigned_count, "assigned_to": target_user["nickname"]}
+
+@api_router.post("/super-admin/brands/{brand_id}/restore")
+async def restore_brand_from_archive(
+    brand_id: str,
+    admin: dict = Depends(require_super_admin)
+):
+    """Восстановление бренда из архива"""
+    brand = await db.brands.find_one({"id": brand_id})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    if brand["status"] != BrandStatus.ARCHIVED:
+        raise HTTPException(status_code=400, detail="Бренд не в архиве")
+    
+    await db.brands.update_one(
+        {"id": brand_id},
+        {"$set": {
+            "status": BrandStatus.IN_POOL,
+            "restored_at": datetime.now(timezone.utc).isoformat(),
+            "restored_by": admin["id"]
+        },
+        "$unset": {
+            "archived_at": "",
+            "archived_by": "",
+            "archive_reason": ""
+        }}
+    )
+    
+    await log_event(EventType.RESTORED_FROM_ARCHIVE, admin["id"], brand_id)
+    
+    return {"status": "success"}
+
+@api_router.post("/super-admin/brands/{brand_id}/unblacklist")
+async def remove_brand_from_blacklist(
+    brand_id: str,
+    admin: dict = Depends(require_super_admin)
+):
+    """Удаление бренда из чёрного списка"""
+    brand = await db.brands.find_one({"id": brand_id})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    if brand["status"] != BrandStatus.BLACKLISTED:
+        raise HTTPException(status_code=400, detail="Бренд не в чёрном списке")
+    
+    await db.brands.update_one(
+        {"id": brand_id},
+        {"$set": {
+            "status": BrandStatus.IN_POOL,
+            "unblacklisted_at": datetime.now(timezone.utc).isoformat(),
+            "unblacklisted_by": admin["id"]
+        },
+        "$unset": {
+            "blacklisted_at": "",
+            "blacklisted_by": "",
+            "blacklist_reason": ""
+        }}
+    )
+    
+    await log_event(EventType.REMOVED_FROM_BLACKLIST, admin["id"], brand_id)
+    
+    return {"status": "success"}
+
+@api_router.delete("/super-admin/imports/{import_id}")
+async def delete_import_with_brands(
+    import_id: str,
+    archive: bool = Query(True, description="Архивировать бренды вместо удаления"),
+    admin: dict = Depends(require_super_admin)
+):
+    """Удаление импорта с архивированием связанных брендов"""
+    # Находим импорт
+    import_doc = await db.imports.find_one({"id": import_id}, {"_id": 0})
+    if not import_doc:
+        raise HTTPException(status_code=404, detail="Импорт не найден")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Находим все бренды этого импорта
+    brands = await db.brands.find({"import_id": import_id}).to_list(10000)
+    
+    if archive:
+        # Архивируем бренды
+        await db.brands.update_many(
+            {"import_id": import_id},
+            {"$set": {
+                "status": BrandStatus.ARCHIVED,
+                "archived_at": now.isoformat(),
+                "archived_by": admin["id"],
+                "archive_reason": f"Удаление импорта {import_doc.get('file_name', import_id)}",
+                "assigned_to_user_id": None,
+                "assigned_to_nickname": None
+            }}
+        )
+    else:
+        # Удаляем бренды полностью
+        brand_ids = [b["id"] for b in brands]
+        await db.brands.delete_many({"import_id": import_id})
+        await db.brand_items.delete_many({"brand_id": {"$in": brand_ids}})
+        await db.brand_notes.delete_many({"brand_id": {"$in": brand_ids}})
+    
+    # Помечаем импорт как удалённый
+    await db.imports.update_one(
+        {"id": import_id},
+        {"$set": {
+            "deleted": True,
+            "deleted_at": now.isoformat(),
+            "deleted_by": admin["id"],
+            "brands_archived": archive
+        }}
+    )
+    
+    await log_event(
+        EventType.IMPORT_DELETED,
+        admin["id"],
+        metadata={
+            "import_id": import_id,
+            "file_name": import_doc.get("file_name"),
+            "brands_count": len(brands),
+            "archived": archive
+        }
+    )
+    
+    return {
+        "status": "success",
+        "brands_affected": len(brands),
+        "action": "archived" if archive else "deleted"
+    }
+
+@api_router.get("/super-admin/imports")
+async def get_imports_list(admin: dict = Depends(require_super_admin)):
+    """Список всех импортов с возможностью удаления"""
+    imports = await db.imports.find(
+        {"deleted": {"$ne": True}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Добавляем количество брендов для каждого импорта
+    for imp in imports:
+        brands_count = await db.brands.count_documents({
+            "import_id": imp["id"],
+            "status": {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}
+        })
+        imp["active_brands_count"] = brands_count
+        
+        archived_count = await db.brands.count_documents({
+            "import_id": imp["id"],
+            "status": BrandStatus.ARCHIVED
+        })
+        imp["archived_brands_count"] = archived_count
+    
+    return {"imports": imports}
+
+@api_router.get("/super-admin/settings")
+async def get_global_settings_endpoint(admin: dict = Depends(require_super_admin)):
+    """Получить глобальные настройки"""
+    settings = await get_global_settings()
+    return settings
+
+@api_router.put("/super-admin/settings")
+async def update_global_settings(
+    settings_update: GlobalSettingsUpdate,
+    admin: dict = Depends(require_super_admin)
+):
+    """Обновить глобальные настройки (рабочее время, выходные)"""
+    update_data = {}
+    
+    if settings_update.work_hours_start:
+        update_data["work_hours_start"] = settings_update.work_hours_start
+    if settings_update.work_hours_end:
+        update_data["work_hours_end"] = settings_update.work_hours_end
+    if settings_update.weekends is not None:
+        update_data["weekends"] = settings_update.weekends
+    if settings_update.holidays is not None:
+        update_data["holidays"] = settings_update.holidays
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_data["updated_by"] = admin["id"]
+    
+    await db.system_settings.update_one(
+        {"type": "global"},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    await log_event(
+        EventType.SETTINGS_UPDATED,
+        admin["id"],
+        metadata={"changes": update_data}
+    )
+    
+    return {"status": "success", "settings": update_data}
+
+@api_router.get("/super-admin/archived-brands")
+async def get_archived_brands(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    admin: dict = Depends(require_super_admin)
+):
+    """Список архивированных брендов"""
+    brands = await db.brands.find(
+        {"status": BrandStatus.ARCHIVED},
+        {"_id": 0}
+    ).sort("archived_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.brands.count_documents({"status": BrandStatus.ARCHIVED})
+    
+    return {
+        "brands": brands,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+@api_router.get("/super-admin/blacklisted-brands")
+async def get_blacklisted_brands(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    admin: dict = Depends(require_super_admin)
+):
+    """Список брендов в чёрном списке"""
+    brands = await db.brands.find(
+        {"status": BrandStatus.BLACKLISTED},
+        {"_id": 0}
+    ).sort("blacklisted_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.brands.count_documents({"status": BrandStatus.BLACKLISTED})
+    
+    return {
+        "brands": brands,
+        "total": total,
+        "skip": skip,
+        "limit": limit
+    }
+
+@api_router.post("/super-admin/brands/bulk-restore")
+async def bulk_restore_brands(
+    brand_ids: List[str] = Body(...),
+    admin: dict = Depends(require_super_admin)
+):
+    """Массовое восстановление брендов из архива"""
+    now = datetime.now(timezone.utc)
+    restored_count = 0
+    
+    for brand_id in brand_ids:
+        result = await db.brands.update_one(
+            {"id": brand_id, "status": BrandStatus.ARCHIVED},
+            {"$set": {
+                "status": BrandStatus.IN_POOL,
+                "restored_at": now.isoformat(),
+                "restored_by": admin["id"]
+            },
+            "$unset": {
+                "archived_at": "",
+                "archived_by": "",
+                "archive_reason": ""
+            }}
+        )
+        if result.modified_count > 0:
+            restored_count += 1
+    
+    return {"status": "success", "restored_count": restored_count}
+
 @api_router.get("/")
 async def root():
-    return {"message": "PROCTO 13 Brand Management API v3.0"}
+    return {"message": "PROCTO 13 Brand Management API v4.0 - Super Admin Edition"}
 
 app.include_router(api_router)
 
