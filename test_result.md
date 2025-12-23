@@ -225,3 +225,124 @@ agent_communication:
       - Статус обновляется: OK
       - Заметка сохраняется: OK
       - Toast "Статус обновлён": OK
+
+# BASH Feature - Batch Management (NEW)
+
+bash_feature:
+  - task: "BASH - Upload Excel & Parse Keepa Export"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    priority: "P0"
+    status_history:
+      - working: true
+        agent: "main_fork_2"
+        comment: "POST /api/bash/upload - парсинг Excel файла Keepa, создание партии и товаров"
+    test_results:
+      - method: "curl API test"
+        result: "SUCCESS - 53 товара импортировано из тестового файла"
+
+  - task: "BASH - Get Batches & Items"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    priority: "P0"
+    status_history:
+      - working: true
+        agent: "main_fork_2"
+        comment: "GET /api/bash - список партий, GET /api/bash/{id} - партия с товарами"
+
+  - task: "BASH - Update Item (Cost, Extra, Quantity)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    priority: "P0"
+    status_history:
+      - working: true
+        agent: "main_fork_2"
+        comment: "PUT /api/bash/item/{id} - обновление товара с пересчётом profit/ROI"
+    test_results:
+      - method: "curl API test"
+        result: "SUCCESS - profit_per_unit=$6.41, ROI=109.76% рассчитаны корректно"
+
+  - task: "BASH - Delete Batch"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    priority: "P1"
+    status_history:
+      - working: true
+        agent: "main_fork_2"
+        comment: "DELETE /api/bash/{id} - удаление партии со всеми товарами"
+
+  - task: "BASH - 17track Integration"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    priority: "P1"
+    status_history:
+      - working: true
+        agent: "main_fork_2"
+        comment: "GET /api/tracking/{number}, POST /api/bash/{id}/track"
+    test_results:
+      - method: "curl API test"
+        result: "SUCCESS - API 17track отвечает корректно"
+
+  - task: "BASH - Frontend Page"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/BashPage.jsx"
+    priority: "P0"
+    status_history:
+      - working: true
+        agent: "main_fork_2"
+        comment: |
+          Полнофункциональная страница с:
+          - Загрузка Excel через модалку
+          - Карточки статистики (товары, затраты, выручка, профит, ROI)
+          - Таблица товаров с редактируемыми полями
+          - Сортировка и фильтрация
+          - Кнопка отслеживания
+
+  - task: "Staff Page - Admin Logs Access"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/StaffPage.jsx"
+    priority: "P0"
+    status_history:
+      - working: true
+        agent: "main_fork_2"
+        comment: "Страница /staff для просмотра активности сёрчеров админами"
+
+current_agent_communication:
+  - agent: "main_fork_2"
+    message: |
+      BASH Feature Implementation Complete!
+      
+      Backend APIs (all working):
+      - POST /api/bash/upload - загрузка и парсинг Keepa Excel
+      - GET /api/bash - список партий
+      - GET /api/bash/{id} - партия с товарами и статистикой
+      - PUT /api/bash/{id} - обновление партии
+      - DELETE /api/bash/{id} - удаление партии
+      - PUT /api/bash/item/{id} - обновление товара с пересчётом
+      - PUT /api/bash/items/bulk-update - массовое обновление
+      - GET /api/tracking/{number} - отслеживание через 17track
+      - POST /api/bash/{id}/track - отслеживание партии
+      
+      Frontend (working):
+      - BashPage.jsx - полная страница с UI
+      - StaffPage.jsx - страница логов для админов
+      - Роуты /bash и /staff в App.js
+      - Ссылки в Sidebar.jsx
+      
+      Формулы расчёта:
+      - Shipping Cost = Weight(g) / 453.592 * 0.8 (фунт на Amazon)
+      - Profit = Buy Box - Ref Fee - FBA Fee - Shipping - Cost - Extra
+      - ROI = (Profit / (Cost + Shipping + Extra)) * 100
+      
+      17track API Key: сохранён в backend/.env как TRACK17_API_KEY
+      
+      Credentials:
+      - Super Admin: admin@procto13.com / admin123 / PROCTO13
+      - Searcher: searcher@procto13.com / searcher123 / PROCTO13
