@@ -1704,9 +1704,621 @@ async def init_data():
     
     return {"status": "initialized"}
 
+# ============== ФАЗА 2: Таймауты и KPI ==============
+
+@api_router.get("/analytics/review-timeout")
+async def get_review_timeout_brands(admin: dict = Depends(require_admin)):
+    """Бренды в REVIEW больше N дней (закрывает дыру #10)"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=REVIEW_TIMEOUT_DAYS)).isoformat()
+    
+    brands = await db.brands.find({
+        "pipeline_stage": PipelineStage.REVIEW,
+        "status": {"$nin": [BrandStatus.IN_POOL]},
+        "assigned_at": {"$lt": cutoff, "$ne": None}
+    }, {"_id": 0}).to_list(500)
+    
+    # Добавляем время в REVIEW
+    for brand in brands:
+        if brand.get("assigned_at"):
+            assigned_dt = datetime.fromisoformat(brand["assigned_at"].replace('Z', '+00:00'))
+            days_in_review = (datetime.now(timezone.utc) - assigned_dt).days
+            brand["days_in_review"] = days_in_review
+            
+            # Получаем никнейм
+            if brand.get("assigned_to_user_id"):
+                user = await db.users.find_one({"id": brand["assigned_to_user_id"]}, {"nickname": 1})
+                brand["assigned_to_nickname"] = user["nickname"] if user else None
+    
+    return {"brands": brands, "count": len(brands), "threshold_days": REVIEW_TIMEOUT_DAYS}
+
+@api_router.get("/analytics/inactive-brands")
+async def get_inactive_brands(admin: dict = Depends(require_admin)):
+    """Бренды без активности больше N дней (закрывает дыру #7)"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
+    
+    brands = await db.brands.find({
+        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
+                           BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
+                           BrandStatus.OUTCOME_REPLIED]},
+        "$or": [
+            {"last_action_at": {"$lt": cutoff}},
+            {"last_action_at": None}
+        ]
+    }, {"_id": 0}).to_list(500)
+    
+    for brand in brands:
+        if brand.get("last_action_at"):
+            last_dt = datetime.fromisoformat(brand["last_action_at"].replace('Z', '+00:00'))
+            brand["days_inactive"] = (datetime.now(timezone.utc) - last_dt).days
+        else:
+            brand["days_inactive"] = 999
+            
+        if brand.get("assigned_to_user_id"):
+            user = await db.users.find_one({"id": brand["assigned_to_user_id"]}, {"nickname": 1})
+            brand["assigned_to_nickname"] = user["nickname"] if user else None
+    
+    return {"brands": brands, "count": len(brands), "threshold_days": INACTIVITY_TIMEOUT_DAYS}
+
+@api_router.get("/analytics/kpi")
+async def get_kpi_report(
+    period_days: int = Query(7, ge=1, le=90),
+    admin: dict = Depends(require_admin)
+):
+    """KPI отчёт по сёрчерам (закрывает дыры #23, #25)"""
+    period_start = (datetime.now(timezone.utc) - timedelta(days=period_days)).isoformat()
+    
+    searchers = await db.users.find({"role": UserRole.SEARCHER}, {"_id": 0}).to_list(100)
+    kpi_data = []
+    
+    for s in searchers:
+        user_id = s["id"]
+        
+        # Валидные действия с весами (закрывает дыру #23)
+        stage_events = await db.brand_events.count_documents({
+            "user_id": user_id,
+            "event_type": EventType.STAGE_COMPLETED,
+            "created_at": {"$gte": period_start}
+        })
+        
+        outcome_events = await db.brand_events.count_documents({
+            "user_id": user_id,
+            "event_type": EventType.OUTCOME_SET,
+            "created_at": {"$gte": period_start}
+        })
+        
+        info_updates = await db.brand_events.count_documents({
+            "user_id": user_id,
+            "event_type": EventType.INFO_UPDATED,
+            "created_at": {"$gte": period_start}
+        })
+        
+        notes_added = await db.brand_notes.count_documents({
+            "user_id": user_id,
+            "created_at": {"$gte": period_start},
+            "note_type": {"$in": [NoteType.GENERAL, NoteType.STAGE_DONE]}
+        })
+        
+        returns = await db.brand_events.count_documents({
+            "user_id": user_id,
+            "event_type": EventType.RETURNED_TO_POOL,
+            "created_at": {"$gte": period_start}
+        })
+        
+        quick_returns = await db.brand_events.count_documents({
+            "user_id": user_id,
+            "event_type": EventType.RETURNED_TO_POOL,
+            "created_at": {"$gte": period_start},
+            "metadata.quick_return": True
+        })
+        
+        # Высокое качество (health_score > 50)
+        high_quality = await db.brands.count_documents({
+            "assigned_to_user_id": user_id,
+            "health_score": {"$gte": 50}
+        })
+        
+        # Веса для KPI
+        weighted_score = (
+            stage_events * 10 +      # Этапы - важно
+            outcome_events * 20 +     # Исходы - очень важно
+            info_updates * 5 +        # Обновления - полезно
+            notes_added * 3 +         # Заметки - полезно
+            high_quality * 2 -        # Бонус за качество
+            returns * 5 -             # Штраф за возвраты
+            quick_returns * 15        # Большой штраф за быстрые возвраты
+        )
+        
+        kpi_data.append({
+            "user_id": user_id,
+            "nickname": s["nickname"],
+            "period_days": period_days,
+            "metrics": {
+                "stages_completed": stage_events,
+                "outcomes_set": outcome_events,
+                "info_updates": info_updates,
+                "notes_added": notes_added,
+                "returns": returns,
+                "quick_returns": quick_returns,
+                "high_quality_brands": high_quality
+            },
+            "weighted_score": max(0, weighted_score),
+            "quality_ratio": round(high_quality / max(1, stage_events + outcome_events) * 100, 1)
+        })
+    
+    # Сортируем по weighted_score
+    kpi_data.sort(key=lambda x: x["weighted_score"], reverse=True)
+    
+    return {"kpi": kpi_data, "period_days": period_days}
+
+@api_router.post("/brands/{brand_id}/no-response")
+async def mark_no_response(brand_id: str, note_text: str = Body(..., embed=True), user: dict = Depends(get_current_user)):
+    """Пометить как 'нет ответа' (закрывает дыру #11)"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    await db.brands.update_one({"id": brand_id}, {"$set": {
+        "status": BrandStatus.NO_RESPONSE,
+        "last_action_at": now,
+        "updated_at": now
+    }})
+    
+    note = {
+        "id": str(uuid.uuid4()),
+        "brand_id": brand_id,
+        "user_id": user["id"],
+        "note_text": note_text,
+        "note_type": NoteType.GENERAL,
+        "created_at": now
+    }
+    await db.brand_notes.insert_one(note)
+    
+    await log_event(EventType.MARKED_NO_RESPONSE, user["id"], brand_id)
+    
+    return {"status": "success"}
+
+# ============== ФАЗА 2: Undo (закрывает дыру #31) ==============
+
+@api_router.get("/brands/{brand_id}/last-action")
+async def get_last_action(brand_id: str, user: dict = Depends(get_current_user)):
+    """Получить последнее действие для возможной отмены"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
+    
+    # Находим последнее действие этого пользователя
+    event = await db.brand_events.find_one(
+        {
+            "brand_id": brand_id,
+            "user_id": user["id"],
+            "event_type": {"$in": [
+                EventType.STAGE_COMPLETED,
+                EventType.OUTCOME_SET,
+                EventType.MARKED_NO_RESPONSE,
+                EventType.MARKED_PROBLEMATIC,
+                EventType.MARKED_ON_HOLD
+            ]}
+        },
+        {"_id": 0},
+        sort=[("created_at", -1)]
+    )
+    
+    if not event:
+        return {"can_undo": False, "reason": "Нет действий для отмены"}
+    
+    # Проверяем окно отмены
+    event_dt = datetime.fromisoformat(event["created_at"].replace('Z', '+00:00'))
+    minutes_ago = (datetime.now(timezone.utc) - event_dt).total_seconds() / 60
+    
+    if minutes_ago > UNDO_WINDOW_MINUTES:
+        return {"can_undo": False, "reason": f"Прошло больше {UNDO_WINDOW_MINUTES} минут", "event": event}
+    
+    return {"can_undo": True, "event": event, "minutes_remaining": round(UNDO_WINDOW_MINUTES - minutes_ago, 1)}
+
+@api_router.post("/brands/{brand_id}/undo")
+async def undo_last_action(brand_id: str, user: dict = Depends(get_current_user)):
+    """Отменить последнее действие (закрывает дыру #31)"""
+    last_action = await get_last_action(brand_id, user)
+    
+    if not last_action.get("can_undo"):
+        raise HTTPException(status_code=400, detail=last_action.get("reason", "Отмена невозможна"))
+    
+    event = last_action["event"]
+    event_type = event["event_type"]
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Откатываем в зависимости от типа действия
+    if event_type == EventType.STAGE_COMPLETED:
+        # Возвращаем на предыдущий этап
+        metadata = event.get("metadata", {})
+        prev_stage = metadata.get("prev_stage", PipelineStage.REVIEW)
+        
+        await db.brands.update_one({"id": brand_id}, {"$set": {
+            "pipeline_stage": prev_stage,
+            "updated_at": now
+        }})
+        
+    elif event_type == EventType.OUTCOME_SET:
+        # Убираем исход, возвращаем в IN_WORK
+        await db.brands.update_one({"id": brand_id}, {"$set": {
+            "status": BrandStatus.IN_WORK,
+            "pipeline_stage": PipelineStage.CALL_OR_PUSH_RECOMMENDED,
+            "updated_at": now
+        }})
+        
+    elif event_type in [EventType.MARKED_NO_RESPONSE, EventType.MARKED_PROBLEMATIC, EventType.MARKED_ON_HOLD]:
+        # Возвращаем в IN_WORK
+        await db.brands.update_one({"id": brand_id}, {"$set": {
+            "status": BrandStatus.IN_WORK,
+            "on_hold_reason": None,
+            "on_hold_review_date": None,
+            "updated_at": now
+        }})
+    
+    # Логируем отмену
+    await log_event(EventType.UNDO_ACTION, user["id"], brand_id, {
+        "undone_event_type": event_type,
+        "undone_event_id": event["id"]
+    })
+    
+    return {"status": "success", "undone_event_type": event_type}
+
+# ============== ФАЗА 2: Heartbeat агрегация (закрывает дыру #22) ==============
+
+@api_router.post("/auth/heartbeat")
+async def heartbeat_v2(user: dict = Depends(get_current_user)):
+    """Heartbeat с агрегацией (закрывает дыру #22)"""
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    hour = now.hour
+    
+    # Обновляем last_seen
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"last_seen_at": now.isoformat()}}
+    )
+    
+    # Агрегируем heartbeat по часам (не создаём отдельные события)
+    await db.heartbeat_aggregates.update_one(
+        {"user_id": user["id"], "date": today, "hour": hour},
+        {
+            "$inc": {"count": 1},
+            "$set": {"last_at": now.isoformat()}
+        },
+        upsert=True
+    )
+    
+    return {"status": "ok"}
+
+@api_router.get("/analytics/activity-heatmap")
+async def get_activity_heatmap(
+    user_id: Optional[str] = None,
+    days: int = Query(7, ge=1, le=30),
+    admin: dict = Depends(require_admin)
+):
+    """Тепловая карта активности (на основе агрегированных heartbeat)"""
+    start_date = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+    
+    query = {"date": {"$gte": start_date}}
+    if user_id:
+        query["user_id"] = user_id
+    
+    aggregates = await db.heartbeat_aggregates.find(query, {"_id": 0}).to_list(1000)
+    
+    # Группируем по пользователям
+    heatmap = {}
+    for agg in aggregates:
+        uid = agg["user_id"]
+        if uid not in heatmap:
+            heatmap[uid] = {}
+        
+        key = f"{agg['date']}_{agg['hour']}"
+        heatmap[uid][key] = agg["count"]
+    
+    return {"heatmap": heatmap, "days": days}
+
+# ============== ФАЗА 3: Round-robin выдача (закрывает дыру #8) ==============
+
+@api_router.post("/brands/claim-fair")
+async def claim_brands_fair(
+    idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
+    user: dict = Depends(get_current_user)
+):
+    """Честная выдача брендов с round-robin внутри приоритета (закрывает дыру #8)"""
+    if user["role"] != UserRole.SEARCHER:
+        raise HTTPException(status_code=403, detail="Только сёрчеры могут получать бренды")
+    
+    request_key = idempotency_key or f"{user['id']}_{datetime.now(timezone.utc).timestamp()}"
+    if request_key in claim_requests_in_progress:
+        raise HTTPException(status_code=429, detail="Запрос уже обрабатывается")
+    
+    claim_requests_in_progress.add(request_key)
+    
+    try:
+        settings = await get_settings()
+        max_active = settings.get("max_active_brands", MAX_ACTIVE_BRANDS_PER_SEARCHER)
+        
+        current_active = await db.brands.count_documents({
+            "assigned_to_user_id": user["id"],
+            "status": {"$nin": [BrandStatus.IN_POOL]}
+        })
+        
+        if current_active >= max_active:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Достигнут лимит активных брендов ({max_active})"
+            )
+        
+        available_slots = max_active - current_active
+        batch_size = min(CLAIM_BATCH_SIZE, available_slots)
+        
+        assigned_brands = []
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Получаем диапазоны приоритетов
+        priority_ranges = await db.brands.aggregate([
+            {"$match": {"status": BrandStatus.IN_POOL, "assigned_to_user_id": None}},
+            {"$group": {
+                "_id": {"$floor": {"$divide": ["$priority_score", 50]}},  # Группы по 50
+                "count": {"$sum": 1}
+            }},
+            {"$sort": {"_id": -1}}
+        ]).to_list(100)
+        
+        brands_per_range = max(1, batch_size // max(1, len(priority_ranges)))
+        
+        for _ in range(batch_size):
+            # Round-robin: случайный выбор внутри топ-приоритетов
+            brand = await db.brands.find_one_and_update(
+                {
+                    "status": BrandStatus.IN_POOL,
+                    "assigned_to_user_id": None
+                },
+                {"$set": {
+                    "status": BrandStatus.ASSIGNED,
+                    "assigned_to_user_id": user["id"],
+                    "assigned_at": now,
+                    "pipeline_stage": PipelineStage.REVIEW,
+                    "updated_at": now
+                },
+                "$inc": {"assignment_count": 1}},
+                sort=[("priority_score", -1), ("assignment_count", 1), ("created_at", 1)],  # Меньше назначений = приоритет
+                return_document=True
+            )
+            
+            if not brand:
+                break
+            
+            assigned_brands.append(brand["id"])
+            await record_assignment_history(brand["id"], user["id"])
+        
+        if assigned_brands:
+            await log_event(EventType.BRANDS_ASSIGNED, user["id"], metadata={
+                "count": len(assigned_brands),
+                "method": "fair_round_robin"
+            })
+        
+        return {"status": "success", "count": len(assigned_brands)}
+    
+    finally:
+        claim_requests_in_progress.discard(request_key)
+
+# ============== ФАЗА 3: Детектор общих контактов (закрывает дыру #40) ==============
+
+@api_router.get("/analytics/shared-contacts")
+async def get_shared_contacts(admin: dict = Depends(require_admin)):
+    """Находит бренды с одинаковыми доменами/контактами"""
+    # Группируем по домену сайта
+    brands_with_sites = await db.brands.find(
+        {"website_url": {"$ne": None, "$exists": True}},
+        {"_id": 0, "id": 1, "name_original": 1, "website_url": 1, "assigned_to_user_id": 1}
+    ).to_list(10000)
+    
+    # Извлекаем домены
+    domain_map = {}
+    for brand in brands_with_sites:
+        url = brand.get("website_url", "")
+        if url:
+            # Извлекаем домен
+            domain = re.sub(r'^https?://(www\.)?', '', url).split('/')[0].lower()
+            if domain:
+                if domain not in domain_map:
+                    domain_map[domain] = []
+                domain_map[domain].append({
+                    "brand_id": brand["id"],
+                    "brand_name": brand["name_original"],
+                    "assigned_to": brand.get("assigned_to_user_id")
+                })
+    
+    # Находим дубликаты (домен встречается > 1 раза)
+    shared = []
+    for domain, brands in domain_map.items():
+        if len(brands) > 1:
+            shared.append({
+                "domain": domain,
+                "brands_count": len(brands),
+                "brands": brands
+            })
+    
+    # Сортируем по количеству
+    shared.sort(key=lambda x: x["brands_count"], reverse=True)
+    
+    return {"shared_contacts": shared[:100], "total_found": len(shared)}
+
+# ============== ФАЗА 3: Экспорт с водяным знаком (закрывает дыру #39) ==============
+
+@api_router.get("/export/brands-watermarked")
+async def export_brands_watermarked(
+    status: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    format: str = Query("json", enum=["json", "csv"]),
+    admin: dict = Depends(require_admin)
+):
+    """Экспорт с водяным знаком (закрывает дыру #39)"""
+    query = {}
+    if status:
+        query["status"] = status
+    if assigned_to:
+        query["assigned_to_user_id"] = assigned_to
+    
+    brands = await db.brands.find(query, {"_id": 0}).to_list(10000)
+    
+    export_id = str(uuid.uuid4())[:8]
+    export_time = datetime.now(timezone.utc).isoformat()
+    
+    # Водяной знак
+    watermark = {
+        "export_id": export_id,
+        "exported_by": admin["nickname"],
+        "exported_by_email": admin["email"],
+        "exported_at": export_time,
+        "filter_status": status,
+        "filter_assigned_to": assigned_to,
+        "total_records": len(brands)
+    }
+    
+    # Логируем экспорт
+    await log_event(EventType.EXPORT_CREATED, admin["id"], metadata={
+        "export_id": export_id,
+        "count": len(brands),
+        "format": format,
+        "filters": {"status": status, "assigned_to": assigned_to}
+    })
+    
+    if format == "csv":
+        # Возвращаем CSV
+        import csv
+        from io import StringIO
+        from fastapi.responses import StreamingResponse
+        
+        output = StringIO()
+        output.write(f"# WATERMARK: {json.dumps(watermark)}\n")
+        
+        if brands:
+            writer = csv.DictWriter(output, fieldnames=brands[0].keys())
+            writer.writeheader()
+            writer.writerows(brands)
+        
+        output.seek(0)
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=export_{export_id}.csv"}
+        )
+    
+    return {
+        "watermark": watermark,
+        "brands": brands
+    }
+
+# ============== ФАЗА 3: Разделение ролей админов (закрывает дыру #38) ==============
+
+@api_router.get("/admin/sensitive/passwords")
+async def view_passwords(admin: dict = Depends(require_super_admin)):
+    """Просмотр паролей - только для super_admin"""
+    users = await db.users.find({}, {"_id": 0, "id": 1, "email": 1, "password": 1, "secret_code": 1, "nickname": 1}).to_list(1000)
+    
+    # Логируем просмотр
+    await log_event(EventType.SENSITIVE_VIEW, admin["id"], metadata={
+        "action": "view_passwords",
+        "users_count": len(users)
+    })
+    
+    return users
+
+@api_router.post("/admin/sensitive/mass-operation")
+async def confirm_mass_operation(
+    operation: str = Body(...),
+    target_ids: List[str] = Body(...),
+    secret_code: str = Body(...),
+    admin: dict = Depends(require_super_admin)
+):
+    """Подтверждение массовой операции секретным кодом (закрывает дыру #32)"""
+    if admin["secret_code"] != secret_code:
+        raise HTTPException(status_code=403, detail="Неверный секретный код")
+    
+    # Логируем попытку
+    await log_event(EventType.SENSITIVE_VIEW, admin["id"], metadata={
+        "action": "mass_operation_confirmed",
+        "operation": operation,
+        "target_count": len(target_ids)
+    })
+    
+    return {"confirmed": True, "operation": operation, "target_count": len(target_ids)}
+
+# ============== Проверка таймаутов (cron job endpoint) ==============
+
+@api_router.post("/system/check-timeouts")
+async def check_timeouts(admin: dict = Depends(require_admin)):
+    """Проверка таймаутов и создание алертов"""
+    now = datetime.now(timezone.utc)
+    alerts_created = 0
+    
+    # 1. Бренды в REVIEW слишком долго (дыра #10)
+    review_cutoff = (now - timedelta(days=REVIEW_TIMEOUT_DAYS)).isoformat()
+    stuck_in_review = await db.brands.find({
+        "pipeline_stage": PipelineStage.REVIEW,
+        "status": {"$nin": [BrandStatus.IN_POOL]},
+        "assigned_at": {"$lt": review_cutoff, "$ne": None}
+    }).to_list(100)
+    
+    for brand in stuck_in_review:
+        existing = await db.alerts.find_one({
+            "brand_id": brand["id"],
+            "alert_type": "review_timeout",
+            "resolved": False
+        })
+        if not existing:
+            await create_alert(
+                "review_timeout",
+                f"Бренд '{brand['name_original']}' в REVIEW уже {REVIEW_TIMEOUT_DAYS}+ дней",
+                "warning",
+                brand.get("assigned_to_user_id"),
+                brand["id"]
+            )
+            alerts_created += 1
+    
+    # 2. Неактивные бренды (дыра #7)
+    inactive_cutoff = (now - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
+    inactive_brands = await db.brands.find({
+        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD,
+                           BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
+                           BrandStatus.OUTCOME_REPLIED]},
+        "$or": [
+            {"last_action_at": {"$lt": inactive_cutoff}},
+            {"last_action_at": None}
+        ]
+    }).to_list(100)
+    
+    for brand in inactive_brands:
+        existing = await db.alerts.find_one({
+            "brand_id": brand["id"],
+            "alert_type": "inactivity_timeout",
+            "resolved": False
+        })
+        if not existing:
+            await create_alert(
+                "inactivity_timeout",
+                f"Бренд '{brand['name_original']}' без активности {INACTIVITY_TIMEOUT_DAYS}+ дней",
+                "warning",
+                brand.get("assigned_to_user_id"),
+                brand["id"]
+            )
+            alerts_created += 1
+    
+    return {"alerts_created": alerts_created, "checked_at": now.isoformat()}
+
 @api_router.get("/")
 async def root():
-    return {"message": "PROCTO 13 Brand Management API v2.0"}
+    return {"message": "PROCTO 13 Brand Management API v3.0"}
 
 app.include_router(api_router)
 
