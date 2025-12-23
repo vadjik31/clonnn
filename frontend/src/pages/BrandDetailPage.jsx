@@ -1202,4 +1202,241 @@ const NoResponseModal = ({ open, onClose, onSubmit }) => {
   );
 };
 
+const ContactModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [contactType, setContactType] = useState("email");
+  const [value, setValue] = useState("");
+  const [notes, setNotes] = useState("");
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const contactTypes = [
+    { value: "email", label: "Email" },
+    { value: "phone", label: "Телефон" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "website_form", label: "Форма на сайте" },
+    { value: "instagram", label: "Instagram" },
+    { value: "facebook", label: "Facebook" },
+    { value: "other", label: "Другое" },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!value.trim()) {
+      toast.error("Введите контакт");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/contacts`, {
+        contacts: [{
+          contact_type: contactType,
+          value: value.trim(),
+          is_primary: isPrimary,
+          notes: notes.trim() || null
+        }]
+      });
+      toast.success("Контакт добавлен");
+      setValue("");
+      setNotes("");
+      setIsPrimary(false);
+      onClose();
+      onSuccess();
+    } catch (error) {
+      toast.error("Ошибка добавления контакта");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider text-green-400">
+            Добавить контакт
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Тип контакта</Label>
+            <Select value={contactType} onValueChange={setContactType}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                {contactTypes.map(t => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Контакт</Label>
+            <Input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder={contactType === "email" ? "brand@example.com" : contactType === "phone" ? "+1234567890" : "Значение..."}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Примечание (опционально)</Label>
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="Кто это, откуда взяли..."
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Checkbox 
+              id="primary" 
+              checked={isPrimary} 
+              onCheckedChange={setIsPrimary}
+              className="border-[#2A2F3A]"
+            />
+            <Label htmlFor="primary" className="text-[#94A3B8] text-sm cursor-pointer">
+              Основной контакт
+            </Label>
+          </div>
+          
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
+              {loading ? "Добавление..." : "Добавить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const RepliedModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [subStatus, setSubStatus] = useState("");
+  const [note, setNote] = useState("");
+  const [nextActionDate, setNextActionDate] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const statusOptions = [
+    { value: "need_action", label: "Нужно действие с нашей стороны", description: "Бренд попросил что-то сделать (доп. инфо, предложение и т.д.)" },
+    { value: "waiting", label: "Ожидаем от них", description: "Мы сделали свою часть, ждём их решения" },
+    { value: "approved", label: "Одобрили сотрудничество", description: "Успех! Бренд согласен работать" },
+    { value: "declined", label: "Отказали", description: "Бренд отказался от сотрудничества" },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!subStatus) {
+      toast.error("Выберите подстатус");
+      return;
+    }
+    if (!note.trim()) {
+      toast.error("Введите заметку");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/replied`, {
+        sub_status: subStatus,
+        note_text: note.trim(),
+        next_action_date: nextActionDate || null
+      });
+      toast.success("Статус обновлён");
+      setSubStatus("");
+      setNote("");
+      setNextActionDate("");
+      onClose();
+      onSuccess();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6] max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider text-blue-400">
+            Бренд ответил
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-[#94A3B8]">
+            Выберите что именно произошло после ответа бренда
+          </p>
+          
+          <div className="space-y-2">
+            {statusOptions.map(opt => (
+              <label
+                key={opt.value}
+                className={`block p-3 rounded-[2px] border cursor-pointer transition-all ${
+                  subStatus === opt.value 
+                    ? "border-blue-500 bg-blue-900/20" 
+                    : "border-[#2A2F3A] hover:border-[#FF9900]/50"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="subStatus"
+                    value={opt.value}
+                    checked={subStatus === opt.value}
+                    onChange={(e) => setSubStatus(e.target.value)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-[#E6E6E6]">{opt.label}</div>
+                    <div className="text-xs text-[#94A3B8]">{opt.description}</div>
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+          
+          {(subStatus === "need_action" || subStatus === "waiting") && (
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Когда вернуться (опционально)</Label>
+              <Input
+                type="date"
+                value={nextActionDate}
+                onChange={(e) => setNextActionDate(e.target.value)}
+                className="bg-[#0F1115] border-[#2A2F3A]"
+              />
+            </div>
+          )}
+          
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Подробности (обязательно)</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Что именно ответил бренд, какие следующие шаги..."
+              required
+            />
+          </div>
+          
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading || !subStatus} className="bg-blue-600 hover:bg-blue-700">
+              {loading ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default BrandDetailPage;
