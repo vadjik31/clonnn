@@ -4048,16 +4048,19 @@ async def get_batch(
     total_profit = sum(i.get("total_profit", 0) or 0 for i in items)
     total_revenue = sum((i.get("buy_box_price", 0) or 0) * (i.get("quantity", 1) or 1) for i in items)
     
-    # Правильный расчёт среднего ROI - только для товаров с ценой
+    # Правильный расчёт ROI - только для товаров с себестоимостью
     items_with_cost = [i for i in items if (i.get("cost_price", 0) or 0) > 0]
     avg_roi = 0.0
     if items_with_cost:
+        # Профит только от товаров с себестоимостью
+        profit_from_priced = sum(i.get("total_profit", 0) or 0 for i in items_with_cost)
+        # Инвестиции только от товаров с себестоимостью  
         total_investment = sum(
             ((i.get("cost_price", 0) or 0) + (i.get("shipping_cost", 0) or 0) + (i.get("extra_costs", 0) or 0)) * (i.get("quantity", 1) or 1)
             for i in items_with_cost
         )
         if total_investment > 0:
-            avg_roi = (total_profit / total_investment) * 100
+            avg_roi = (profit_from_priced / total_investment) * 100
     
     # Собираем уникальные статусы для этой партии
     unique_statuses = list(set([i.get("status", "") for i in items if i.get("status")]))
