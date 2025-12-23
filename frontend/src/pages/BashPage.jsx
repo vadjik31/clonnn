@@ -299,7 +299,9 @@ const BashPage = () => {
     const p = batchData.tracking_parsed;
     const statusMap = { 0: { text: "Нет инфо", color: "text-[#94A3B8]" }, 10: { text: "В пути", color: "text-blue-400" }, 20: { text: "Истёк", color: "text-red-400" }, 30: { text: "Не доставлено", color: "text-red-400" }, 35: { text: "Ожидание", color: "text-yellow-400" }, 40: { text: "Доставлено", color: "text-green-400" }, 50: { text: "Нет инфо", color: "text-[#94A3B8]" } };
     const info = statusMap[p.status_code] || statusMap[0];
-    return { statusText: info.text, statusColor: info.color, lastEvent: p.last_event, lastTime: p.last_time };
+    // Use status_text from API if available, otherwise use mapped text
+    const displayText = p.status_text || info.text;
+    return { statusText: displayText, statusColor: info.color, lastEvent: p.last_event, lastTime: p.last_time };
   };
   const trackingDisplay = getTrackingDisplay();
 
