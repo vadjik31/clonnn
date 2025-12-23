@@ -229,6 +229,11 @@ function AppContent() {
               <Layout><BashPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/suppliers" element={
+            <ProtectedRoute adminOnly>
+              <Layout><SuppliersPage /></Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Searcher Routes */}
           <Route path="/my-brands" element={
