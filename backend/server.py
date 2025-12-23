@@ -146,22 +146,31 @@ class EventType:
     RETURNED_TO_POOL = "returned_to_pool"
     MARKED_PROBLEMATIC = "marked_problematic"
     MARKED_ON_HOLD = "marked_on_hold"
+    MARKED_NO_RESPONSE = "marked_no_response"  # Закрывает дыру #11
     REASSIGNED = "reassigned"
     ADMIN_RELEASED = "admin_released"
     ADMIN_BULK_RELEASE = "admin_bulk_release"
     HEARTBEAT = "heartbeat"
+    HEARTBEAT_AGGREGATED = "heartbeat_aggregated"  # Закрывает дыру #22
     IMPORT_COMPLETED = "import_completed"
+    IMPORT_STARTED = "import_started"  # Закрывает дыру #28
     EXPORT_CREATED = "export_created"
     SENSITIVE_VIEW = "sensitive_view"
     OUTCOME_SET = "outcome_set"
     INFO_UPDATED = "info_updated"
     UNDO_ACTION = "undo_action"
+    REVIEW_TIMEOUT = "review_timeout"  # Закрывает дыру #10
+    INACTIVITY_TIMEOUT = "inactivity_timeout"  # Закрывает дыру #7
 
 # Лимиты (закрывает дыру #9)
 MAX_ACTIVE_BRANDS_PER_SEARCHER = 300
 CLAIM_BATCH_SIZE = 100
 QUICK_RETURN_HOURS = 48  # Время для определения "быстрой очистки"
 MAX_RETURN_RATE_PERCENT = 30  # Порог для алерта
+REVIEW_TIMEOUT_DAYS = 3  # Закрывает дыру #10 - таймаут REVIEW
+INACTIVITY_TIMEOUT_DAYS = 7  # Закрывает дыру #7
+HEARTBEAT_AGGREGATE_MINUTES = 60  # Закрывает дыру #22 - агрегация heartbeat
+UNDO_WINDOW_MINUTES = 10  # Закрывает дыру #31 - окно отмены
 
 # ============== PYDANTIC MODELS ==============
 class UserCreate(BaseModel):
