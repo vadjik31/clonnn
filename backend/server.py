@@ -1865,8 +1865,8 @@ async def export_brands(
     assigned_to: Optional[str] = None,
     admin: dict = Depends(require_admin)
 ):
-    """Экспорт брендов с логированием (закрывает дыру #20, #39)"""
-    query = {}
+    """Экспорт брендов с логированием и водяным знаком"""
+    query = {"status": {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}}
     if status:
         query["status"] = status
     if assigned_to:
@@ -1882,14 +1882,24 @@ async def export_brands(
             user = await db.users.find_one({"id": brand["assigned_to_user_id"]}, {"nickname": 1})
             brand["assigned_to_nickname"] = user["nickname"] if user else None
     
-    # Логируем экспорт (закрывает дыру #20, #39)
+    # Генерируем водяной знак
+    watermark_info = generate_export_watermark_info(admin["id"], admin["nickname"])
+    brands = add_watermark_to_data(brands, admin["id"], admin["nickname"])
+    
+    # Логируем экспорт
     await log_event(EventType.EXPORT_CREATED, admin["id"], metadata={
         "filter_status": status,
         "filter_assigned_to": assigned_to,
-        "count": len(brands)
+        "count": len(brands),
+        "watermark_id": watermark_info["export_id"]
     })
     
-    return brands
+    return {
+        "brands": brands,
+        "total": len(brands),
+        "watermark": watermark_info,
+        "exported_at": datetime.now(timezone.utc).isoformat()
+    }
 
 # ============== INIT DATA ==============
 @api_router.post("/init")
