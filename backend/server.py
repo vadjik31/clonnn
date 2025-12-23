@@ -4091,6 +4091,59 @@ async def bulk_update_batch_items(
     
     return {"status": "success", "updated_count": updated_count}
 
+# Заметки к партиям и товарам
+@api_router.post("/bash/{batch_id}/notes")
+async def add_batch_note(
+    batch_id: str,
+    note: BatchNoteCreate,
+    admin: dict = Depends(require_admin)
+):
+    """Добавить заметку к партии или товару"""
+    batch = await db.batches.find_one({"id": batch_id})
+    if not batch:
+        raise HTTPException(status_code=404, detail="Партия не найдена")
+    
+    note_record = {
+        "id": str(uuid.uuid4()),
+        "batch_id": batch_id,
+        "item_id": note.item_id,  # Может быть None если заметка к партии
+        "text": note.text,
+        "created_by": admin["id"],
+        "created_by_nickname": admin.get("nickname", "Admin"),
+        "created_by_role": admin["role"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.batch_notes.insert_one(note_record)
+    del note_record["_id"] if "_id" in note_record else None
+    
+    return note_record
+
+@api_router.get("/bash/{batch_id}/notes")
+async def get_batch_notes(
+    batch_id: str,
+    item_id: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
+    """Получить заметки партии или товара"""
+    query = {"batch_id": batch_id}
+    if item_id:
+        query["item_id"] = item_id
+    
+    notes = await db.batch_notes.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return {"notes": notes}
+
+@api_router.delete("/bash/notes/{note_id}")
+async def delete_batch_note(
+    note_id: str,
+    admin: dict = Depends(require_admin)
+):
+    """Удалить заметку"""
+    result = await db.batch_notes.delete_one({"id": note_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Заметка не найдена")
+    return {"status": "success"}
+
 # 17track API Integration
 import httpx
 
