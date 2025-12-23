@@ -211,6 +211,11 @@ function AppContent() {
               <Layout><AnalyticsPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/super-admin" element={
+            <ProtectedRoute adminOnly>
+              <Layout><SuperAdminPage /></Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Searcher Routes */}
           <Route path="/my-brands" element={
