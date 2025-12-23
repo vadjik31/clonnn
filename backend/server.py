@@ -4388,27 +4388,35 @@ async def track_batch(
     # Вызываем трекинг API с carrier_code
     tracking_result = await track_shipment(tracking_number, carrier_code=carrier_code, admin=admin)
     
-    # Парсим статус для удобного отображения
+    # Парсим статус для удобного отображения из tracking_result напрямую
     parsed_status = None
     if tracking_result.get("status") == "success":
-        data = tracking_result.get("data", {}).get("data", {})
-        accepted = data.get("accepted", [])
-        if accepted:
-            track_info = accepted[0].get("track", {})
-            parsed_status = {
-                "status_code": track_info.get("e"),
-                "last_event": track_info.get("z0", {}).get("z") if track_info.get("z0") else None,
-                "last_time": track_info.get("z0", {}).get("a") if track_info.get("z0") else None,
-                "carrier": track_info.get("w1"),
-                "events": track_info.get("z1", [])[:5] if track_info.get("z1") else []
-            }
+        parsed_status = {
+            "status_code": 10,  # По умолчанию "В пути"
+            "status_text": tracking_result.get("tracking_status", "Нет данных"),
+            "last_event": tracking_result.get("last_event", ""),
+            "last_time": tracking_result.get("last_time", ""),
+            "carrier": tracking_result.get("carrier", "")
+        }
+        
+        # Определяем status_code по тексту статуса
+        status_text_lower = (tracking_result.get("tracking_status") or "").lower()
+        if "deliver" in status_text_lower or "доставлен" in status_text_lower:
+            parsed_status["status_code"] = 40
+        elif "transit" in status_text_lower or "пути" in status_text_lower:
+            parsed_status["status_code"] = 10
+        elif "expired" in status_text_lower or "истёк" in status_text_lower:
+            parsed_status["status_code"] = 20
+        elif "pickup" in status_text_lower or "pending" in status_text_lower or "ожидан" in status_text_lower:
+            parsed_status["status_code"] = 35
+        elif "not found" in status_text_lower or "нет данных" in status_text_lower:
+            parsed_status["status_code"] = 0
     
     # Сохраняем результат
     await db.batches.update_one(
         {"id": batch_id},
         {"$set": {
-            "tracking_status": tracking_result.get("status"),
-            "tracking_data": tracking_result.get("data"),
+            "tracking_status": tracking_result.get("tracking_status", ""),
             "tracking_parsed": parsed_status,
             "tracking_updated_at": datetime.now(timezone.utc).isoformat()
         }}
