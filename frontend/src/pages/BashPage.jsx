@@ -610,9 +610,10 @@ const BashPage = () => {
           <DialogHeader><DialogTitle className="text-[#FF9900]"><Truck size={18} className="inline mr-2" />Отслеживание</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label className="text-[#94A3B8] text-xs">Трекинг номер</Label><Input value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} placeholder="Номер" className="bg-[#0F1115] border-[#2A2F3A] mt-1" /></div>
-            <div><Label className="text-[#94A3B8] text-xs">Перевозчик</Label>
-              <Input value={carrierName} onChange={(e) => { setCarrierName(e.target.value); searchCarriers(e.target.value); }} placeholder="Начните вводить..." className="bg-[#0F1115] border-[#2A2F3A] mt-1" />
-              {carriers.length > 0 && carrierName && <div className="mt-1 bg-[#0F1115] border border-[#2A2F3A] rounded max-h-[100px] overflow-y-auto">{carriers.map(c => <button key={c.key} onClick={() => { setCarrierName(c.name); setCarrierCode(c.key); setCarriers([]); }} className="w-full text-left px-3 py-2 text-sm hover:bg-[#1A1D24] text-[#E6E6E6]">{c.name}</button>)}</div>}
+            <div><Label className="text-[#94A3B8] text-xs">Перевозчик (введите название или код)</Label>
+              <Input value={carrierName} onChange={(e) => { setCarrierName(e.target.value); searchCarriers(e.target.value); }} placeholder="DHL, 100001, USPS..." className="bg-[#0F1115] border-[#2A2F3A] mt-1" />
+              {carriers.length > 0 && carrierName && <div className="mt-1 bg-[#0F1115] border border-[#2A2F3A] rounded max-h-[150px] overflow-y-auto">{carriers.map(c => <button key={c.key} onClick={() => { setCarrierName(c.name); setCarrierCode(c.key); setCarriers([]); }} className="w-full text-left px-3 py-2 text-sm hover:bg-[#1A1D24] text-[#E6E6E6] flex justify-between"><span>{c.name}</span><span className="text-[#FF9900] font-mono text-xs">{c.key}</span></button>)}</div>}
+              {carrierCode && <p className="text-xs text-[#94A3B8] mt-1">Код: <span className="text-[#FF9900] font-mono">{carrierCode}</span></p>}
             </div>
             <div className="flex gap-2">
               <Button onClick={handleSaveTracking} className="flex-1 bg-[#FF9900] hover:bg-[#E68A00] text-black">Сохранить</Button>
