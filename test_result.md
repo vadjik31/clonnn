@@ -115,6 +115,16 @@ backend:
         agent: "main"
         comment: "sanitize_input() function added"
 
+  - task: "Suppliers CRUD API"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    priority: "P1"
+    status_history:
+      - working: true
+        agent: "main_fork_3"
+        comment: "GET/POST/PUT/DELETE /api/suppliers - полный CRUD для поставщиков"
+
 frontend:
   - task: "Super Admin Page"
     implemented: true
@@ -156,36 +166,74 @@ frontend:
         agent: "main"
         comment: "Алерты сгруппированы по типу, компактный вид"
 
+  - task: "BASH - Fix Jumping Rows"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/BashPage.jsx"
+    priority: "P0"
+    status_history:
+      - working: true
+        agent: "main_fork_3"
+        comment: "Исправлено - строки больше не прыгают при редактировании"
+
+  - task: "Suppliers Page"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/SuppliersPage.jsx"
+    priority: "P1"
+    status_history:
+      - working: true
+        agent: "main_fork_3"
+        comment: "Новая страница для управления поставщиками с полным CRUD"
+
 metadata:
   created_by: "main_agent"
-  version: "4.0"
-  test_sequence: 2
+  version: "5.0"
+  test_sequence: 3
   run_ui: true
 
 test_plan:
-  current_focus: []
+  current_focus: 
+    - "Suppliers CRUD"
+    - "BASH jumping rows fix"
+    - "17track v2.4 integration"
   stuck_tasks: []
   test_all: false
-  test_priority: "completed"
+  test_priority: "P0 - suppliers and bash fixes"
 
-agent_communication:
-  - agent: "main"
+current_agent_communication:
+  - agent: "main_fork_3"
     message: |
-      Супер-админ функционал полностью реализован и протестирован:
+      Fork 3 - Завершённые задачи:
       
-      BACKEND (все API работают):
-      - Check-in система
-      - Bulk archive/blacklist/assign
-      - Restore/unblacklist
-      - Delete import
-      - Global settings
-      - User activity logs
+      1. BASH - Исправлены "прыгающие строки" (P0)
+         - Добавлен sortedItemIds state для сохранения порядка
+         - Сортировка происходит только при изменении параметров сортировки
+         - Редактирование ячейки не вызывает пересортировку
+         - Тест: PASSED - ASIN остаётся на месте после редактирования
       
-      FRONTEND (все UI работают):
-      - SuperAdminPage с 6 вкладками
-      - Кнопка "Зашёл!" для сёрчеров
-      - Массовое выделение брендов
-      - Улучшенные алерты на дашборде
+      2. 17track API v2.4 - Обновлена интеграция (P0)
+         - track_batch() теперь корректно парсит ответ track_shipment()
+         - Статус отображается как текст из API, не только код
+         - status_text сохраняется и отображается на UI
+      
+      3. Раздел "Поставщики" - Полностью реализован (P1)
+         Backend:
+         - GET /api/suppliers - список всех
+         - POST /api/suppliers - создание
+         - PUT /api/suppliers/{id} - обновление
+         - DELETE /api/suppliers/{id} - удаление
+         - Логирование всех операций в user_activities
+         
+         Frontend:
+         - SuppliersPage.jsx с таблицей и модалкой
+         - Поиск по имени, сайту, логину
+         - Скрытие/показ паролей
+         - Копирование в буфер
+         - Роут /suppliers в App.js
+         - Ссылка "Поставщики" в Sidebar
+         
+         Тест: PASSED - Создан поставщик "China Direct Ltd"
       
       Credentials:
       - Super Admin: admin@procto13.com / admin123 / PROCTO13
