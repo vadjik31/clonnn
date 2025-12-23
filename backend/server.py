@@ -1199,6 +1199,64 @@ async def get_brands(
         "pages": (total + limit - 1) // limit
     }
 
+@api_router.get("/brands/{brand_id}/timeline")
+async def get_brand_timeline(brand_id: str, user: dict = Depends(get_current_user)):
+    """Краткая история действий с брендом для тултипа"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0, "assigned_to_user_id": 1})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Доступ запрещён")
+    
+    # Получаем последние события
+    events = await db.brand_events.find(
+        {"brand_id": brand_id},
+        {"_id": 0, "event_type": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    # Получаем количество заметок и контактов
+    notes_count = await db.brand_notes.count_documents({"brand_id": brand_id})
+    contacts_count = await db.brand_contacts.count_documents({"brand_id": brand_id})
+    
+    # Формируем краткую историю с русскими названиями
+    timeline = []
+    for event in events:
+        event_type = event.get("event_type", "unknown")
+        timeline.append({
+            "action": EVENT_LABELS_RU.get(event_type, event_type),
+            "date": event.get("created_at", "")[:10]
+        })
+    
+    return {
+        "timeline": timeline,
+        "notes_count": notes_count,
+        "contacts_count": contacts_count
+    }
+
+@api_router.get("/brands/ids")
+async def get_all_brand_ids(
+    status: Optional[str] = None,
+    pipeline_stage: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    search: Optional[str] = None,
+    user: dict = Depends(require_admin)
+):
+    """Получить все ID брендов по фильтрам (для массовых действий)"""
+    query = {"status": {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}}
+    
+    if status:
+        query["status"] = status
+    if pipeline_stage:
+        query["pipeline_stage"] = pipeline_stage
+    if assigned_to:
+        query["assigned_to_user_id"] = assigned_to
+    if search:
+        query["name_normalized"] = {"$regex": search.lower(), "$options": "i"}
+    
+    brands = await db.brands.find(query, {"_id": 0, "id": 1}).to_list(10000)
+    return {"ids": [b["id"] for b in brands], "total": len(brands)}
+
 @api_router.get("/brands/{brand_id}", response_model=BrandDetailResponse)
 async def get_brand_detail(brand_id: str, user: dict = Depends(get_current_user)):
     brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
