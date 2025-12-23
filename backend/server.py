@@ -1585,6 +1585,159 @@ async def update_brand_info(brand_id: str, req: UpdateBrandInfoRequest, user: di
     
     return {"status": "success"}
 
+@api_router.post("/brands/{brand_id}/contacts")
+async def add_brand_contacts(brand_id: str, req: AddContactRequest, user: dict = Depends(get_current_user)):
+    """Добавить контакты бренда"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Сохраняем контакты в отдельную коллекцию
+    for contact in req.contacts:
+        contact_doc = {
+            "id": str(uuid.uuid4()),
+            "brand_id": brand_id,
+            "contact_type": sanitize_input(contact.contact_type),
+            "value": sanitize_input(contact.value),
+            "is_primary": contact.is_primary,
+            "notes": sanitize_input(contact.notes) if contact.notes else None,
+            "added_by_user_id": user["id"],
+            "added_by_nickname": user["nickname"],
+            "created_at": now.isoformat()
+        }
+        await db.brand_contacts.insert_one(contact_doc)
+    
+    # Обновляем флаг contacts_found
+    await db.brands.update_one(
+        {"id": brand_id},
+        {"$set": {
+            "contacts_found": True,
+            "contacts_count": await db.brand_contacts.count_documents({"brand_id": brand_id}),
+            "updated_at": now.isoformat()
+        }}
+    )
+    
+    await log_event(EventType.INFO_UPDATED, user["id"], brand_id, {
+        "action": "contacts_added",
+        "count": len(req.contacts)
+    })
+    
+    return {"status": "success", "contacts_added": len(req.contacts)}
+
+@api_router.get("/brands/{brand_id}/contacts")
+async def get_brand_contacts(brand_id: str, user: dict = Depends(get_current_user)):
+    """Получить контакты бренда"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
+    
+    contacts = await db.brand_contacts.find({"brand_id": brand_id}, {"_id": 0}).to_list(100)
+    
+    return {"contacts": contacts, "count": len(contacts)}
+
+@api_router.delete("/brands/{brand_id}/contacts/{contact_id}")
+async def delete_brand_contact(brand_id: str, contact_id: str, user: dict = Depends(get_current_user)):
+    """Удалить контакт бренда"""
+    contact = await db.brand_contacts.find_one({"id": contact_id, "brand_id": brand_id})
+    if not contact:
+        raise HTTPException(status_code=404, detail="Контакт не найден")
+    
+    # Только добавивший или админ может удалить
+    if user["role"] == UserRole.SEARCHER and contact.get("added_by_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Нет прав на удаление")
+    
+    await db.brand_contacts.delete_one({"id": contact_id})
+    
+    # Обновляем счётчик
+    count = await db.brand_contacts.count_documents({"brand_id": brand_id})
+    await db.brands.update_one(
+        {"id": brand_id},
+        {"$set": {
+            "contacts_found": count > 0,
+            "contacts_count": count
+        }}
+    )
+    
+    return {"status": "success"}
+
+@api_router.post("/brands/{brand_id}/replied")
+async def set_replied_status(brand_id: str, req: RepliedStatusRequest, user: dict = Depends(get_current_user)):
+    """Установить статус 'Ответил' с подстатусом"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
+    
+    now = datetime.now(timezone.utc)
+    
+    # Маппинг подстатусов
+    status_map = {
+        "need_action": BrandStatus.REPLIED_NEED_ACTION,
+        "waiting": BrandStatus.REPLIED_WAITING,
+        "approved": BrandStatus.REPLIED_APPROVED,
+        "declined": BrandStatus.REPLIED_DECLINED
+    }
+    
+    new_status = status_map.get(req.sub_status, BrandStatus.OUTCOME_REPLIED)
+    
+    # Определяем этап
+    if req.sub_status in ["approved", "declined"]:
+        new_stage = PipelineStage.CLOSED
+    else:
+        new_stage = brand.get("pipeline_stage", PipelineStage.REVIEW)
+    
+    # Вычисляем next_action_at если указана дата
+    next_action = None
+    if req.next_action_date:
+        next_action = req.next_action_date
+    elif req.sub_status == "need_action":
+        # По умолчанию через 2 дня
+        next_action = (now + timedelta(days=2)).isoformat()
+    elif req.sub_status == "waiting":
+        # По умолчанию через 5 дней
+        next_action = (now + timedelta(days=5)).isoformat()
+    
+    await db.brands.update_one(
+        {"id": brand_id},
+        {"$set": {
+            "status": new_status,
+            "pipeline_stage": new_stage,
+            "replied_sub_status": req.sub_status,
+            "last_action_at": now.isoformat(),
+            "next_action_at": next_action,
+            "updated_at": now.isoformat()
+        }}
+    )
+    
+    # Добавляем заметку
+    note = {
+        "id": str(uuid.uuid4()),
+        "brand_id": brand_id,
+        "user_id": user["id"],
+        "note_text": sanitize_input(req.note_text),
+        "note_type": NoteType.STATUS_CHANGE,
+        "created_at": now.isoformat()
+    }
+    await db.brand_notes.insert_one(note)
+    
+    await log_event(EventType.OUTCOME_SET, user["id"], brand_id, {
+        "status": new_status,
+        "sub_status": req.sub_status,
+        "prev_status": brand.get("status")
+    })
+    
+    return {"status": "success", "new_status": new_status, "new_stage": new_stage}
+
 @api_router.post("/brands/{brand_id}/note")
 async def add_note(brand_id: str, req: BrandNoteCreate, user: dict = Depends(get_current_user)):
     """Добавить заметку"""
