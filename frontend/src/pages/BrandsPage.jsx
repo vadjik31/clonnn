@@ -424,11 +424,19 @@ const BrandsPage = () => {
             </Button>
             <Button
               size="sm"
+              onClick={() => setBulkModal({ open: true, action: "release" })}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <RotateCcw size={14} className="mr-1" />
+              В пул
+            </Button>
+            <Button
+              size="sm"
               variant="outline"
               onClick={() => { setSelectedBrands(new Set()); setSelectAllPages(false); }}
               className="border-[#2A2F3A] text-[#94A3B8]"
             >
-              Сбросить
+              Отмена
             </Button>
           </div>
         </div>
