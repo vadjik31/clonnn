@@ -354,7 +354,7 @@ const BrandDetailPage = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-[#E6E6E6] font-mono uppercase tracking-wider flex items-center gap-2">
               <Phone size={18} className="text-green-400" />
-              Контакты ({brand.contacts?.length || 0})
+              Контакты ({contacts?.length || 0})
             </h3>
             {canAct && (
               <Button
