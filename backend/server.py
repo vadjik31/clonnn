@@ -348,6 +348,38 @@ class DashboardResponse(BaseModel):
     searchers_activity: List[Dict[str, Any]]
     alerts: List[AlertResponse]
 
+# ============== NEW MODELS FOR SUPER ADMIN ==============
+
+class BulkArchiveRequest(BaseModel):
+    brand_ids: List[str]
+    reason: str
+
+class BulkBlacklistRequest(BaseModel):
+    brand_ids: List[str]
+    reason: str
+
+class BulkAssignRequest(BaseModel):
+    brand_ids: List[str]
+    user_id: str
+    reason: str
+
+class DeleteImportRequest(BaseModel):
+    import_id: str
+    reason: str
+
+class GlobalSettingsUpdate(BaseModel):
+    work_hours_start: Optional[str] = None
+    work_hours_end: Optional[str] = None
+    weekends: Optional[List[int]] = None  # 0=Пн, 6=Вс
+    holidays: Optional[List[str]] = None  # Даты YYYY-MM-DD
+
+class UserActivityLog(BaseModel):
+    action: str
+    details: Optional[Dict[str, Any]] = None
+
+class CheckInRequest(BaseModel):
+    message: Optional[str] = None
+
 # Idempotency tracking (закрывает дыру #2)
 claim_requests_in_progress = set()
 
