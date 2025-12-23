@@ -254,20 +254,38 @@ const BashPage = () => {
   const items = batchData?.items || [];
   const uniqueStatuses = batchData?.unique_statuses || [];
   
-  const filteredItems = items.filter(item => {
+  // Filter items first
+  const filteredItemsBase = items.filter(item => {
     if (statusFilter === "__empty__" && (item.status || "")) return false;
     if (statusFilter !== "all" && statusFilter !== "__empty__" && (item.status || "") !== statusFilter) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return item.asin?.toLowerCase().includes(s) || item.title?.toLowerCase().includes(s) || item.brand?.toLowerCase().includes(s) || item.supplier_sku?.toLowerCase().includes(s);
-  }).sort((a, b) => {
-    let aVal = a[sortBy] || 0, bVal = b[sortBy] || 0;
-    if (sortBy === "roi") {
-      if ((a.cost_price || 0) <= 0) aVal = sortOrder === "desc" ? -Infinity : Infinity;
-      if ((b.cost_price || 0) <= 0) bVal = sortOrder === "desc" ? -Infinity : Infinity;
-    }
-    return sortOrder === "desc" ? bVal - aVal : aVal - bVal;
   });
+  
+  // Sort and update sortedItemIds only when sort params, filter, or batch changes
+  useEffect(() => {
+    if (filteredItemsBase.length === 0) {
+      setSortedItemIds([]);
+      return;
+    }
+    const sorted = [...filteredItemsBase].sort((a, b) => {
+      let aVal = a[sortBy] || 0, bVal = b[sortBy] || 0;
+      if (sortBy === "roi") {
+        if ((a.cost_price || 0) <= 0) aVal = sortOrder === "desc" ? -Infinity : Infinity;
+        if ((b.cost_price || 0) <= 0) bVal = sortOrder === "desc" ? -Infinity : Infinity;
+      }
+      return sortOrder === "desc" ? bVal - aVal : aVal - bVal;
+    });
+    setSortedItemIds(sorted.map(i => i.id));
+  }, [sortBy, sortOrder, statusFilter, search, selectedBatch?.id, items.length]);
+  
+  // Use stored order to prevent jumping on edit
+  const filteredItems = sortedItemIds.length > 0
+    ? sortedItemIds
+        .map(id => filteredItemsBase.find(item => item.id === id))
+        .filter(Boolean)
+    : filteredItemsBase;
 
   const paginatedItems = filteredItems.slice((page - 1) * itemsPerPage, page * itemsPerPage);
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
