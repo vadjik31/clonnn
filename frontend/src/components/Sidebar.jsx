@@ -65,6 +65,7 @@ const Sidebar = ({ user }) => {
     { to: "/import", icon: Upload, label: "Импорт" },
     { to: "/brands", icon: Package, label: "Все бренды" },
     { to: "/bash", icon: Boxes, label: "BASH" },
+    { to: "/suppliers", icon: Building2, label: "Поставщики" },
     { to: "/settings", icon: Settings, label: "Настройки" },
   ];
 
@@ -76,6 +77,7 @@ const Sidebar = ({ user }) => {
     { to: "/import", icon: Upload, label: "Импорт" },
     { to: "/brands", icon: Package, label: "Все бренды" },
     { to: "/bash", icon: Boxes, label: "BASH" },
+    { to: "/suppliers", icon: Building2, label: "Поставщики" },
     { to: "/super-admin", icon: Shield, label: "Супер-админ" },
     { to: "/settings", icon: Settings, label: "Настройки" },
   ];
