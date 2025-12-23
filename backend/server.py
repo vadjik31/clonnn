@@ -375,6 +375,7 @@ class SettingsUpdate(BaseModel):
 class BulkReleaseRequest(BaseModel):
     brand_ids: List[str]
     reason: str
+    clear_history: bool = True  # По умолчанию очищаем историю назначений
 
 class BulkReleasePreview(BaseModel):
     count: int
