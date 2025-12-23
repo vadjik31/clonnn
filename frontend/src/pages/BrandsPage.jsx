@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../App";
+import { api, useAuth } from "../App";
 import { toast } from "sonner";
-import { Search, Filter, ChevronLeft, ChevronRight, RotateCcw, UserPlus } from "lucide-react";
+import { Search, Filter, ChevronLeft, ChevronRight, RotateCcw, UserPlus, Archive, Ban, CheckSquare, Square } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -20,15 +20,21 @@ import {
 } from "../components/ui/dialog";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
+import { Checkbox } from "../components/ui/checkbox";
 import StatusBadge from "../components/StatusBadge";
 
 const BrandsPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [brands, setBrands] = useState([]);
   const [total, setTotal] = useState(0);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
+  
+  // Selection for bulk actions (super_admin only)
+  const [selectedBrands, setSelectedBrands] = useState(new Set());
+  const [bulkModal, setBulkModal] = useState({ open: false, action: null });
   
   // Filters
   const [filters, setFilters] = useState({
