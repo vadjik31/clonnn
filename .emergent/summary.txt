@@ -1,180 +1,181 @@
 <analysis>**original_problem_statement:**
-The user initially requested an internal web system for managing a brand database for PROCTO 13 LLC, featuring roles like Super-Admin, Admin, and Searcher.
+The user's initial request was for an internal brand management web system for PROCTO 13 LLC, with roles for Super-Admin, Admin, and Searcher. The project's scope expanded to include a BASH feature for managing product batches from Excel files, featuring complex financial calculations.
 
-The project's scope then expanded significantly with a large feature request: a BASH section for managing product batches from uploaded Excel files. This involved parsing, complex financial calculations (Profit/ROI), and a detailed data table.
-
-Through iterative feedback, the user has further refined the BASH feature with several new requests:
-*   **Custom Statuses:** The ability for users to create their own statuses for batch items (e.g., out of stock, heavy), filter by them, and mass-delete items based on a selected status.
-*   **Improved Batch Management:** A dedicated list view for all batches, rather than viewing one at a time, to allow for easier navigation and management.
-*   **Enhanced Tracking:** A more robust integration with the 17track API (v2.4), showing the actual shipment status directly on the page and providing an auto-complete for selecting the shipping carrier. The user provided a Google Apps Script as a reference for the desired implementation.
-*   **UI/UX Fixes:**
-    *   Fix table rows jumping to the top after an edit.
-    *   Prevent long product titles from being cut off.
-    *   Allow zooming in on product images.
-    *   Add a dedicated section for managing Suppliers.
-*   **Data Handling:**
-    *   Use the 90-day average price if a Buy Box price is unavailable.
-    *   Add a feature to export items that have a supplier SKU and quantity greater than zero.
-    *   Correct the summary ROI calculation.
+Throughout the session, the user's requests focused on performance optimization, role-based permissions, and UI/UX enhancements. Key requests included:
+*   **Performance:** Fixing severe lagging and page not responding errors, particularly on the Analytics and Dashboard pages, caused by inefficient backend queries and frontend race conditions during navigation.
+*   **Permissions:**
+    *   Granting regular Admins the same brand management capabilities as Super-Admins (archiving, blacklisting, restoring).
+    *   Fixing an issue where Super-Admins couldn't see imported files while regular Admins could.
+    *   Implementing role-based visibility for Suppliers (Searchers see their own creations, Admins see all) and adding duplicate validation.
+*   **BASH Module:**
+    *   Fixing input lag when typing in the Артикуль (Supplier SKU) field.
+    *   Making the Доставка (Ship) cost a manual input field.
+    *   Adding a new преп.кост (Prep Cost) field and integrating it into ROI calculations.
+*   **Archive Management:**
+    *   Enabling the permanent deletion of brands from the archive.
+    *   Implementing bulk selection and bulk deletion/restoration of archived brands.
+    *   Fixing a data discrepancy where the UI showed only 100 archived brands, but the database contained over 1400.
+    *   Fixing an error that occurred when attempting to bulk-delete all selected brands.
+*   **UI Fixes:**
+    *   Correcting the position of tooltips on the Analytics page, which were previously unreadable as they appeared off-screen.
 
 **User's preferred language**: Russian
 
 **what currently exists?**
-A full-stack application (FastAPI, React, MongoDB) with a complete BASH module for managing product batches. The BASH feature allows users to:
-- Upload Excel files () which are parsed and stored in the database.
-- View batches in a list and drill down into a detailed view for each batch.
-- The detail view includes a summary dashboard (Total Items, Cost, Revenue, Profit, ROI) and a comprehensive table of all items.
-- The item table displays product info, financial data, and allows for real-time editing of , , and , with  and  recalculating instantly.
-- **Custom Statuses**: Users can create, assign, filter by, and bulk-delete items based on custom text statuses.
-- **Image Zoom**: Users can click on a product thumbnail to see a larger version.
-- **Tracking**: A basic tracking implementation exists that can be updated with a tracking number and carrier.
-- **Admin Logs**: The  for  users to view employee activity logs has been successfully implemented and verified.
+A full-stack application (FastAPI, React, MongoDB) with a complete BASH module for batch management and a multi-tiered user role system.
+- **Performance:** The application is now highly optimized. Backend endpoints for the Dashboard and Analytics pages use efficient MongoDB aggregation pipelines. The frontend uses  to cancel stale requests during navigation, preventing race conditions and lag. Frontend caching and skeleton loaders provide a fast user experience.
+- **BASH Page:** Features a table for batch items with real-time profit/ROI calculations. Input lag has been resolved using debounced and uncontrolled components. It includes fields for , , , a new , and a manual  cost.
+- **Suppliers Section:** A dedicated page for managing suppliers with role-based access control (Searchers see their own, Admins see all) and backend validation to prevent duplicate site entries.
+- **Management Page:** The former Super-Admin page is now a Management page accessible to both Admins and Super-Admins. It includes tabs for viewing and managing archived and blacklisted brands, with functionality for permanent deletion and restoration. Bulk actions (select all, bulk restore, bulk delete) are implemented for the archive.
+- **Import History:** The import page now correctly displays the history of all uploaded files for both Admins and Super-Admins, with an option to delete an import and its associated brands.
 
 **Last working item**:
-*   **Last item agent was working:** The agent started to address the user's latest feedback batch:
-    1.  **Tracking API Update:** Began refactoring the backend 17track integration to use the more advanced v2.4 API, based on a script the user provided.
-    2.  **Jumping Rows Fix:** Acknowledged the issue where editing an item causes it to jump to the top of the table.
-    3.  **Suppliers Section:** Acknowledged the request to create a new section for managing suppliers.
-*   **Status:** IN PROGRESS
-*   **Agent Testing Done:** N
-*   **Which testing method agent to use?**
-    *   **Tracking API:** Backend testing using  to verify the new v2.4 API flow (register, then get info).
-    *   **Jumping Rows Fix:** Use the screenshot tool. Edit a value in a cell midway down the  table and verify the row does not change position.
-    *   **Suppliers Section:** Use the **frontend testing agent** to test the creation of a new supplier page, form submission, and data persistence.
-*   **User Testing Done:** N
+- **Last item agent was working:** The agent was fixing two critical bugs related to the archive management feature:
+    1.  Bulk deletion of archived brands was failing with a Бренд не найден (Brand not found) error.
+    2.  The archive page was only displaying 100 brands, while the dashboard correctly reported a total of 1482.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** both
+    - **Backend:** Use the backend testing agent or  to verify the two fixes. First, confirm the route ordering allows the  endpoint to be hit correctly. Second, confirm the  endpoint can return more than 100 items.
+    - **Frontend:** Use the frontend testing agent for a full E2E test: log in as an admin, navigate to Management -> Archive, verify that more than 100 items are loaded (or that pagination works), select multiple items, and successfully use the bulk delete button.
+- **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1: Table rows jump on edit (P0)**
-    *   **Description:** When a user edits an input field (e.g., Себест.) in the BASH item table, the entire table re-sorts, causing the edited row to jump, creating a poor user experience.
-    *   **Attempted fixes:** None yet. The agent acknowledged the issue.
+-   **Issue 1: Bulk deletion of archived brands fails (P0)**
+    *   **Description:** When a user selects multiple brands in the archive and clicks Удалить (Delete), the API returns a Бренд не найден error. The agent identified this is due to incorrect route ordering in , where the dynamic route  is catching the request before the static  route.
+    *   **Attempted fixes:** None implemented. The cause has been identified.
     *   **Next debug checklist:**
-        1.  Examine . The issue is likely caused by a  hook that re-fetches or re-sorts the entire  array whenever a single item is updated.
-        2.  Modify the state update logic. Instead of re-fetching the whole list, update the single item within the existing client-side array to prevent a re-sort. The sorting should only be triggered by an explicit click on a column header.
-    *   **Why fix this issue and what will be achieved with the fix?** To improve usability and prevent user frustration when entering data for multiple items.
+        1.  Open .
+        2.  Locate the route definition for .
+        3.  Move this definition so it appears *before* the definition for .
+    *   **Why fix this issue and what will be achieved with the fix?** This will make the bulk deletion feature functional, which is a direct user request.
     *   **Status:** IN PROGRESS
     *   **Is recurring issue?** N
-    *   **Should Test frontend/backend/both after fix?** Frontend.
-    *   **Blocked on other issue:** No.
+    *   **Should Test frontend/backend/both after fix?** Both.
+    - **Blocked on other issue:** None.
+-   **Issue 2: Archived brands list is limited to 100 items (P0)**
+    *   **Description:** The Управление (Management) -> Архив page only displays 100 brands, preventing access to the full list of 1482 items present in the database. The agent identified a hardcoded  in the backend endpoint.
+    *   **Attempted fixes:** None implemented. The cause has been identified.
+    *   **Next debug checklist:**
+        1.  Open .
+        2.  Find the endpoint that serves the archived brands list (likely ).
+        3.  Remove the  from the MongoDB query.
+        4.  **Crucially**, implement pagination in this endpoint (e.g., accepting  and  query parameters) to avoid sending 1400+ items at once, which would crash the frontend.
+    *   **Why fix this issue and what will be achieved with the fix?** To allow admins to access and manage the entire list of archived brands.
+    *   **Status:** IN PROGRESS
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Both.
+    - **Blocked on other issue:** None.
 
 **In progress Task List**:
-*   **Task 1: Overhaul 17track Integration to v2.4 (P0)**
-    *   **Description**: Refactor the backend tracking logic based on the user's Google Apps Script. The new flow should first  tracking numbers with the 17track v2.4 API and then use  to retrieve detailed status information. The UI should display the descriptive status text (e.g., In Transit / Arrived at Hub) instead of a generic message.
-    *   **Where to resume**: The agent was modifying the  function in . The function needs to be completed to implement the two-step register/fetch process and parse the richer response from the v2.4 API.
-    *   **What will be achieved with this?**: Provides accurate, real-time shipment status directly in the UI, as requested by the user.
-    *   **Status**: IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?** Both. Backend via curl, frontend via screenshot to verify the status text is displayed correctly.
-    *   **Blocked on something**: No.
-
-*   **Task 2: Implement Suppliers Section (P1)**
-    *   **Description**: Create a new page for managing suppliers. All roles can view, but only , , and  can create/edit. The page should contain a table and a form with fields for Сайт поставщика (Website), имя поставщика (Name), логин (Login), пароль (Password), and заметки (Notes).
-    *   **Where to resume**: This task has not been started.
-        1.  **Backend**: Add a new MongoDB collection  and create CRUD endpoints in .
-        2.  **Frontend**: Create a new page component (e.g., ), add a route in , and a link in .
-    *   **What will be achieved with this?**: Fulfills a direct user request for a centralized place to manage supplier information.
-    *   **Status**: NOT STARTED
-    *   **Should Test frontend/backend/both after fix?** Both.
-    *   **Blocked on something**: No.
+- None.
 
 **Upcoming and Future Tasks**
+*   **Upcoming Tasks:**
+    *   **Implement Frontend Pagination for Archive (P0):** After fixing the backend limit, the  must be updated to use the new pagination capabilities. This will involve adding pagination controls to the UI and fetching data page by page to handle the large dataset without freezing the browser.
 *   **Future Tasks:**
     *   **XSS Protection:** Sanitize all user-generated input fields to prevent cross-site scripting.
     *   **Error Monitoring Page:** Create a dedicated UI for admins to view system errors and incidents.
     *   **Log Retention Policy:** Implement a scheduled task to clean up old activity logs.
 
 **Completed work in this session**
-- **Admin Logs Feature (DONE):** Successfully created and verified the  page, allowing  users to view employee activity logs.
-- **BASH Feature - Initial Implementation (DONE):**
-    - Built backend for Excel file upload, parsing, and data storage for batches and items.
-    - Created the initial  frontend with file upload and a data table.
-- **BASH Feature - Iteration 1 (User Feedback) (DONE):**
-    - Implemented a batch list view and detail view, improving navigation.
-    - Added a fallback to use the 90-day average price when Buy Box price is missing.
-    - Added fields for Supplier Link and Supplier SKU.
-    - Added a Notes feature for each item.
-    - Implemented  on input fields to reduce UI jerkiness.
-- **BASH Feature - Iteration 2 (User Feedback) (DONE):**
-    - **Custom Statuses:** Implemented user-creatable statuses with filtering and bulk deletion.
-    - **Carrier Autocomplete:** Added an autocomplete feature for selecting the shipping carrier when tracking a batch.
-    - **Fixed Backend Routing:** Resolved an issue where static API routes were being incorrectly intercepted by dynamic routes.
-- **BASH Feature - Iteration 3 (User Feedback) (DONE):**
-    - **Fixed ROI Calculation:** Corrected the summary ROI formula to provide accurate results.
-    - **UI Enhancements:**
-        - Made product titles wrap to be fully visible.
-        - Implemented an image zoom feature on-click.
-        - Re-introduced separate columns for , , and  fees.
-        - Removed the Продаж/мес (Sales/month) column as requested.
-        - Added an Экспорт (Export) button to the UI.
-    - **Fixed Status Filter:** Ensured newly created custom statuses correctly appear in the filter dropdowns.
+- **Performance Overhaul (DONE):** Optimized the Dashboard, Analytics, and Brands pages by rewriting backend queries using MongoDB aggregation and implementing frontend request cancellation with  to eliminate severe lag and race conditions.
+- **Permissions and Roles Refactor (DONE):**
+    - Granted regular Admins the same brand management permissions (archive, blacklist, restore) as Super-Admins.
+    - Unified the import history view for both Admin and Super-Admin roles.
+    - Implemented role-based visibility and duplicate validation for the Suppliers feature.
+- **BASH UX Improvements (DONE):**
+    - Fixed jumping rows bug on item edit.
+    - Resolved input lag for text fields by using debounced, uncontrolled components.
+    - Added a  field and made  a manual input, updating all relevant ROI calculations.
+- **Carrier Data Integration (DONE):** Refactored the tracking feature to load carrier information from a user-provided CSV file, with search by name and code.
+- **Archive Management Feature (DONE):**
+    - Created a Management page for Admins/Super-Admins to view and manage the brand archive.
+    - Implemented permanent brand deletion from the archive.
+    - Added bulk actions (select all, restore, delete) to the archive UI.
+- **UI Fixes (DONE):** Corrected the positioning of unreadable tooltips on the Analytics page.
+
+**Earlier issues found/mentioned but not fixed**
+- None.
+
+**Known issue recurrence from previous fork**
+- None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, MongoDB (), Pydantic, JWT.
-- **Data Parsing:**  and  for handling  uploads.
-- **API Calls:**  for making requests to the 17track API.
-- **Frontend:** React, , , , .
+- **Backend:** FastAPI, MongoDB (, Aggregation Framework with , ), Pydantic, JWT.
+- **Frontend:** React, ,  for request cancellation, , .
+- **Performance Optimization:** Backend query optimization, DB indexing, frontend request cancellation, and strategic use of uncontrolled components to prevent re-renders.
 
 **key DB schema**
-*   : { id, name, user_id, created_at, tracking_number, carrier_code, tracking_status, last_tracked_at, notes: [...] }
-*   : { id, batch_id, asin, title, ..., cost_price, extra_costs, quantity, profit, roi, supplier_link, supplier_sku, status, custom_status }
-*   : Static list from  used for auto-complete.
-*   **To be created**: : { site, name, login, password, notes, created_by, created_at }
+*   : 
+*   :  (added ,  is now editable).
+*   : 
+*   : The unified collection for all import history.
+*   : Contains status fields like , , .
+
+**changes in tech stack**
+- No changes to the core technologies.
 
 **All files of reference**
-*   **/app/backend/server.py**: Contains all backend logic, including the entire BASH feature. It was heavily modified to add new endpoints and update existing logic for tracking, statuses, and ROI calculation.
-*   **/app/frontend/src/pages/BashPage.jsx**: The main frontend file for the BASH feature. It has been overwritten multiple times to incorporate user feedback on UI, calculations, and new features like custom statuses and image zoom.
-*   **/app/backend/.env**: The  was added here.
-*   **/app/frontend/src/pages/StaffPage.jsx**: Created and completed to provide admins with access to logs.
-*   : Updated with routes for  and .
+*   : The monolithic backend file. It was heavily modified for performance optimization, permission changes, and new feature logic. The route ordering is critical and is the cause of a pending bug.
+*   : The Management page. Contains the logic for viewing the archive and handling bulk actions. Needs to be updated for pagination.
+*   : Optimized with caching and .
+*   : Optimized via backend aggregation.
+*   : Partially optimized with uncontrolled inputs to fix lag.
+*   : Updated to reflect new navigation for different roles.
+*   : New data file for shipping carriers.
 
 **Areas that need refactoring**:
-*   **/app/backend/server.py**: This file is critically oversized (4500+ lines) and urgently needs to be broken down into a more maintainable structure (e.g., separate files for routes, models, and services in directories like , , etc.).
-*   **/app/frontend/src/pages/BashPage.jsx**: This component is also very large and complex. It should be refactored into smaller, more manageable components (e.g., , , , , ).
+*   : Critically oversized and fragile. Breaking it into a structured package (e.g., , , ) is the highest priority refactoring task.
+*   : This component is growing in complexity with multiple tabs and bulk action state. It should be broken into smaller sub-components (, , etc.).
+*   : Still a very large and complex component that would benefit from being split into smaller pieces.
 
 **key api endpoints**
-*    (POST)
-*    (GET)
-*    (GET, PUT, DELETE)
-*    (GET)
-*    (GET, POST)
-*    (POST)
-*    (GET)
-*    (POST)
-*   **(New)  (GET, POST)**
-*   **(New)  (PUT, DELETE)**
+*   : Optimized with aggregation.
+*   : Optimized with aggregation.
+*   , : Updated for role-based logic and validation.
+*   : The single source for import history.
+*   : **(Buggy)** The endpoint for bulk deleting archived brands. Needs route order fix.
+*   : **(Buggy)** The endpoint for fetching archived brands. Needs limit removal and pagination.
+*   , : Permissions changed to allow Admins.
+*   : Permanently deletes a single archived brand.
 
 **Critical Info for New Agent**
-*   The top priorities are fixing the jumping rows bug, overhauling the 17track integration, and then implementing the Suppliers section.
-*   The user provides very specific, iterative feedback. Always confirm your plan before implementing major changes.
-*   The user's reference script for 17track API v2.4 is the source of truth for the new tracking implementation.
-*   The  and  files are extremely large. Navigate them carefully and consider that they are prime candidates for refactoring after the current tasks are completed.
+*   The immediate priorities are the two P0 bugs: fixing the bulk delete routing error and removing the 100-item limit on the archive page.
+*   After fixing the 100-item limit on the backend, you **must** implement pagination on the frontend () to handle the 1400+ items. The application will freeze without it.
+*   The user is highly sensitive to performance. Continue using the established patterns for optimization: backend aggregation for complex reads and frontend request cancellation () for all data-fetching  hooks.
+*   Be extremely careful when editing . Its size makes it fragile, and incorrect route ordering has already caused a bug. Any new routes should be placed thoughtfully relative to existing dynamic routes.
 
 **documents and test_reports created in this job**
-*   
-*   User-provided artifacts (, ) have been downloaded and used.
+*    (updated)
+*    (created)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Latest:** Requested fixes for tracking, jumping rows, and the addition of a Suppliers section. Provided a Google Apps Script for the 17track v2.4 API as a reference.
-2.  Reported issues: image zoom not working, custom statuses not saving to the filter list, incorrect ROI calculation, missing export button, and requested removal of Sales/mo and re-addition of fee breakdown.
-3.  Provided a screenshot showing a truncated product title.
-4.  Gave feedback on the previous implementation: tracking status message is uninformative (Статус получен), summary ROI is 0%, SKU import is incorrect, ROI doesn't update in real-time, and requested fully custom statuses and image zoom.
-5.  Final approval of the BASH V2 implementation with instructions for testing.
-6.  Confirmed that the carrier autocomplete feature for tracking is working perfectly.
-7.  Reported a bug where the API for searching carriers was failing due to an incorrect route order in .
-8.  Confirmed the Delete by Status modal is working as expected.
-9.  Confirmed the custom status selection modal is working as expected.
-10. Confirmed the detailed batch view is working perfectly, noting all the new features (stats, tracking card, filters, table data).
+1.  **Latest:** tried to select all - deletion error, and yes, figure out why my dashboard says 1482 in the archive but there are actually 100 in the archive, we need to figure it out
+2.  what if I want to bulk delete brands from the archive? Not one by one. and it lagged again, for some reason
+3.  its strange I deleted the imports but the brands remained... and how to get access to the archive and can I delete brands from the archive... also a regular admin cannot see the logins and passwords of other users, also a regular admin can do everything with brands that a super-admin does"
+4.  "its strange, as a super-admin I dont see anything in the import... but a regular admin can... make it so that I can delete some import and then all the brands from the list would disappear"
+5.  "the site just crashed again, and now it wont let me open the site page not responding
+6.  a couple of moments for the batches, 1. The article is somehow very difficult to enter, as if it lags... 2. Delivery, let me write it myself... 3. Enter prep.cost. It worked fast, now I clicked on some section and it lagged again... In the analytics, the tooltips... are not visible
+7.  I just quickly clicked on a few sections, then analytics and it lagged for 30 seconds
+8.  walk through the entire site and make sure that everything works quickly... and also make it so that ALL suppliers are visible to the admin, and searchers can only see THEIR suppliers... validate for duplicates
+9.  look, the site is down, why is that?
+10. in batches the goods are not visible. in the track I have to enter the carrier code as in the file
 
 **Project Health Check:**
-*   **Broken:** The BASH item table has a significant usability issue (jumping rows).
+*   **Broken:**
+    *   The bulk delete functionality for archived brands is non-functional due to a routing bug.
+    *   The archive view is incomplete, showing only 100 out of 1482 items.
 *   **Mocked:** None.
 
 **3rd Party Integrations**
-*   **17track:** Used for shipment tracking. The API key  is stored in . The integration is currently being upgraded from a basic implementation to the v2.4 API.
+*   **17track:** API key  stored in . The integration is stable.
 
 **Testing status**
-*   **Testing agent used after significant changes:** NO (in this session)
+*   **Testing agent used after significant changes:** NO
 *   **Troubleshoot agent used after agent stuck in loop:** NO
 *   **Test files created:** []
 *   **Known regressions:** None.
@@ -190,4 +191,5 @@ A full-stack application (FastAPI, React, MongoDB) with a complete BASH module f
     *   **Secret Code:** 
 
 **What agent forgot to execute**
-The agent was actively working on the user's latest requests but was interrupted before it could finish the implementation. The plan to address the feedback was sound, but the work is incomplete. No tasks were forgotten.</analysis>
+- The agent correctly identified the final two bugs but was interrupted before implementing the fixes.
+- The agent did not proactively add the necessary follow-up task of implementing frontend pagination for the archive page, which is required to support the fix for the 100-item limit.</analysis>

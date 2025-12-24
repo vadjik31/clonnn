@@ -1,6 +1,6 @@
 {
   "timestamp": "2025-12-23T12:03:12.604266",
-  "base_url": "https://inventory-pulse-169.preview.emergentagent.com",
+  "base_url": "https://procto-admin.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
