@@ -18,6 +18,7 @@ import SuperAdminPage from "./pages/SuperAdminPage";
 import StaffPage from "./pages/StaffPage";
 import BashPage from "./pages/BashPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import TasksPage from "./pages/TasksPage";
 
 // Components
 import Sidebar from "./components/Sidebar";
