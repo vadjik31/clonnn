@@ -332,12 +332,8 @@ const AnalyticsPage = () => {
             </Button>
           )}
         </div>
-              Удалить все
-            </Button>
-          )}
-        </div>
         <p className="text-sm text-[#94A3B8] mb-4">
-          Бренды без действий более {inactiveBrands?.threshold_days} дней
+          Бренды без действий более {inactiveBrands?.threshold_days} дней (показаны первые 100)
         </p>
         
         <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -354,10 +350,12 @@ const AnalyticsPage = () => {
                   <span className="px-2 py-1 bg-orange-900/20 text-orange-400 rounded text-xs font-mono">
                     {brand.days_inactive} дней
                   </span>
-                  {user?.role === "super_admin" && (
-                    <Button
-                      onClick={() => handleDeleteInactive([brand.id])}
-                      variant="ghost"
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
                       size="sm"
                       className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1 h-auto"
                     >
