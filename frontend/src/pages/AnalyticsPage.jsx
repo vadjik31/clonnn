@@ -169,6 +169,15 @@ const AnalyticsPage = () => {
           <p className="text-[#94A3B8] mt-1">KPI сёрчеров и контроль качества</p>
         </div>
         <div className="flex items-center gap-4">
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            variant="ghost"
+            size="sm"
+            className="text-[#94A3B8] hover:text-[#FF9900]"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          </Button>
           <Select value={period} onValueChange={setPeriod}>
             <SelectTrigger className="w-[150px] bg-[#0F1115] border-[#2A2F3A] text-[#E6E6E6]">
               <SelectValue />
