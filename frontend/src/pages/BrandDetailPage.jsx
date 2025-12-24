@@ -1098,15 +1098,18 @@ const OnHoldModal = ({ open, onClose, brandId, onSuccess }) => {
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[#94A3B8]">Дата пересмотра</Label>
+            <Label className="text-[#94A3B8]">Дата пересмотра (когда вернуться)</Label>
             <Input
               type="date"
               value={reviewDate}
               onChange={(e) => setReviewDate(e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              max={new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
               className="bg-[#0F1115] border-[#2A2F3A]"
               required
               data-testid="onhold-date"
             />
+            <p className="text-xs text-[#475569]">Формат: ДД.ММ.ГГГГ (макс. 1 год вперёд)</p>
           </div>
           <div className="space-y-2">
             <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
