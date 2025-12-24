@@ -19,7 +19,8 @@ import {
   Undo2,
   Ban,
   Phone,
-  Mail
+  Mail,
+  Archive
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
