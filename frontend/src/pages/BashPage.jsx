@@ -6,7 +6,7 @@ import {
   Boxes, Upload, Calculator, TrendingUp, Package, DollarSign, Percent, Trash2,
   ChevronLeft, ChevronRight, ArrowUpDown, Search, FileSpreadsheet, Truck, RefreshCw,
   ExternalLink, MessageSquare, Link, ChevronDown, ChevronUp, X, Filter, Plus, Eye,
-  Download, Copy
+  Download, Copy, Pencil
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
