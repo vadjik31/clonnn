@@ -230,7 +230,7 @@ function AppContent() {
             </ProtectedRoute>
           } />
           <Route path="/suppliers" element={
-            <ProtectedRoute adminOnly>
+            <ProtectedRoute>
               <Layout><SuppliersPage /></Layout>
             </ProtectedRoute>
           } />
