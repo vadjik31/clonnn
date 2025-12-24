@@ -23,13 +23,25 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Trim все поля перед отправкой
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    const trimmedSecretCode = secretCode.trim().toUpperCase();
+    
+    // Валидация
+    if (!trimmedEmail || !trimmedPassword || !trimmedSecretCode) {
+      toast.error("Заполните все поля");
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      const userData = await login(email, password, secretCode);
+      const userData = await login(trimmedEmail, trimmedPassword, trimmedSecretCode);
       toast.success(`Добро пожаловать, ${userData.nickname}!`);
       
-      const from = location.state?.from?.pathname || (userData.role === "admin" ? "/dashboard" : "/my-brands");
+      const from = location.state?.from?.pathname || (userData.role === "admin" || userData.role === "super_admin" ? "/dashboard" : "/my-brands");
       navigate(from, { replace: true });
     } catch (error) {
       const message = error.response?.data?.detail || "Ошибка входа";
