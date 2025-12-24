@@ -1063,6 +1063,22 @@ const OnHoldModal = ({ open, onClose, brandId, onSuccess }) => {
       toast.error("Заполните все поля");
       return;
     }
+    
+    // Валидация даты
+    const selectedDate = new Date(reviewDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    
+    if (selectedDate < today) {
+      toast.error("Дата не может быть в прошлом");
+      return;
+    }
+    if (selectedDate > maxDate) {
+      toast.error("Дата не может быть больше чем через год");
+      return;
+    }
+    
     setLoading(true);
     try {
       await api.post(`/brands/${brandId}/on-hold`, { reason, review_date: reviewDate, note_text: note });
