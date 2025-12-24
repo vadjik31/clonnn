@@ -150,6 +150,31 @@ const SuperAdminPage = () => {
     }
   };
 
+  const handleBulkDeleteArchived = async () => {
+    if (selectedArchived.size === 0) return;
+    if (!window.confirm(`Удалить ${selectedArchived.size} брендов навсегда? Это действие нельзя отменить!`)) return;
+    try {
+      await api.delete("/super-admin/brands/bulk-delete", { data: Array.from(selectedArchived) });
+      toast.success(`Удалено ${selectedArchived.size} брендов`);
+      setSelectedArchived(new Set());
+      fetchData();
+    } catch (error) {
+      toast.error("Ошибка удаления");
+    }
+  };
+
+  const handleBulkRestoreArchived = async () => {
+    if (selectedArchived.size === 0) return;
+    try {
+      await api.post("/super-admin/brands/bulk-restore", Array.from(selectedArchived));
+      toast.success(`Восстановлено ${selectedArchived.size} брендов`);
+      setSelectedArchived(new Set());
+      fetchData();
+    } catch (error) {
+      toast.error("Ошибка восстановления");
+    }
+  };
+
   const handleUnblacklistBrand = async (brandId) => {
     try {
       await api.post(`/super-admin/brands/${brandId}/unblacklist`);
@@ -171,7 +196,7 @@ const SuperAdminPage = () => {
     }
   };
 
-  if (user?.role !== "super_admin") {
+  if (user?.role !== "super_admin" && user?.role !== "admin") {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-red-400 font-mono">⛔ Доступ запрещён. Требуется роль супер-админа.</div>
