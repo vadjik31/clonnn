@@ -286,7 +286,7 @@ const BrandsPage = () => {
     }
   };
 
-  const isSuperAdmin = user?.role === "super_admin";
+  const isAdmin = user?.role === "super_admin" || user?.role === "admin";
 
   const statusOptions = [
     { value: "IN_POOL", label: "В пуле" },
