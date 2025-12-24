@@ -4584,6 +4584,26 @@ async def bulk_update_items_status(
 
 # ===================== SUPPLIERS SECTION =====================
 
+def extract_domain_name(url: str) -> str:
+    """Извлечь чистое доменное имя без TLD (amazon из amazon.com, ebay из ebay.ru)"""
+    if not url:
+        return ""
+    # Убираем протокол
+    domain = url.lower().strip()
+    domain = re.sub(r'^https?://', '', domain)
+    domain = re.sub(r'^www\.', '', domain)
+    # Берём только первую часть (до первого /)
+    domain = domain.split('/')[0]
+    # Убираем TLD (.com, .ru, .co.uk и т.д.)
+    parts = domain.split('.')
+    if len(parts) >= 2:
+        # Убираем последние части (TLD)
+        # Для случаев типа co.uk, com.br - убираем 2 последних если предпоследний короткий
+        if len(parts) >= 3 and len(parts[-2]) <= 3:
+            return parts[-3]
+        return parts[-2] if parts[-2] else parts[0]
+    return parts[0] if parts else ""
+
 class SupplierCreate(BaseModel):
     site: str = ""
     name: str
@@ -4602,8 +4622,19 @@ class SupplierUpdate(BaseModel):
 async def get_suppliers(
     admin: dict = Depends(require_admin)
 ):
-    """Получить список всех поставщиков"""
-    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    """Получить список поставщиков (админы видят всё, сёрчеры - только свои)"""
+    role = admin.get("role")
+    
+    if role in ["admin", "super_admin"]:
+        # Админы видят всех поставщиков
+        suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    else:
+        # Сёрчеры видят только своих поставщиков
+        suppliers = await db.suppliers.find(
+            {"created_by": admin.get("id")}, 
+            {"_id": 0}
+        ).to_list(1000)
+    
     return {"suppliers": suppliers}
 
 @api_router.post("/suppliers")
@@ -4611,9 +4642,30 @@ async def create_supplier(
     supplier: SupplierCreate,
     admin: dict = Depends(require_admin)
 ):
-    """Создать нового поставщика (только searcher, admin, super_admin)"""
+    """Создать нового поставщика с проверкой дублей по домену для сёрчеров"""
     if admin.get("role") not in ["searcher", "admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Нет прав для создания поставщика")
+    
+    role = admin.get("role")
+    user_id = admin.get("id")
+    
+    # Для сёрчеров проверяем дубли по доменному имени
+    if role == "searcher" and supplier.site:
+        new_domain = extract_domain_name(supplier.site)
+        if new_domain:
+            # Проверяем есть ли уже такой домен у этого сёрчера
+            existing_suppliers = await db.suppliers.find(
+                {"created_by": user_id},
+                {"_id": 0, "site": 1}
+            ).to_list(1000)
+            
+            for existing in existing_suppliers:
+                existing_domain = extract_domain_name(existing.get("site", ""))
+                if existing_domain and existing_domain == new_domain:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"Поставщик с сайтом '{new_domain}' уже существует"
+                    )
     
     supplier_dict = {
         "id": str(uuid4()),
