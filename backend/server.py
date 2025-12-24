@@ -4319,6 +4319,29 @@ async def update_batch_item(
     updated = await db.batch_items.find_one({"id": item_id}, {"_id": 0})
     return updated
 
+@api_router.delete("/bash/items/{item_id}")
+async def delete_batch_item(
+    item_id: str,
+    admin: dict = Depends(require_admin)
+):
+    """Удаление одного товара из партии"""
+    item = await db.batch_items.find_one({"id": item_id})
+    if not item:
+        raise HTTPException(status_code=404, detail="Товар не найден")
+    
+    await db.batch_items.delete_one({"id": item_id})
+    
+    # Обновляем счётчик в партии
+    batch_id = item.get("batch_id")
+    if batch_id:
+        remaining = await db.batch_items.count_documents({"batch_id": batch_id})
+        await db.batches.update_one(
+            {"id": batch_id},
+            {"$set": {"items_count": remaining}}
+        )
+    
+    return {"status": "success", "deleted_id": item_id}
+
 @api_router.put("/bash/items/bulk-update")
 async def bulk_update_batch_items(
     item_ids: List[str] = Body(...),
