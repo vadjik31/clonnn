@@ -4139,9 +4139,9 @@ async def get_batch(
     if items_with_cost:
         # Профит только от товаров с себестоимостью
         profit_from_priced = sum(i.get("total_profit", 0) or 0 for i in items_with_cost)
-        # Инвестиции только от товаров с себестоимостью  
+        # Инвестиции только от товаров с себестоимостью (включая prep_cost)
         total_investment = sum(
-            ((i.get("cost_price", 0) or 0) + (i.get("shipping_cost", 0) or 0) + (i.get("extra_costs", 0) or 0)) * (i.get("quantity", 1) or 1)
+            ((i.get("cost_price", 0) or 0) + (i.get("shipping_cost", 0) or 0) + (i.get("extra_costs", 0) or 0) + (i.get("prep_cost", 0) or 0)) * (i.get("quantity", 1) or 1)
             for i in items_with_cost
         )
         if total_investment > 0:
