@@ -53,19 +53,19 @@ const EditableCell = ({ value, onChange, type = "number", placeholder = "", clas
   );
 };
 
-// Text input with debounce - improved state management
+// Text input with debounce - key-based reset to prevent cascading renders
 const DebouncedTextInput = ({ value, onChange, placeholder = "", className = "" }) => {
   const [localValue, setLocalValue] = useState(value || "");
   const timeoutRef = useRef(null);
-  const prevValueRef = useRef(value);
   
-  // Reset local value when external value changes
-  useEffect(() => {
-    if (value !== prevValueRef.current) {
-      setLocalValue(value || "");
-      prevValueRef.current = value;
-    }
-  }, [value]);
+  // Use key-based reset pattern
+  const valueKey = `${value || 'empty'}`;
+  const [lastValueKey, setLastValueKey] = useState(valueKey);
+  
+  if (valueKey !== lastValueKey) {
+    setLocalValue(value || "");
+    setLastValueKey(valueKey);
+  }
   
   const handleChange = (e) => {
     const newValue = e.target.value;
