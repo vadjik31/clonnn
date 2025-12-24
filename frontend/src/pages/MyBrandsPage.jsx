@@ -82,6 +82,7 @@ const MyBrandsPage = () => {
     { value: "OUTCOME_DECLINED", label: "Отклонён" },
     { value: "OUTCOME_REPLIED", label: "Ответил" },
     { value: "REPLIED_NEED_ACTION", label: "Нужно действие" },
+    { value: "REPLIED_NEED_SEARCHER", label: "Внимание сёрчера!" },
     { value: "REPLIED_WAITING", label: "Ожидаем от них" },
     { value: "REPLIED_APPROVED", label: "Одобрили" },
     { value: "REPLIED_DECLINED", label: "Отказали" },
