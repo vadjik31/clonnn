@@ -3579,6 +3579,18 @@ async def get_archived_brands(
         "pages": (total + limit - 1) // limit if limit > 0 else 0
     }
 
+@api_router.get("/super-admin/archived-brands/all-ids")
+async def get_all_archived_brand_ids(
+    admin: dict = Depends(require_admin)
+):
+    """Получить все ID архивированных брендов для массового выбора"""
+    brands = await db.brands.find(
+        {"status": BrandStatus.ARCHIVED},
+        {"id": 1, "_id": 0}
+    ).to_list(50000)
+    
+    return {"ids": [b["id"] for b in brands], "count": len(brands)}
+
 @api_router.get("/super-admin/blacklisted-brands")
 async def get_blacklisted_brands(
     page: int = Query(1, ge=1),
