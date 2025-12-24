@@ -179,7 +179,7 @@ const MyBrandsPage = () => {
             className={filters.overdue ? "btn-primary" : "border-[#2A2F3A] text-[#94A3B8]"}
             data-testid="overdue-filter"
           >
-            🔥 Горит
+            ⏰ Просрочено
           </Button>
         </div>
       </div>
