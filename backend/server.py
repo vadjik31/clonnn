@@ -2316,20 +2316,24 @@ async def get_inactive_brands(admin: dict = Depends(require_admin)):
     """Бренды без активности больше N дней (оптимизированная версия)"""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
     
-    # Используем aggregation pipeline для оптимизации
+    # Запрос для подсчёта общего количества
+    count_query = {
+        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
+                           BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
+                           BrandStatus.OUTCOME_REPLIED, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+        "$or": [
+            {"last_action_at": {"$lt": cutoff}},
+            {"last_action_at": None}
+        ]
+    }
+    
+    # Получаем общее количество
+    total_count = await db.brands.count_documents(count_query)
+    
+    # Используем aggregation pipeline для оптимизации (показываем только 100)
     pipeline = [
-        {
-            "$match": {
-                "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
-                                   BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
-                                   BrandStatus.OUTCOME_REPLIED]},
-                "$or": [
-                    {"last_action_at": {"$lt": cutoff}},
-                    {"last_action_at": None}
-                ]
-            }
-        },
-        {"$limit": 100},  # Лимитируем для производительности
+        {"$match": count_query},
+        {"$limit": 100},
         {
             "$lookup": {
                 "from": "users",
@@ -2366,7 +2370,7 @@ async def get_inactive_brands(admin: dict = Depends(require_admin)):
     # Сортируем по дням неактивности
     brands.sort(key=lambda x: x.get("days_inactive", 0), reverse=True)
     
-    return {"brands": brands, "count": len(brands), "threshold_days": INACTIVITY_TIMEOUT_DAYS}
+    return {"brands": brands, "count": total_count, "threshold_days": INACTIVITY_TIMEOUT_DAYS}
 
 @api_router.get("/analytics/inactive-brands/all-ids")
 async def get_all_inactive_brand_ids(admin: dict = Depends(require_admin)):
