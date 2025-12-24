@@ -232,6 +232,7 @@ const SuperAdminPage = () => {
             <ArchivedTab 
               brands={archivedBrands} 
               onRestore={handleRestoreBrand}
+              onDelete={handleDeleteBrand}
             />
           )}
           {activeTab === "blacklist" && (
