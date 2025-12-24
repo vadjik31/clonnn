@@ -15,7 +15,8 @@ import {
   Shield,
   UserCheck,
   Boxes,
-  Building2
+  Building2,
+  ListTodo
 } from "lucide-react";
 
 const Sidebar = ({ user }) => {
