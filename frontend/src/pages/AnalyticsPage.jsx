@@ -322,30 +322,17 @@ const AnalyticsPage = () => {
             <AlertTriangle size={18} className="text-orange-400" />
             Без активности ({inactiveBrands?.count || 0})
           </h3>
-          {user?.role === "super_admin" && (
-            <div className="flex gap-2">
-              <Button
-                onClick={handleCleanupTest}
-                variant="outline"
-                size="sm"
-                className="text-yellow-400 border-yellow-400/30 hover:bg-yellow-900/20"
-              >
-                <Trash2 size={14} className="mr-1" />
-                Удалить Test*
-              </Button>
-              {inactiveBrands?.brands?.length > 0 && (
-                <Button
-                  onClick={() => handleDeleteInactive(inactiveBrands.brands.map(b => b.id))}
-                  disabled={deletingInactive}
-                  variant="outline"
-                  size="sm"
-                  className="text-red-400 border-red-400/30 hover:bg-red-900/20"
-                >
-                  <Trash2 size={14} className="mr-1" />
-                  Удалить все
-                </Button>
-              )}
-            </div>
+          {user?.role === "super_admin" && inactiveBrands?.brands?.length > 0 && (
+            <Button
+              onClick={() => handleDeleteInactive(inactiveBrands.brands.map(b => b.id))}
+              disabled={deletingInactive}
+              variant="outline"
+              size="sm"
+              className="text-red-400 border-red-400/30 hover:bg-red-900/20"
+            >
+              <Trash2 size={14} className="mr-1" />
+              Удалить все
+            </Button>
           )}
         </div>
         <p className="text-sm text-[#94A3B8] mb-4">
