@@ -217,7 +217,7 @@ const DashboardPage = () => {
                 <th className="py-3 px-4 text-center">Брендов</th>
                 <th className="py-3 px-4 text-center">Просрочено</th>
                 <th className="py-3 px-4 text-center">Очищено</th>
-                <th className="py-3 px-4 text-center">Быстрые возвраты</th>
+                <th className="py-3 px-4 text-center">Отметился?</th>
                 <th className="py-3 px-4 text-center">Низкое качество</th>
                 <th className="py-3 px-4 text-left">Рабочие часы</th>
               </tr>
