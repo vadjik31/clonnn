@@ -229,6 +229,31 @@ const BashPage = () => {
     } catch (error) { toast.error("Ошибка"); }
   };
 
+  const handleDeleteItem = async (itemId) => {
+    if (!window.confirm("Удалить этот товар?")) return;
+    try {
+      await api.delete(`/bash/items/${itemId}`);
+      toast.success("Товар удалён");
+      // Обновляем локальное состояние
+      const newItems = batchData.items.filter(i => i.id !== itemId);
+      setBatchData(prev => ({
+        ...prev,
+        items: newItems,
+        items_count: newItems.length
+      }));
+    } catch (error) { toast.error("Ошибка удаления"); }
+  };
+
+  const handleEditBatchName = async () => {
+    if (!editBatchName.trim()) return;
+    try {
+      await api.put(`/bash/${selectedBatch.id}`, { name: editBatchName });
+      toast.success("Название обновлено");
+      setBatchData(prev => ({ ...prev, name: editBatchName }));
+      setEditNameModal(false);
+    } catch (error) { toast.error("Ошибка"); }
+  };
+
   const handleSaveTracking = async () => {
     try {
       await api.put(`/bash/${selectedBatch.id}`, { tracking_number: trackingNumber, carrier_code: carrierCode, carrier_name: carrierName });
