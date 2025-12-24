@@ -3192,7 +3192,7 @@ async def bulk_blacklist_brands(
 @api_router.post("/super-admin/brands/bulk-assign")
 async def bulk_assign_brands(
     request: BulkAssignRequest,
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Массовое назначение брендов сёрчеру"""
     now = datetime.now(timezone.utc)
@@ -3249,7 +3249,7 @@ async def bulk_assign_brands(
 @api_router.post("/super-admin/brands/{brand_id}/restore")
 async def restore_brand_from_archive(
     brand_id: str,
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Восстановление бренда из архива"""
     brand = await db.brands.find_one({"id": brand_id})
