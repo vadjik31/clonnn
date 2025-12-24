@@ -124,27 +124,45 @@ const BashPage = () => {
   // Store sorted item IDs to prevent "jumping" on edit
   const [sortedItemIds, setSortedItemIds] = useState([]);
 
-  useEffect(() => { fetchBatches(); }, []);
-  useEffect(() => { if (selectedBatch?.id && view === "detail") fetchBatchData(selectedBatch.id); }, [selectedBatch?.id, view]);
+  useEffect(() => { 
+    fetchBatches(); 
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    };
+  }, []);
+  
+  useEffect(() => { 
+    if (selectedBatch?.id && view === "detail") fetchBatchData(selectedBatch.id); 
+  }, [selectedBatch?.id, view]);
 
   const fetchBatches = async () => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
     try {
-      const res = await api.get("/bash");
+      const res = await api.get("/bash", { signal: abortControllerRef.current.signal });
       setBatches(res.data.batches || []);
-    } catch (error) { console.error(error); }
+    } catch (error) { 
+      if (error.name === 'AbortError' || error.name === 'CanceledError') return;
+      console.error(error); 
+    }
     finally { setLoading(false); }
   };
 
   const fetchBatchData = async (batchId) => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
     try {
-      const res = await api.get(`/bash/${batchId}`);
+      const res = await api.get(`/bash/${batchId}`, { signal: abortControllerRef.current.signal });
       setBatchData(res.data);
       if (res.data.tracking_number) {
         setTrackingNumber(res.data.tracking_number);
         setCarrierCode(res.data.carrier_code || "");
         setCarrierName(res.data.carrier_name || "");
       }
-    } catch (error) { toast.error("Ошибка загрузки"); }
+    } catch (error) { 
+      if (error.name === 'AbortError' || error.name === 'CanceledError') return;
+      toast.error("Ошибка загрузки"); 
+    }
   };
 
   const handleUploadFile = async () => {
