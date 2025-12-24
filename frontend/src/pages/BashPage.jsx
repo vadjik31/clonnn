@@ -108,6 +108,8 @@ const BashPage = () => {
   const [selectedStatuses, setSelectedStatuses] = useState([]);
   const [exportSkuModal, setExportSkuModal] = useState(false);
   const [exportedItems, setExportedItems] = useState([]);
+  const [editNameModal, setEditNameModal] = useState(false);
+  const [editBatchName, setEditBatchName] = useState("");
   const [zoomImage, setZoomImage] = useState(null);
   
   // Filters
