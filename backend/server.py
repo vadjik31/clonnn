@@ -1992,47 +1992,93 @@ async def admin_bulk_release(req: BulkReleaseRequest, admin: dict = Depends(requ
 # ============== DASHBOARD ==============
 @api_router.get("/dashboard", response_model=DashboardResponse)
 async def get_dashboard(admin: dict = Depends(require_admin)):
-    total = await db.brands.count_documents({})
-    in_pool = await db.brands.count_documents({"status": BrandStatus.IN_POOL})
-    assigned = await db.brands.count_documents({"status": {"$ne": BrandStatus.IN_POOL}})
-    
     now = datetime.now(timezone.utc)
     now_iso = now.isoformat()
+    week_ago = (now - timedelta(days=7)).isoformat()
     
-    # Просроченные (исключая ON_HOLD) - закрывает дыру #15
-    overdue = await db.brands.count_documents({
+    # Параллельные агрегации для основных счётчиков
+    total_future = db.brands.count_documents({})
+    in_pool_future = db.brands.count_documents({"status": BrandStatus.IN_POOL})
+    
+    overdue_future = db.brands.count_documents({
         "next_action_at": {"$lt": now_iso, "$ne": None},
         "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
                            BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED, 
                            BrandStatus.OUTCOME_REPLIED]}
     })
     
-    pipeline_status = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
-    status_counts = await db.brands.aggregate(pipeline_status).to_list(100)
-    brands_by_status = {s["_id"]: s["count"] for s in status_counts}
+    # Aggregation для статусов и стадий
+    status_pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
+    stage_pipeline = [{"$group": {"_id": "$pipeline_stage", "count": {"$sum": 1}}}]
     
-    pipeline_stage = [{"$group": {"_id": "$pipeline_stage", "count": {"$sum": 1}}}]
-    stage_counts = await db.brands.aggregate(pipeline_stage).to_list(100)
+    # Aggregation для сёрчеров - все данные одним запросом
+    searcher_brands_pipeline = [
+        {"$match": {"assigned_to_user_id": {"$ne": None}}},
+        {"$group": {
+            "_id": "$assigned_to_user_id",
+            "assigned_count": {"$sum": 1},
+            "overdue_count": {"$sum": {"$cond": [
+                {"$and": [
+                    {"$lt": ["$next_action_at", now_iso]},
+                    {"$ne": ["$next_action_at", None]},
+                    {"$not": {"$in": ["$status", [BrandStatus.ON_HOLD, BrandStatus.OUTCOME_APPROVED, 
+                                                   BrandStatus.OUTCOME_DECLINED, BrandStatus.OUTCOME_REPLIED]]}}
+                ]}, 1, 0
+            ]}},
+            "low_quality_count": {"$sum": {"$cond": [
+                {"$and": [
+                    {"$lt": ["$health_score", 30]},
+                    {"$ne": ["$status", BrandStatus.IN_POOL]}
+                ]}, 1, 0
+            ]}}
+        }}
+    ]
+    
+    # Events aggregation для cleared_count и quick_returns
+    events_pipeline = [
+        {"$match": {
+            "event_type": EventType.RETURNED_TO_POOL,
+            "created_at": {"$gte": week_ago}
+        }},
+        {"$group": {
+            "_id": "$user_id",
+            "cleared_count": {"$sum": 1},
+            "quick_returns": {"$sum": {"$cond": [{"$eq": ["$metadata.quick_return", True]}, 1, 0]}}
+        }}
+    ]
+    
+    # Выполняем все запросы параллельно
+    total, in_pool, overdue, status_counts, stage_counts, searcher_brands, events_stats, searchers, alerts = await asyncio.gather(
+        total_future,
+        in_pool_future,
+        overdue_future,
+        db.brands.aggregate(status_pipeline).to_list(100),
+        db.brands.aggregate(stage_pipeline).to_list(100),
+        db.brands.aggregate(searcher_brands_pipeline).to_list(100),
+        db.brand_events.aggregate(events_pipeline).to_list(100),
+        db.users.find({"role": UserRole.SEARCHER}, {"_id": 0}).to_list(100),
+        db.alerts.find({"resolved": False}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
+    )
+    
+    assigned = total - in_pool
+    brands_by_status = {s["_id"]: s["count"] for s in status_counts}
     brands_by_stage = {s["_id"]: s["count"] for s in stage_counts}
     
-    searchers = await db.users.find({"role": UserRole.SEARCHER}, {"_id": 0}).to_list(100)
-    searchers_activity = []
+    # Маппинг данных по сёрчерам
+    searcher_brand_map = {s["_id"]: s for s in searcher_brands}
+    events_map = {e["_id"]: e for e in events_stats}
     
+    searchers_activity = []
     for s in searchers:
-        assigned_count = await db.brands.count_documents({"assigned_to_user_id": s["id"]})
-        overdue_count = await db.brands.count_documents({
-            "assigned_to_user_id": s["id"],
-            "next_action_at": {"$lt": now_iso, "$ne": None},
-            "status": {"$nin": [BrandStatus.ON_HOLD, BrandStatus.OUTCOME_APPROVED, 
-                               BrandStatus.OUTCOME_DECLINED, BrandStatus.OUTCOME_REPLIED]}
-        })
+        user_id = s["id"]
+        brand_data = searcher_brand_map.get(user_id, {})
+        event_data = events_map.get(user_id, {})
         
-        # Светофор с учётом рабочих часов (закрывает дыру #21)
+        # Светофор активности
         last_seen = s.get("last_seen_at")
         work_start = s.get("work_hours_start", "09:00")
         work_end = s.get("work_hours_end", "18:00")
         
-        # Проверяем, в рабочих ли часах сейчас
         current_hour = now.hour
         try:
             start_hour = int(work_start.split(":")[0])
@@ -2042,63 +2088,37 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
             in_work_hours = True
         
         if last_seen:
-            last_seen_dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
-            minutes_ago = (now - last_seen_dt).total_seconds() / 60
-            
-            if in_work_hours:
-                if minutes_ago < 15:
-                    activity_status = "online"
-                elif minutes_ago < 60:
-                    activity_status = "idle"
+            try:
+                last_seen_dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
+                minutes_ago = (now - last_seen_dt).total_seconds() / 60
+                
+                if in_work_hours:
+                    if minutes_ago < 15:
+                        activity_status = "online"
+                    elif minutes_ago < 60:
+                        activity_status = "idle"
+                    else:
+                        activity_status = "offline"
                 else:
-                    activity_status = "offline"
-            else:
-                activity_status = "off_hours"
+                    activity_status = "off_hours"
+            except:
+                activity_status = "offline"
         else:
             activity_status = "offline" if in_work_hours else "off_hours"
         
-        # Статистика возвратов (закрывает дыру #3)
-        week_ago = (now - timedelta(days=7)).isoformat()
-        cleared_count = await db.brand_events.count_documents({
-            "user_id": s["id"],
-            "event_type": EventType.RETURNED_TO_POOL,
-            "created_at": {"$gte": week_ago}
-        })
-        
-        # Быстрые возвраты
-        quick_returns = await db.brand_events.count_documents({
-            "user_id": s["id"],
-            "event_type": EventType.RETURNED_TO_POOL,
-            "created_at": {"$gte": week_ago},
-            "metadata.quick_return": True
-        })
-        
-        # Низкое качество
-        low_quality = await db.brands.count_documents({
-            "assigned_to_user_id": s["id"],
-            "health_score": {"$lt": 30},
-            "status": {"$nin": [BrandStatus.IN_POOL]}
-        })
-        
         searchers_activity.append({
-            "id": s["id"],
+            "id": user_id,
             "nickname": s["nickname"],
-            "assigned_count": assigned_count,
-            "overdue_count": overdue_count,
-            "cleared_count": cleared_count,
-            "quick_returns_count": quick_returns,
-            "low_quality_count": low_quality,
+            "assigned_count": brand_data.get("assigned_count", 0),
+            "overdue_count": brand_data.get("overdue_count", 0),
+            "cleared_count": event_data.get("cleared_count", 0),
+            "quick_returns_count": event_data.get("quick_returns", 0),
+            "low_quality_count": brand_data.get("low_quality_count", 0),
             "activity_status": activity_status,
             "last_seen_at": s.get("last_seen_at"),
             "work_hours": f"{work_start} - {work_end}",
             "in_work_hours": in_work_hours
         })
-    
-    # Получаем непрочитанные алерты (закрывает дыру #24)
-    alerts = await db.alerts.find(
-        {"resolved": False},
-        {"_id": 0}
-    ).sort("created_at", -1).limit(10).to_list(10)
     
     return DashboardResponse(
         total_brands=total,
