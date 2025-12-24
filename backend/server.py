@@ -459,7 +459,7 @@ class AddContactRequest(BaseModel):
     contacts: List[ContactInfo]
 
 class RepliedStatusRequest(BaseModel):
-    sub_status: str  # need_action, waiting, approved, declined
+    sub_status: str  # need_action, need_searcher_attention, waiting, approved, declined
     note_text: str
     next_action_date: Optional[str] = None
 
