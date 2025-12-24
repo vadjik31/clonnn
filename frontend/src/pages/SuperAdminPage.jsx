@@ -74,31 +74,34 @@ const SuperAdminPage = () => {
       const signal = abortControllerRef.current.signal;
       switch (activeTab) {
         case "check-ins":
-          const checkInsRes = await api.get("/super-admin/check-ins");
+          const checkInsRes = await api.get("/super-admin/check-ins", { signal });
           setCheckIns(checkInsRes.data);
           break;
         case "imports":
-          const importsRes = await api.get("/super-admin/imports");
+          const importsRes = await api.get("/super-admin/imports", { signal });
           setImports(importsRes.data.imports || []);
           break;
         case "settings":
-          const settingsRes = await api.get("/super-admin/settings");
+          const settingsRes = await api.get("/super-admin/settings", { signal });
           setSettings(settingsRes.data);
           break;
         case "archived":
-          const archivedRes = await api.get("/super-admin/archived-brands");
+          const archivedRes = await api.get("/super-admin/archived-brands?limit=100", { signal });
           setArchivedBrands(archivedRes.data.brands || []);
+          setSelectedArchived(new Set());
           break;
         case "blacklist":
-          const blacklistRes = await api.get("/super-admin/blacklisted-brands");
+          const blacklistRes = await api.get("/super-admin/blacklisted-brands?limit=100", { signal });
           setBlacklistedBrands(blacklistRes.data.brands || []);
+          setSelectedBlacklisted(new Set());
           break;
         case "activity":
-          const usersRes = await api.get("/users");
+          const usersRes = await api.get("/users", { signal });
           setSearchers(usersRes.data.filter(u => u.role === "searcher"));
           break;
       }
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') return;
       toast.error("Ошибка загрузки данных");
     } finally {
       setLoading(false);
