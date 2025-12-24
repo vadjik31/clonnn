@@ -533,38 +533,81 @@ const ImportsTab = ({ imports, onDelete }) => {
   );
 };
 
-const ArchivedTab = ({ brands, onRestore, onDelete }) => {
+const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, onBulkDelete, onBulkRestore }) => {
+  const toggleSelect = (id) => {
+    const newSelected = new Set(selected);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    onSelectChange(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selected.size === brands.length) {
+      onSelectChange(new Set());
+    } else {
+      onSelectChange(new Set(brands.map(b => b.id)));
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
-        <Archive size={18} className="text-yellow-400" />
-        Архив ({brands.length})
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
+          <Archive size={18} className="text-yellow-400" />
+          Архив ({brands.length})
+        </h3>
+        {selected.size > 0 && (
+          <div className="flex gap-2">
+            <Button size="sm" className="btn-secondary" onClick={onBulkRestore}>
+              <RotateCcw size={14} className="mr-1" />
+              Восстановить ({selected.size})
+            </Button>
+            <Button size="sm" variant="destructive" onClick={onBulkDelete}>
+              <Trash2 size={14} className="mr-1" />
+              Удалить ({selected.size})
+            </Button>
+          </div>
+        )}
+      </div>
 
-      <div className="space-y-2 max-h-[500px] overflow-y-auto">
+      {brands.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
+          <input
+            type="checkbox"
+            checked={selected.size === brands.length && brands.length > 0}
+            onChange={toggleSelectAll}
+            className="rounded border-[#2A2F3A]"
+          />
+          <span>Выбрать все</span>
+        </div>
+      )}
+
+      <div className="space-y-2 max-h-[400px] overflow-y-auto">
         {brands.map(b => (
           <div key={b.id} className="p-3 bg-[#0F1115] rounded-[2px] flex justify-between items-center">
-            <div>
-              <p className="text-[#E6E6E6]">{b.name_original}</p>
-              <p className="text-xs text-[#94A3B8]">
-                {b.archive_reason} • {new Date(b.archived_at).toLocaleDateString('ru-RU')}
-              </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={selected.has(b.id)}
+                onChange={() => toggleSelect(b.id)}
+                className="rounded border-[#2A2F3A]"
+              />
+              <div>
+                <p className="text-[#E6E6E6]">{b.name_original}</p>
+                <p className="text-xs text-[#94A3B8]">
+                  {b.archive_reason || "Нет причины"} • {b.archived_at ? new Date(b.archived_at).toLocaleDateString('ru-RU') : "—"}
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="btn-secondary"
-                onClick={() => onRestore(b.id)}
-              >
+              <Button size="sm" className="btn-secondary" onClick={() => onRestore(b.id)}>
                 <RotateCcw size={14} className="mr-1" />
                 В пул
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-red-400 hover:text-red-300"
-                onClick={() => onDelete(b.id, b.name_original)}
-              >
+              <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => onDelete(b.id, b.name_original)}>
                 <Trash2 size={14} />
               </Button>
             </div>
