@@ -1531,7 +1531,7 @@ const RepliedModal = ({ open, onClose, brandId, onSuccess }) => {
             ))}
           </div>
           
-          {(subStatus === "need_action" || subStatus === "waiting") && (
+          {(subStatus === "need_action" || subStatus === "need_searcher_attention" || subStatus === "waiting") && (
             <div className="space-y-2">
               <Label className="text-[#94A3B8]">Когда вернуться (опционально)</Label>
               <Input
