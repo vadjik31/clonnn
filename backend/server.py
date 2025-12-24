@@ -2368,6 +2368,26 @@ async def get_inactive_brands(admin: dict = Depends(require_admin)):
     
     return {"brands": brands, "count": len(brands), "threshold_days": INACTIVITY_TIMEOUT_DAYS}
 
+@api_router.get("/analytics/inactive-brands/all-ids")
+async def get_all_inactive_brand_ids(admin: dict = Depends(require_admin)):
+    """Получить все ID неактивных брендов для массового удаления"""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
+    
+    brands = await db.brands.find(
+        {
+            "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
+                               BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
+                               BrandStatus.OUTCOME_REPLIED, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+            "$or": [
+                {"last_action_at": {"$lt": cutoff}},
+                {"last_action_at": None}
+            ]
+        },
+        {"id": 1, "_id": 0}
+    ).to_list(50000)
+    
+    return {"ids": [b["id"] for b in brands], "count": len(brands)}
+
 @api_router.get("/analytics/kpi")
 async def get_kpi_report(
     period_days: int = Query(7, ge=1, le=90),
