@@ -3560,7 +3560,7 @@ async def bulk_restore_brands(
 
 @api_router.delete("/super-admin/brands/cleanup-test")
 async def cleanup_test_brands(
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Удалить тестовые бренды (начинающиеся с Test)"""
     # Находим тестовые бренды
@@ -3593,7 +3593,7 @@ async def cleanup_test_brands(
 @api_router.delete("/super-admin/brands/bulk-delete")
 async def bulk_delete_brands(
     brand_ids: List[str] = Body(...),
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Массовое удаление брендов (полное удаление из БД)"""
     if not brand_ids:
