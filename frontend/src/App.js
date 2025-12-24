@@ -235,6 +235,11 @@ function AppContent() {
               <Layout><SuppliersPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/tasks" element={
+            <ProtectedRoute adminOnly>
+              <Layout><TasksPage /></Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Searcher Routes */}
           <Route path="/my-brands" element={
