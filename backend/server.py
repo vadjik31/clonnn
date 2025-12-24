@@ -3374,10 +3374,11 @@ async def delete_import_with_brands(
 @api_router.get("/super-admin/imports")
 async def get_imports_list(admin: dict = Depends(require_super_admin)):
     """Список всех импортов с возможностью удаления"""
-    imports = await db.imports.find(
-        {"deleted": {"$ne": True}},
+    # Используем batch_imports - это основная коллекция импортов
+    imports = await db.batch_imports.find(
+        {},
         {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
+    ).sort("imported_at", -1).to_list(100)
     
     if not imports:
         return {"imports": []}
@@ -3406,18 +3407,24 @@ async def get_imports_list(admin: dict = Depends(require_super_admin)):
     for c in counts:
         imp_id = c["_id"]["import_id"]
         if imp_id not in stats:
-            stats[imp_id] = {"active": 0, "archived": 0}
+            stats[imp_id] = {"active": 0, "archived": 0, "blacklisted": 0}
         
         if c["_id"]["is_archived"]:
             stats[imp_id]["archived"] = c["count"]
-        elif not c["_id"]["is_blacklisted"]:
+        elif c["_id"]["is_blacklisted"]:
+            stats[imp_id]["blacklisted"] = c["count"]
+        else:
             stats[imp_id]["active"] += c["count"]
     
     # Добавляем статистику к импортам
     for imp in imports:
-        imp_stats = stats.get(imp["id"], {"active": 0, "archived": 0})
+        imp_stats = stats.get(imp["id"], {"active": 0, "archived": 0, "blacklisted": 0})
         imp["active_brands_count"] = imp_stats["active"]
         imp["archived_brands_count"] = imp_stats["archived"]
+        imp["blacklisted_brands_count"] = imp_stats["blacklisted"]
+        imp["total_brands_count"] = imp_stats["active"] + imp_stats["archived"] + imp_stats["blacklisted"]
+    
+    return {"imports": imports}
     
     return {"imports": imports}
 
