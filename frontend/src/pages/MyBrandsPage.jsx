@@ -31,11 +31,22 @@ const MyBrandsPage = () => {
     page: 1
   });
 
+  // Рефреш данных при возврате на страницу
   useEffect(() => {
-    fetchBrands();
+    const handleFocus = () => {
+      fetchBrands();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchBrands(controller.signal);
+    return () => controller.abort();
   }, [filters]);
 
-  const fetchBrands = async () => {
+  const fetchBrands = async (signal) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
