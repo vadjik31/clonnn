@@ -222,3 +222,10 @@ body {
     @apply bg-[#0F1115] text-[#E6E6E6];
   }
 }
+
+/* Hide Emergent badge */
+#emergent-branding,
+[id*="emergent"],
+a[href*="emergent.sh"] {
+  display: none !important;
+}
