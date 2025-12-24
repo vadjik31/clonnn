@@ -1843,6 +1843,7 @@ async def set_replied_status(brand_id: str, req: RepliedStatusRequest, user: dic
     # Маппинг подстатусов
     status_map = {
         "need_action": BrandStatus.REPLIED_NEED_ACTION,
+        "need_searcher_attention": BrandStatus.REPLIED_NEED_SEARCHER,
         "waiting": BrandStatus.REPLIED_WAITING,
         "approved": BrandStatus.REPLIED_APPROVED,
         "declined": BrandStatus.REPLIED_DECLINED
