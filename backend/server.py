@@ -855,12 +855,17 @@ async def record_assignment_history(brand_id: str, user_id: str):
 # ============== AUTH ROUTES ==============
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(req: LoginRequest, request: Request):
-    user = await db.users.find_one({"email": req.email}, {"_id": 0})
+    # Убираем пробелы из полей ввода
+    email = req.email.strip().lower()
+    password = req.password.strip()
+    secret_code = req.secret_code.strip().upper()
+    
+    user = await db.users.find_one({"email": email}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
-    if user["password"] != req.password:
+    if user["password"] != password:
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
-    if user["secret_code"] != req.secret_code:
+    if user["secret_code"].upper() != secret_code:
         raise HTTPException(status_code=401, detail="Неверный секретный код")
     if user["status"] != "active":
         raise HTTPException(status_code=403, detail="Аккаунт отключён")
