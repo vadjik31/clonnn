@@ -2048,7 +2048,8 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
     ]
     
     # Выполняем все запросы параллельно
-    total, in_pool, overdue, status_counts, stage_counts, searcher_brands, events_stats, searchers, alerts = await asyncio.gather(
+    today_str = now.strftime("%Y-%m-%d")
+    total, in_pool, overdue, status_counts, stage_counts, searcher_brands, events_stats, searchers, alerts, today_checkins = await asyncio.gather(
         total_future,
         in_pool_future,
         overdue_future,
@@ -2057,8 +2058,12 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
         db.brands.aggregate(searcher_brands_pipeline).to_list(100),
         db.brand_events.aggregate(events_pipeline).to_list(100),
         db.users.find({"role": UserRole.SEARCHER}, {"_id": 0}).to_list(100),
-        db.alerts.find({"resolved": False}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
+        db.alerts.find({"resolved": False}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10),
+        db.check_ins.find({"date": today_str}, {"user_id": 1}).to_list(100)
     )
+    
+    # Сет ID отметившихся сегодня
+    checked_in_today_ids = {c["user_id"] for c in today_checkins}
     
     assigned = total - in_pool
     brands_by_status = {s["_id"]: s["count"] for s in status_counts}
