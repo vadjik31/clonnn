@@ -58,13 +58,14 @@ const AnalyticsPage = () => {
   
   // Cache ref to prevent duplicate fetches
   const cacheRef = useRef({ kpi: {}, inactive: null, lastFetch: 0 });
+  const abortControllerRef = useRef(null);
   const CACHE_TTL = 60000; // 1 minute cache
 
   const fetchAllData = useCallback(async (forceRefresh = false) => {
     const now = Date.now();
     const cache = cacheRef.current;
     
-    // Check cache
+    // Check cache first - instant return if valid
     if (!forceRefresh && cache.kpi[period] && cache.inactive && (now - cache.lastFetch) < CACHE_TTL) {
       setKpiData(cache.kpi[period]);
       setInactiveBrands(cache.inactive);
@@ -72,22 +73,36 @@ const AnalyticsPage = () => {
       return;
     }
     
+    // Cancel previous request if still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     if (!loading) setRefreshing(true);
     
     try {
       const [kpi, inactive] = await Promise.all([
-        api.get(`/analytics/kpi?period_days=${period}`),
-        api.get("/analytics/inactive-brands")
+        api.get(`/analytics/kpi?period_days=${period}`, { 
+          signal: abortControllerRef.current.signal 
+        }),
+        api.get("/analytics/inactive-brands", { 
+          signal: abortControllerRef.current.signal 
+        })
       ]);
       
       // Update cache
       cache.kpi[period] = kpi.data;
       cache.inactive = inactive.data;
-      cache.lastFetch = now;
+      cache.lastFetch = Date.now();
       
       setKpiData(kpi.data);
       setInactiveBrands(inactive.data);
     } catch (error) {
+      // Ignore abort errors
+      if (error.name === 'AbortError' || error.name === 'CanceledError') {
+        return;
+      }
       toast.error("Ошибка загрузки аналитики");
     } finally {
       setLoading(false);
@@ -97,6 +112,13 @@ const AnalyticsPage = () => {
 
   useEffect(() => {
     fetchAllData();
+    
+    // Cleanup on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [period]);
 
   const handleRefresh = () => {
