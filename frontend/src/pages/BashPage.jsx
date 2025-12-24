@@ -738,6 +738,26 @@ const BashPage = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* EDIT NAME MODAL */}
+      <Dialog open={editNameModal} onOpenChange={setEditNameModal}>
+        <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6] max-w-sm">
+          <DialogHeader><DialogTitle className="text-[#FF9900]">Изменить название</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <Input 
+              value={editBatchName} 
+              onChange={(e) => setEditBatchName(e.target.value)} 
+              placeholder="Название партии" 
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              onKeyDown={(e) => e.key === "Enter" && handleEditBatchName()}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditNameModal(false)} className="border-[#2A2F3A]">Отмена</Button>
+              <Button onClick={handleEditBatchName} className="bg-[#FF9900] hover:bg-[#E68A00] text-black">Сохранить</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
