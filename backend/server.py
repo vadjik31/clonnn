@@ -1712,7 +1712,7 @@ async def mark_on_hold(brand_id: str, req: MarkOnHoldRequest, user: dict = Depen
         "on_hold_reason": req.reason,
         "on_hold_review_date": req.review_date,
         "last_action_at": now,
-        "next_action_at": None,  # ON_HOLD не считается просроченным
+        "next_action_at": req.review_date,  # Дата напоминания для сёрчера
         "updated_at": now
     }})
     
