@@ -2251,6 +2251,11 @@ async def init_data():
     await db.alerts.create_index([("resolved", 1), ("created_at", -1)])
     await db.brands.create_index("import_id")  # Для быстрой статистики импортов
     await db.check_ins.create_index([("date", 1), ("user_id", 1)])  # Для check-ins
+    # Дополнительные индексы для аналитики
+    await db.brand_events.create_index([("user_id", 1), ("created_at", -1)])
+    await db.brand_notes.create_index([("user_id", 1), ("created_at", -1)])
+    await db.brand_contacts.create_index("brand_id")
+    await db.brands.create_index([("assigned_to_user_id", 1), ("assigned_at", 1)])
     
     return {"status": "initialized"}
 
