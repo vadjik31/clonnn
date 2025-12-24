@@ -3820,13 +3820,14 @@ def calculate_profit_roi(item: dict) -> dict:
     cost_price = item.get("cost_price", 0) or 0
     extra_costs = item.get("extra_costs", 0) or 0
     shipping_cost = item.get("shipping_cost", 0) or 0
+    prep_cost = item.get("prep_cost", 0) or 0
     quantity = item.get("quantity", 1) or 1
     
-    # Profit на единицу
-    profit_per_unit = buy_box_price - referral_fee - fba_fee - cost_price - shipping_cost - extra_costs
+    # Profit на единицу (включая prep_cost)
+    profit_per_unit = buy_box_price - referral_fee - fba_fee - cost_price - shipping_cost - extra_costs - prep_cost
     
     # Total investment (затраты)
-    total_investment = cost_price + shipping_cost + extra_costs
+    total_investment = cost_price + shipping_cost + extra_costs + prep_cost
     
     # ROI
     roi = 0.0
