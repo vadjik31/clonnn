@@ -546,11 +546,11 @@ const BashPage = () => {
                     <td className="py-1 px-2 text-right font-mono text-xs text-[#E6E6E6]">${item.buy_box_price?.toFixed(2) || "0"}</td>
                     <td className="py-1 px-2 text-right font-mono text-[10px] text-red-400">${item.referral_fee?.toFixed(2) || "0"}</td>
                     <td className="py-1 px-2 text-right font-mono text-[10px] text-red-400">${item.fba_fee?.toFixed(2) || "0"}</td>
-                    <td className="py-1 px-2 text-right"><EditableCell value={item.shipping_cost} onChange={(v) => handleUpdateItem(item.id, "shipping_cost", v)} className="w-12" placeholder="0" /></td>
-                    <td className="py-1 px-2 text-right"><EditableCell value={item.prep_cost} onChange={(v) => handleUpdateItem(item.id, "prep_cost", v)} className="w-12" placeholder="0" /></td>
-                    <td className="py-1 px-2 text-right"><EditableCell value={item.cost_price} onChange={(v) => handleUpdateItem(item.id, "cost_price", v)} className="w-14" placeholder="0" /></td>
-                    <td className="py-1 px-2 text-right"><EditableCell value={item.extra_costs} onChange={(v) => handleUpdateItem(item.id, "extra_costs", v)} className="w-12" placeholder="0" /></td>
-                    <td className="py-1 px-2 text-right"><EditableCell value={item.quantity} onChange={(v) => handleUpdateItem(item.id, "quantity", Math.max(1, parseInt(v) || 1))} className="w-10" /></td>
+                    <td className="py-1 px-2 text-right"><EditableCell key={`${item.id}-shipping-${item.shipping_cost}`} value={item.shipping_cost} onChange={(v) => handleUpdateItem(item.id, "shipping_cost", v)} className="w-12" placeholder="0" /></td>
+                    <td className="py-1 px-2 text-right"><EditableCell key={`${item.id}-prep-${item.prep_cost}`} value={item.prep_cost} onChange={(v) => handleUpdateItem(item.id, "prep_cost", v)} className="w-12" placeholder="0" /></td>
+                    <td className="py-1 px-2 text-right"><EditableCell key={`${item.id}-cost-${item.cost_price}`} value={item.cost_price} onChange={(v) => handleUpdateItem(item.id, "cost_price", v)} className="w-14" placeholder="0" /></td>
+                    <td className="py-1 px-2 text-right"><EditableCell key={`${item.id}-extra-${item.extra_costs}`} value={item.extra_costs} onChange={(v) => handleUpdateItem(item.id, "extra_costs", v)} className="w-12" placeholder="0" /></td>
+                    <td className="py-1 px-2 text-right"><EditableCell key={`${item.id}-quantity-${item.quantity}`} value={item.quantity} onChange={(v) => handleUpdateItem(item.id, "quantity", Math.max(1, parseInt(v) || 1))} className="w-10" /></td>
                     <td className={`py-1 px-2 text-right font-mono text-xs font-bold ${(item.total_profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>${item.total_profit?.toFixed(2) || "0"}</td>
                     <td className={`py-1 px-2 text-right font-mono text-xs font-bold ${(item.cost_price || 0) <= 0 ? 'text-[#94A3B8]' : (item.roi || 0) >= 30 ? 'text-green-400' : (item.roi || 0) >= 15 ? 'text-yellow-400' : 'text-red-400'}`}>{(item.cost_price || 0) > 0 ? `${item.roi?.toFixed(0)}%` : "—"}</td>
                     <td className="py-1 px-2 text-center"><StatusBadge status={item.status} onClick={() => { setStatusModal(item); setCustomStatus(item.status || ""); }} /></td>
