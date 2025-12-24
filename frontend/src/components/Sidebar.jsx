@@ -85,6 +85,7 @@ const Sidebar = ({ user }) => {
   const searcherLinks = [
     { to: "/my-brands", icon: Briefcase, label: "Мои бренды" },
     { to: "/problematic", icon: AlertTriangle, label: "Проблемные" },
+    { to: "/suppliers", icon: Building2, label: "Поставщики" },
   ];
 
   const links = user?.role === "super_admin" ? superAdminLinks : 
