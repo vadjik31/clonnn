@@ -3312,9 +3312,9 @@ async def delete_import_with_brands(
     archive: bool = Query(True, description="Архивировать бренды вместо удаления"),
     admin: dict = Depends(require_super_admin)
 ):
-    """Удаление импорта с архивированием связанных брендов"""
-    # Находим импорт
-    import_doc = await db.imports.find_one({"id": import_id}, {"_id": 0})
+    """Удаление импорта с архивированием/удалением связанных брендов"""
+    # Находим импорт в batch_imports
+    import_doc = await db.batch_imports.find_one({"id": import_id}, {"_id": 0})
     if not import_doc:
         raise HTTPException(status_code=404, detail="Импорт не найден")
     
@@ -3342,17 +3342,11 @@ async def delete_import_with_brands(
         await db.brands.delete_many({"import_id": import_id})
         await db.brand_items.delete_many({"brand_id": {"$in": brand_ids}})
         await db.brand_notes.delete_many({"brand_id": {"$in": brand_ids}})
+        await db.brand_contacts.delete_many({"brand_id": {"$in": brand_ids}})
+        await db.brand_events.delete_many({"brand_id": {"$in": brand_ids}})
     
-    # Помечаем импорт как удалённый
-    await db.imports.update_one(
-        {"id": import_id},
-        {"$set": {
-            "deleted": True,
-            "deleted_at": now.isoformat(),
-            "deleted_by": admin["id"],
-            "brands_archived": archive
-        }}
-    )
+    # Удаляем запись импорта
+    await db.batch_imports.delete_one({"id": import_id})
     
     await log_event(
         EventType.IMPORT_DELETED,
