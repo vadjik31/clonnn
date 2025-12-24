@@ -53,6 +53,7 @@ const SuperAdminPage = () => {
   const [searchers, setSearchers] = useState([]);
   const [selectedArchived, setSelectedArchived] = useState(new Set());
   const [selectedBlacklisted, setSelectedBlacklisted] = useState(new Set());
+  const [selectingAllArchived, setSelectingAllArchived] = useState(false);
   
   // Pagination states
   const [archivePage, setArchivePage] = useState(1);
