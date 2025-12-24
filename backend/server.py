@@ -3492,7 +3492,7 @@ async def update_global_settings(
 async def get_archived_brands(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Список архивированных брендов"""
     brands = await db.brands.find(
@@ -3513,7 +3513,7 @@ async def get_archived_brands(
 async def get_blacklisted_brands(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Список брендов в чёрном списке"""
     brands = await db.brands.find(
@@ -3533,7 +3533,7 @@ async def get_blacklisted_brands(
 @api_router.post("/super-admin/brands/bulk-restore")
 async def bulk_restore_brands(
     brand_ids: List[str] = Body(...),
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Массовое восстановление брендов из архива"""
     now = datetime.now(timezone.utc)
