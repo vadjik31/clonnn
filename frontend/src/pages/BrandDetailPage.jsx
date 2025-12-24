@@ -1180,11 +1180,11 @@ const InfoModal = ({ open, onClose, brand, onSuccess }) => {
           <div className="space-y-2">
             <Label className="text-[#94A3B8]">URL сайта</Label>
             <Input
-              type="url"
+              type="text"
               value={websiteUrl}
               onChange={(e) => setWebsiteUrl(e.target.value)}
               className="bg-[#0F1115] border-[#2A2F3A]"
-              placeholder="https://..."
+              placeholder="example.com или https://..."
               data-testid="website-url"
             />
           </div>
