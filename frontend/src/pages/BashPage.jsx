@@ -60,10 +60,12 @@ const DebouncedTextInput = ({ value, onChange, placeholder = "", className = "" 
   const initialValueRef = useRef(value);
   
   // Only reset if external value changed and differs from local
-  if (value !== initialValueRef.current && value !== localValue) {
-    initialValueRef.current = value;
-    setLocalValue(value || "");
-  }
+  useEffect(() => {
+    if (value !== initialValueRef.current && value !== localValue) {
+      initialValueRef.current = value;
+      setLocalValue(value || "");
+    }
+  }, [value, localValue]);
   
   const handleChange = (e) => {
     const newValue = e.target.value;
