@@ -3781,6 +3781,8 @@ class BatchItemUpdate(BaseModel):
     supplier_link: Optional[str] = None
     supplier_sku: Optional[str] = None
     status: Optional[str] = None  # Кастомный статус товара
+    shipping_cost: Optional[float] = None  # Доставка (редактируемая)
+    prep_cost: Optional[float] = None  # Преп-кост
 
 class BatchUpdate(BaseModel):
     name: Optional[str] = None
