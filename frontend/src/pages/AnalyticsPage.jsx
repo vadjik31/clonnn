@@ -109,7 +109,9 @@ const AnalyticsPage = () => {
     try {
       await api.delete("/super-admin/brands/bulk-delete", { data: brandIds });
       toast.success(`Удалено ${brandIds.length} брендов`);
-      fetchAllData();
+      // Invalidate cache and refresh
+      cacheRef.current.inactive = null;
+      fetchAllData(true);
     } catch (error) {
       toast.error("Ошибка удаления");
     } finally {
@@ -122,16 +124,35 @@ const AnalyticsPage = () => {
     try {
       const res = await api.delete("/super-admin/brands/cleanup-test");
       toast.success(`Удалено тестовых брендов: ${res.data.deleted_count}`);
-      fetchAllData();
+      // Invalidate cache and refresh
+      cacheRef.current = { kpi: {}, inactive: null, lastFetch: 0 };
+      fetchAllData(true);
     } catch (error) {
       toast.error("Ошибка удаления");
     }
   };
 
+  // Skeleton loader
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-[#FF9900] font-mono">Загрузка...</div>
+      <div className="space-y-6 animate-pulse">
+        <div className="h-10 bg-[#2A2F3A] rounded w-48"></div>
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <div className="h-6 bg-[#2A2F3A] rounded w-32 mb-4"></div>
+          <div className="space-y-3">
+            {[1,2,3].map(i => (
+              <div key={i} className="h-12 bg-[#2A2F3A] rounded"></div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <div className="h-6 bg-[#2A2F3A] rounded w-40 mb-4"></div>
+          <div className="space-y-2">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="h-10 bg-[#2A2F3A] rounded"></div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
