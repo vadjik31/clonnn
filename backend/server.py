@@ -4723,9 +4723,9 @@ async def update_supplier(
     # Log activity
     await db.user_activities.insert_one({
         "id": str(uuid4()),
-        "user_id": admin.get("id"),
-        "user_nickname": admin.get("nickname"),
-        "role": admin.get("role"),
+        "user_id": user.get("id"),
+        "user_nickname": user.get("nickname"),
+        "role": user.get("role"),
         "action": "update_supplier",
         "details": f"Обновлён поставщик ID: {supplier_id}",
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -4737,24 +4737,28 @@ async def update_supplier(
 @api_router.delete("/suppliers/{supplier_id}")
 async def delete_supplier(
     supplier_id: str,
-    admin: dict = Depends(require_admin)
+    user: dict = Depends(get_current_user)
 ):
-    """Удалить поставщика (только searcher, admin, super_admin)"""
-    if admin.get("role") not in ["searcher", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Нет прав для удаления")
+    """Удалить поставщика (сёрчеры - только свои, админы - все)"""
+    role = user.get("role")
+    user_id = user.get("id")
     
     existing = await db.suppliers.find_one({"id": supplier_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Поставщик не найден")
+    
+    # Сёрчеры могут удалять только своих поставщиков
+    if role == "searcher" and existing.get("created_by") != user_id:
+        raise HTTPException(status_code=403, detail="Нет прав для удаления этого поставщика")
     
     await db.suppliers.delete_one({"id": supplier_id})
     
     # Log activity
     await db.user_activities.insert_one({
         "id": str(uuid4()),
-        "user_id": admin.get("id"),
-        "user_nickname": admin.get("nickname"),
-        "role": admin.get("role"),
+        "user_id": user.get("id"),
+        "user_nickname": user.get("nickname"),
+        "role": user.get("role"),
         "action": "delete_supplier",
         "details": f"Удалён поставщик: {existing.get('name')}",
         "created_at": datetime.now(timezone.utc).isoformat()
