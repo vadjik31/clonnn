@@ -394,7 +394,7 @@ const BrandsPage = () => {
       </div>
 
       {/* Bulk Actions Bar (super_admin only) */}
-      {isSuperAdmin && selectedBrands.size > 0 && (
+      {isAdmin && selectedBrands.size > 0 && (
         <div className="bg-[#FF9900]/10 border border-[#FF9900]/30 rounded-[2px] p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="text-[#FF9900] font-medium">
@@ -464,7 +464,7 @@ const BrandsPage = () => {
           <table className="w-full" data-testid="brands-table">
             <thead>
               <tr className="table-header">
-                {isSuperAdmin && (
+                {isAdmin && (
                   <th className="py-3 px-2 text-center w-10">
                     <button onClick={toggleSelectAll} className="text-[#94A3B8] hover:text-[#FF9900]">
                       {selectedBrands.size === brands.length && brands.length > 0 ? (
@@ -488,13 +488,13 @@ const BrandsPage = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={isSuperAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={isAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
                     Загрузка...
                   </td>
                 </tr>
               ) : brands.length === 0 ? (
                 <tr>
-                  <td colSpan={isSuperAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={isAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
                     Нет брендов
                   </td>
                 </tr>
@@ -509,7 +509,7 @@ const BrandsPage = () => {
                       onClick={() => navigate(`/brands/${brand.id}`)}
                       data-testid={`brand-row-${brand.id}`}
                     >
-                      {isSuperAdmin && (
+                      {isAdmin && (
                         <td className="table-cell text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={isSelected}
