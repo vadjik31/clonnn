@@ -1393,8 +1393,12 @@ async def claim_brands(
         
         assigned_brands = []
         now = datetime.now(timezone.utc).isoformat()
+        attempts = 0
+        max_attempts = batch_size * 3  # Больше попыток на случай конкуренции
         
-        for _ in range(batch_size):
+        while len(assigned_brands) < batch_size and attempts < max_attempts:
+            attempts += 1
+            
             # Атомарная выдача с проверкой истории (закрывает дыры #1, #4)
             # Ищем бренд, который не был у этого сёрчера ранее и не в ЧС
             pipeline = [
@@ -1419,30 +1423,15 @@ async def claim_brands(
                 }},
                 {"$match": {"prev_assignments": {"$size": 0}}},  # Не был у этого сёрчера
                 {"$sort": {"priority_score": -1, "created_at": 1}},
-                {"$limit": 1}
+                {"$limit": 5}  # Берём 5 кандидатов для большей надёжности
             ]
             
-            result = await db.brands.aggregate(pipeline).to_list(1)
+            result = await db.brands.aggregate(pipeline).to_list(5)
             
             if not result:
-                # Если все бренды уже были - берём любой свободный
+                # Если все бренды уже были - берём любой свободный атомарно
                 brand = await db.brands.find_one_and_update(
                     {"status": BrandStatus.IN_POOL, "assigned_to_user_id": None},
-                    {"$set": {
-                        "status": BrandStatus.ASSIGNED,
-                        "assigned_to_user_id": user["id"],
-                        "assigned_at": now,
-                        "pipeline_stage": PipelineStage.REVIEW,
-                        "updated_at": now,
-                        "$inc": {"assignment_count": 1}
-                    }},
-                    sort=[("priority_score", -1), ("created_at", 1)],
-                    return_document=True
-                )
-            else:
-                brand_id = result[0]["id"]
-                brand = await db.brands.find_one_and_update(
-                    {"id": brand_id, "status": BrandStatus.IN_POOL, "assigned_to_user_id": None},
                     {"$set": {
                         "status": BrandStatus.ASSIGNED,
                         "assigned_to_user_id": user["id"],
@@ -1451,14 +1440,35 @@ async def claim_brands(
                         "updated_at": now
                     },
                     "$inc": {"assignment_count": 1}},
+                    sort=[("priority_score", -1), ("created_at", 1)],
                     return_document=True
                 )
-            
-            if not brand:
-                break
-            
-            assigned_brands.append(brand["id"])
-            await record_assignment_history(brand["id"], user["id"])
+                if brand:
+                    assigned_brands.append(brand["id"])
+                    await record_assignment_history(brand["id"], user["id"])
+                else:
+                    break  # Больше свободных брендов нет
+            else:
+                # Пытаемся захватить один из кандидатов атомарно
+                for candidate in result:
+                    brand_id = candidate["id"]
+                    # Атомарный захват - защита от race condition
+                    brand = await db.brands.find_one_and_update(
+                        {"id": brand_id, "status": BrandStatus.IN_POOL, "assigned_to_user_id": None},
+                        {"$set": {
+                            "status": BrandStatus.ASSIGNED,
+                            "assigned_to_user_id": user["id"],
+                            "assigned_at": now,
+                            "pipeline_stage": PipelineStage.REVIEW,
+                            "updated_at": now
+                        },
+                        "$inc": {"assignment_count": 1}},
+                        return_document=True
+                    )
+                    if brand:
+                        assigned_brands.append(brand["id"])
+                        await record_assignment_history(brand["id"], user["id"])
+                        break  # Успешно захватили, переходим к следующему
         
         if assigned_brands:
             await log_event(EventType.BRANDS_ASSIGNED, user["id"], metadata={"count": len(assigned_brands)})
