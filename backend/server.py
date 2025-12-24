@@ -903,6 +903,8 @@ async def heartbeat(user: dict = Depends(get_current_user)):
 async def get_users(admin: dict = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0}).to_list(1000)
     result = []
+    is_super_admin = admin.get("role") == UserRole.SUPER_ADMIN
+    
     for u in users:
         active_count = await db.brands.count_documents({
             "assigned_to_user_id": u["id"],
@@ -910,6 +912,12 @@ async def get_users(admin: dict = Depends(require_admin)):
         })
         u["active_brands_count"] = active_count
         u["return_rate"] = 0.0
+        
+        # Скрываем пароль и секретный код супер-админа от обычного админа
+        if not is_super_admin and u.get("role") == UserRole.SUPER_ADMIN:
+            u["password"] = "********"
+            u["secret_code"] = "********"
+        
         result.append(UserResponse(**u))
     return result
 
