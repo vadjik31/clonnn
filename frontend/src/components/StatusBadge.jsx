@@ -11,6 +11,7 @@ const StatusBadge = ({ status }) => {
     OUTCOME_REPLIED: { label: "Ответил", color: "bg-emerald-900/20 text-emerald-400 border-emerald-800" },
     // Подстатусы "Ответил"
     REPLIED_NEED_ACTION: { label: "Ждёт действия", color: "bg-amber-900/20 text-amber-400 border-amber-800" },
+    REPLIED_NEED_SEARCHER: { label: "Внимание сёрчера!", color: "bg-pink-900/20 text-pink-400 border-pink-800" },
     REPLIED_WAITING: { label: "Ожидаем от них", color: "bg-sky-900/20 text-sky-400 border-sky-800" },
     REPLIED_APPROVED: { label: "Одобрили", color: "bg-green-900/20 text-green-400 border-green-800" },
     REPLIED_DECLINED: { label: "Отказали", color: "bg-red-900/20 text-red-400 border-red-800" },
