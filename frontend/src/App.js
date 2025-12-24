@@ -124,13 +124,17 @@ function AppContent() {
     initAuth();
   }, []);
 
-  // Heartbeat
+  // Heartbeat with token refresh
   useEffect(() => {
     if (!user) return;
 
     const sendHeartbeat = async () => {
       try {
-        await api.post("/auth/heartbeat");
+        const response = await api.post("/auth/heartbeat");
+        // Обновляем токен если он пришёл в ответе
+        if (response.data?.token) {
+          localStorage.setItem("token", response.data.token);
+        }
       } catch (error) {
         console.error("Heartbeat failed:", error);
       }
