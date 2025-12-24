@@ -612,7 +612,7 @@ const ImportsTab = ({ imports, onDelete }) => {
   );
 };
 
-const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, onBulkDelete, onBulkRestore, page, total, pages, onPageChange }) => {
+const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, onBulkDelete, onBulkRestore, page, total, pages, onPageChange, onSelectAll, selectingAll }) => {
   const toggleSelect = (id) => {
     const newSelected = new Set(selected);
     if (newSelected.has(id)) {
@@ -623,7 +623,7 @@ const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, on
     onSelectChange(newSelected);
   };
 
-  const toggleSelectAll = () => {
+  const toggleSelectAllOnPage = () => {
     if (selected.size === brands.length) {
       onSelectChange(new Set());
     } else {
@@ -652,15 +652,36 @@ const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, on
         )}
       </div>
 
-      {brands.length > 0 && (
-        <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
-          <input
-            type="checkbox"
-            checked={selected.size === brands.length && brands.length > 0}
-            onChange={toggleSelectAll}
-            className="rounded border-[#2A2F3A]"
-          />
-          <span>Выбрать все на странице</span>
+      {total > 0 && (
+        <div className="flex items-center gap-4 text-xs text-[#94A3B8]">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selected.size === brands.length && brands.length > 0}
+              onChange={toggleSelectAllOnPage}
+              className="rounded border-[#2A2F3A]"
+            />
+            <span>Выбрать на странице</span>
+          </label>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={onSelectAll}
+            disabled={selectingAll}
+            className="text-xs border-[#2A2F3A] text-[#94A3B8] hover:text-[#FF9900]"
+          >
+            {selectingAll ? "Загрузка..." : `Выбрать все ${total}`}
+          </Button>
+          {selected.size > 0 && (
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={() => onSelectChange(new Set())}
+              className="text-xs text-[#94A3B8]"
+            >
+              Сбросить
+            </Button>
+          )}
         </div>
       )}
 
