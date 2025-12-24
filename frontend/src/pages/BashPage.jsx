@@ -25,16 +25,24 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-// Editable cell for numbers
-const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "" }) => {
+// Editable cell for numbers - uncontrolled with key reset
+const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "", itemId = "" }) => {
   const [localValue, setLocalValue] = useState(value ?? "");
+  const initialValueRef = useRef(value);
   const debouncedUpdate = useDebounce(onChange, 600);
-  useEffect(() => { setLocalValue(value ?? ""); }, [value]);
+  
+  // Only reset if the external value changed significantly (not from our own update)
+  if (value !== initialValueRef.current && Math.abs((value || 0) - (localValue || 0)) > 0.001) {
+    initialValueRef.current = value;
+    setLocalValue(value ?? "");
+  }
+  
   const handleChange = (e) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
     debouncedUpdate(type === "number" ? (parseFloat(newValue) || 0) : newValue);
   };
+  
   return (
     <input type={type} step={type === "number" ? "0.01" : undefined} min={type === "number" ? "0" : undefined}
       value={localValue} onChange={handleChange}
@@ -47,10 +55,13 @@ const EditableCell = ({ value, onChange, type = "number", placeholder = "", clas
 const DebouncedTextInput = ({ value, onChange, placeholder = "", className = "" }) => {
   const [localValue, setLocalValue] = useState(value || "");
   const timeoutRef = useRef(null);
+  const initialValueRef = useRef(value);
   
-  useEffect(() => { 
-    setLocalValue(value || ""); 
-  }, [value]);
+  // Only reset if external value changed and differs from local
+  if (value !== initialValueRef.current && value !== localValue) {
+    initialValueRef.current = value;
+    setLocalValue(value || "");
+  }
   
   const handleChange = (e) => {
     const newValue = e.target.value;
@@ -59,7 +70,7 @@ const DebouncedTextInput = ({ value, onChange, placeholder = "", className = "" 
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       onChange(newValue);
-    }, 800); // Longer debounce for text
+    }, 800);
   };
   
   return (
