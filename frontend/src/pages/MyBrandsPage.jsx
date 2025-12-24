@@ -221,11 +221,14 @@ const MyBrandsPage = () => {
                 </tr>
               ) : (
                 brands.map((brand) => {
-                  const isOverdue = brand.next_action_at && new Date(brand.next_action_at) < new Date();
+                  const today = new Date().toDateString();
+                  const nextActionDate = brand.next_action_at ? new Date(brand.next_action_at) : null;
+                  const isOverdue = nextActionDate && nextActionDate < new Date() && nextActionDate.toDateString() !== today;
+                  const isToday = nextActionDate && nextActionDate.toDateString() === today;
                   return (
                     <tr 
                       key={brand.id} 
-                      className={`table-row cursor-pointer ${isOverdue ? "bg-red-900/10" : ""}`}
+                      className={`table-row cursor-pointer ${isOverdue ? "bg-red-900/10" : isToday ? "bg-amber-900/10" : ""}`}
                       onClick={() => navigate(`/brands/${brand.id}`)}
                       data-testid={`brand-row-${brand.id}`}
                     >
@@ -264,8 +267,9 @@ const MyBrandsPage = () => {
                       </td>
                       <td className="table-cell">
                         {brand.next_action_at ? (
-                          <span className={`font-mono text-xs ${isOverdue ? "text-red-400 font-bold" : "text-[#94A3B8]"}`}>
+                          <span className={`font-mono text-xs ${isOverdue ? "text-red-400 font-bold" : isToday ? "text-amber-400 font-bold" : "text-[#94A3B8]"}`}>
                             {isOverdue && "🔥 "}
+                            {isToday && "📢 Напоминаю! "}
                             {new Date(brand.next_action_at).toLocaleDateString('ru-RU')}
                           </span>
                         ) : "—"}
