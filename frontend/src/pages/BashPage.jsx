@@ -597,6 +597,9 @@ const BashPage = () => {
                         <div className="flex gap-2 mt-2">
                           <Button variant="outline" size="sm" onClick={() => openNotesModal(item)} className="border-[#2A2F3A] text-[10px] h-6"><MessageSquare size={10} className="mr-1" /> Заметки</Button>
                           {item.supplier_link && <a href={item.supplier_link} target="_blank" rel="noopener noreferrer" className="text-[10px] text-[#FF9900] hover:underline flex items-center gap-1"><Link size={10} /> Поставщик</a>}
+                          {(user?.role === "admin" || user?.role === "super_admin") && (
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(item.id)} className="text-red-400 hover:text-red-300 text-[10px] h-6 ml-auto"><Trash2 size={10} className="mr-1" /> Удалить</Button>
+                          )}
                         </div>
                       </td>
                     </tr>
