@@ -110,12 +110,12 @@ const DashboardPage = () => {
   };
 
   const stageLabels = {
-    REVIEW: "Рассмотрение",
-    EMAIL_1_DONE: "Письмо 1",
-    EMAIL_2_DONE: "Письмо 2",
-    MULTI_CHANNEL_DONE: "Мультиканал",
-    CALL_OR_PUSH_RECOMMENDED: "Звонок/Пуш",
-    CLOSED: "Закрыт"
+    REVIEW: "🔍 Изучение",
+    EMAIL_1_DONE: "1️⃣ Письмо 1",
+    EMAIL_2_DONE: "2️⃣ Письмо 2",
+    MULTI_CHANNEL_DONE: "📱 Соцсети",
+    CALL_OR_PUSH_RECOMMENDED: "📞 Звонок",
+    CLOSED: "✅ Закрыт"
   };
 
   return (
