@@ -126,6 +126,17 @@ const SuperAdminPage = () => {
     }
   };
 
+  const handleDeleteBrand = async (brandId, brandName) => {
+    if (!window.confirm(`Удалить бренд "${brandName}" навсегда? Это действие нельзя отменить!`)) return;
+    try {
+      await api.delete(`/super-admin/brands/${brandId}`);
+      toast.success("Бренд удалён");
+      fetchData();
+    } catch (error) {
+      toast.error("Ошибка удаления");
+    }
+  };
+
   const handleUnblacklistBrand = async (brandId) => {
     try {
       await api.post(`/super-admin/brands/${brandId}/unblacklist`);
