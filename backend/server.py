@@ -3477,7 +3477,7 @@ async def delete_import_with_brands(
     }
 
 @api_router.get("/super-admin/imports")
-async def get_imports_list(admin: dict = Depends(require_super_admin)):
+async def get_imports_list(admin: dict = Depends(require_admin)):
     """Список всех импортов с возможностью удаления"""
     # Используем batch_imports - это основная коллекция импортов
     imports = await db.batch_imports.find(
