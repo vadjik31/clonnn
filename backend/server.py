@@ -59,6 +59,7 @@ class BrandStatus:
     OUTCOME_REPLIED = "OUTCOME_REPLIED"
     # Подстатусы для "Ответил"
     REPLIED_NEED_ACTION = "REPLIED_NEED_ACTION"  # Ответил, нужно действие с нашей стороны
+    REPLIED_NEED_SEARCHER = "REPLIED_NEED_SEARCHER"  # Ответил, надо внимание сёрчера!
     REPLIED_WAITING = "REPLIED_WAITING"  # Ответил, ожидаем от них
     REPLIED_APPROVED = "REPLIED_APPROVED"  # Ответил и одобрил
     REPLIED_DECLINED = "REPLIED_DECLINED"  # Ответил и отказал
