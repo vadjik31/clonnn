@@ -110,6 +110,36 @@ const BrandDetailPage = () => {
     }
   };
 
+  const handleArchive = async () => {
+    const reason = window.prompt("Причина архивации:");
+    if (reason === null) return;
+    try {
+      await api.post("/super-admin/brands/bulk-archive", {
+        brand_ids: [brandId],
+        reason: reason || "Архивировано админом"
+      });
+      toast.success("Бренд отправлен в архив");
+      navigate(-1);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    }
+  };
+
+  const handleBlacklist = async () => {
+    const reason = window.prompt("Причина добавления в ЧС:");
+    if (reason === null) return;
+    try {
+      await api.post("/super-admin/brands/bulk-blacklist", {
+        brand_ids: [brandId],
+        reason: reason || "Добавлено в ЧС админом"
+      });
+      toast.success("Бренд добавлен в чёрный список");
+      navigate(-1);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
