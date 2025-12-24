@@ -56,19 +56,19 @@ const EditableCell = ({ value, onChange, type = "number", placeholder = "", clas
   );
 };
 
-// Text input with debounce - for SKU and other text fields
+// Text input with debounce - improved state management
 const DebouncedTextInput = ({ value, onChange, placeholder = "", className = "" }) => {
   const [localValue, setLocalValue] = useState(value || "");
   const timeoutRef = useRef(null);
-  const initialValueRef = useRef(value);
+  const prevValueRef = useRef(value);
   
-  // Only reset if external value changed and differs from local
+  // Reset local value when external value changes
   useEffect(() => {
-    if (value !== initialValueRef.current && value !== localValue) {
-      initialValueRef.current = value;
+    if (value !== prevValueRef.current) {
       setLocalValue(value || "");
+      prevValueRef.current = value;
     }
-  }, [value, localValue]);
+  }, [value]);
   
   const handleChange = (e) => {
     const newValue = e.target.value;
