@@ -90,6 +90,7 @@ const BrandsPage = () => {
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
+  const abortControllerRef = useRef(null);
   
   // Selection for bulk actions (super_admin only)
   const [selectedBrands, setSelectedBrands] = useState(new Set());
@@ -114,6 +115,12 @@ const BrandsPage = () => {
   useEffect(() => {
     fetchBrands();
     setSelectAllPages(false);
+    
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [filters]);
 
   useEffect(() => {
@@ -121,6 +128,12 @@ const BrandsPage = () => {
   }, []);
 
   const fetchBrands = async () => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     try {
       const params = new URLSearchParams();
       if (filters.status) params.append("status", filters.status);
@@ -131,11 +144,14 @@ const BrandsPage = () => {
       params.append("page", filters.page.toString());
       params.append("limit", "50");
 
-      const response = await api.get(`/brands?${params}`);
+      const response = await api.get(`/brands?${params}`, {
+        signal: abortControllerRef.current.signal
+      });
       setBrands(response.data.brands);
       setTotal(response.data.total);
       setPages(response.data.pages);
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') return;
       toast.error("Ошибка загрузки брендов");
     } finally {
       setLoading(false);
