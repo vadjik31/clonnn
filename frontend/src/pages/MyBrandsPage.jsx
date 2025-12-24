@@ -89,12 +89,12 @@ const MyBrandsPage = () => {
   ];
 
   const stageOptions = [
-    { value: "REVIEW", label: "Рассмотрение" },
-    { value: "EMAIL_1_DONE", label: "Письмо 1" },
-    { value: "EMAIL_2_DONE", label: "Письмо 2" },
-    { value: "MULTI_CHANNEL_DONE", label: "Мультиканал" },
-    { value: "CALL_OR_PUSH_RECOMMENDED", label: "Звонок/Пуш" },
-    { value: "CLOSED", label: "Закрыт" },
+    { value: "REVIEW", label: "🔍 Изучение" },
+    { value: "EMAIL_1_DONE", label: "1️⃣ Письмо 1" },
+    { value: "EMAIL_2_DONE", label: "2️⃣ Письмо 2" },
+    { value: "MULTI_CHANNEL_DONE", label: "📱 Соцсети" },
+    { value: "CALL_OR_PUSH_RECOMMENDED", label: "📞 Звонок" },
+    { value: "CLOSED", label: "✅ Закрыт" },
   ];
 
   return (
