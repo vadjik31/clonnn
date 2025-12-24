@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { api, useAuth } from "../App";
 import { toast } from "sonner";
 import { 
@@ -14,7 +14,8 @@ import {
   Target,
   Skull,
   Trash2,
-  HelpCircle
+  HelpCircle,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
