@@ -3279,7 +3279,7 @@ async def restore_brand_from_archive(
 @api_router.post("/super-admin/brands/{brand_id}/unblacklist")
 async def remove_brand_from_blacklist(
     brand_id: str,
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Удаление бренда из чёрного списка"""
     brand = await db.brands.find_one({"id": brand_id})
@@ -3306,11 +3306,37 @@ async def remove_brand_from_blacklist(
     
     return {"status": "success"}
 
+# Удаление брендов из архива полностью
+@api_router.delete("/super-admin/brands/{brand_id}")
+async def delete_brand_permanently(
+    brand_id: str,
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
+):
+    """Полное удаление бренда из системы"""
+    brand = await db.brands.find_one({"id": brand_id})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    # Удаляем бренд и все связанные данные
+    await db.brands.delete_one({"id": brand_id})
+    await db.brand_notes.delete_many({"brand_id": brand_id})
+    await db.brand_contacts.delete_many({"brand_id": brand_id})
+    await db.brand_events.delete_many({"brand_id": brand_id})
+    await db.brand_items.delete_many({"brand_id": brand_id})
+    
+    await log_event(
+        EventType.BRAND_DELETED, 
+        admin["id"], 
+        metadata={"brand_name": brand.get("name_original"), "brand_id": brand_id}
+    )
+    
+    return {"status": "success", "deleted": brand.get("name_original")}
+
 @api_router.delete("/super-admin/imports/{import_id}")
 async def delete_import_with_brands(
     import_id: str,
     archive: bool = Query(True, description="Архивировать бренды вместо удаления"),
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Удаление импорта с архивированием/удалением связанных брендов"""
     # Находим импорт в batch_imports
