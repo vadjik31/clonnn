@@ -233,6 +233,27 @@ const BrandDetailPage = () => {
               <RotateCcw size={16} className="mr-2" />
               Очистить
             </Button>
+            {/* Admin actions */}
+            {(user?.role === "admin" || user?.role === "super_admin") && (
+              <>
+                <Button
+                  onClick={handleArchive}
+                  className="btn-secondary text-yellow-400"
+                  data-testid="archive-btn"
+                >
+                  <Archive size={16} className="mr-2" />
+                  В архив
+                </Button>
+                <Button
+                  onClick={handleBlacklist}
+                  className="btn-secondary text-red-500"
+                  data-testid="blacklist-btn"
+                >
+                  <Ban size={16} className="mr-2" />
+                  В ЧС
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>
