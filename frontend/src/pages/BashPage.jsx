@@ -32,10 +32,12 @@ const EditableCell = ({ value, onChange, type = "number", placeholder = "", clas
   const debouncedUpdate = useDebounce(onChange, 600);
   
   // Only reset if the external value changed significantly (not from our own update)
-  if (value !== initialValueRef.current && Math.abs((value || 0) - (localValue || 0)) > 0.001) {
-    initialValueRef.current = value;
-    setLocalValue(value ?? "");
-  }
+  useEffect(() => {
+    if (value !== initialValueRef.current && Math.abs((value || 0) - (localValue || 0)) > 0.001) {
+      initialValueRef.current = value;
+      setLocalValue(value ?? "");
+    }
+  }, [value, localValue]);
   
   const handleChange = (e) => {
     const newValue = e.target.value;
