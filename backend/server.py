@@ -4674,8 +4674,8 @@ async def create_supplier(
         "login": supplier.login,
         "password": supplier.password,
         "notes": supplier.notes,
-        "created_by": admin.get("id"),
-        "created_by_nickname": admin.get("nickname", admin.get("email", "")),
+        "created_by": user.get("id"),
+        "created_by_nickname": user.get("nickname", user.get("email", "")),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -4685,9 +4685,9 @@ async def create_supplier(
     # Log activity
     await db.user_activities.insert_one({
         "id": str(uuid4()),
-        "user_id": admin.get("id"),
-        "user_nickname": admin.get("nickname"),
-        "role": admin.get("role"),
+        "user_id": user.get("id"),
+        "user_nickname": user.get("nickname"),
+        "role": user.get("role"),
         "action": "create_supplier",
         "details": f"Создан поставщик: {supplier.name}",
         "created_at": datetime.now(timezone.utc).isoformat()
@@ -4701,15 +4701,19 @@ async def create_supplier(
 async def update_supplier(
     supplier_id: str,
     supplier: SupplierUpdate,
-    admin: dict = Depends(require_admin)
+    user: dict = Depends(get_current_user)
 ):
-    """Обновить поставщика (только searcher, admin, super_admin)"""
-    if admin.get("role") not in ["searcher", "admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Нет прав для редактирования")
+    """Обновить поставщика (сёрчеры - только свои, админы - все)"""
+    role = user.get("role")
+    user_id = user.get("id")
     
     existing = await db.suppliers.find_one({"id": supplier_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Поставщик не найден")
+    
+    # Сёрчеры могут редактировать только своих поставщиков
+    if role == "searcher" and existing.get("created_by") != user_id:
+        raise HTTPException(status_code=403, detail="Нет прав для редактирования этого поставщика")
     
     update_data = {k: v for k, v in supplier.dict().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
