@@ -3576,23 +3576,32 @@ async def get_archived_brands(
 
 @api_router.get("/super-admin/blacklisted-brands")
 async def get_blacklisted_brands(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
-    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=500),
+    search: Optional[str] = Query(None),
+    admin: dict = Depends(require_admin)
 ):
-    """Список брендов в чёрном списке"""
+    """Список брендов в чёрном списке с пагинацией"""
+    query = {"status": BrandStatus.BLACKLISTED}
+    
+    if search:
+        query["name_normalized"] = {"$regex": search.lower(), "$options": "i"}
+    
+    skip = (page - 1) * limit
+    
     brands = await db.brands.find(
-        {"status": BrandStatus.BLACKLISTED},
+        query,
         {"_id": 0}
     ).sort("blacklisted_at", -1).skip(skip).limit(limit).to_list(limit)
     
-    total = await db.brands.count_documents({"status": BrandStatus.BLACKLISTED})
+    total = await db.brands.count_documents(query)
     
     return {
         "brands": brands,
         "total": total,
-        "skip": skip,
-        "limit": limit
+        "page": page,
+        "limit": limit,
+        "pages": (total + limit - 1) // limit if limit > 0 else 0
     }
 
 @api_router.post("/super-admin/brands/bulk-restore")
