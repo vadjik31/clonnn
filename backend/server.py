@@ -4620,10 +4620,10 @@ class SupplierUpdate(BaseModel):
 
 @api_router.get("/suppliers")
 async def get_suppliers(
-    admin: dict = Depends(require_admin)
+    user: dict = Depends(get_current_user)
 ):
     """Получить список поставщиков (админы видят всё, сёрчеры - только свои)"""
-    role = admin.get("role")
+    role = user.get("role")
     
     if role in ["admin", "super_admin"]:
         # Админы видят всех поставщиков
@@ -4631,7 +4631,7 @@ async def get_suppliers(
     else:
         # Сёрчеры видят только своих поставщиков
         suppliers = await db.suppliers.find(
-            {"created_by": admin.get("id")}, 
+            {"created_by": user.get("id")}, 
             {"_id": 0}
         ).to_list(1000)
     
@@ -4640,14 +4640,14 @@ async def get_suppliers(
 @api_router.post("/suppliers")
 async def create_supplier(
     supplier: SupplierCreate,
-    admin: dict = Depends(require_admin)
+    user: dict = Depends(get_current_user)
 ):
     """Создать нового поставщика с проверкой дублей по домену для сёрчеров"""
-    if admin.get("role") not in ["searcher", "admin", "super_admin"]:
+    if user.get("role") not in ["searcher", "admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Нет прав для создания поставщика")
     
-    role = admin.get("role")
-    user_id = admin.get("id")
+    role = user.get("role")
+    user_id = user.get("id")
     
     # Для сёрчеров проверяем дубли по доменному имени
     if role == "searcher" and supplier.site:
