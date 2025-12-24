@@ -1303,7 +1303,7 @@ const NoResponseModal = ({ open, onClose, onSubmit }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <p className="text-sm text-[#94A3B8]">
             Используйте этот статус, когда связались с брендом, но не получили ответа.
-            Это отличается от "Отказал" или "Ответил".
+            Это отличается от &quot;Отказал&quot; или &quot;Ответил&quot;.
           </p>
           <div className="space-y-2">
             <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
