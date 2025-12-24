@@ -3306,11 +3306,67 @@ async def remove_brand_from_blacklist(
     
     return {"status": "success"}
 
-# Удаление брендов из архива полностью
+# ВАЖНО: Статические роуты ДОЛЖНЫ быть ВЫШЕ динамических!
+# Массовое удаление брендов (полное удаление из БД)
+@api_router.delete("/super-admin/brands/bulk-delete")
+async def bulk_delete_brands(
+    brand_ids: List[str] = Body(...),
+    admin: dict = Depends(require_admin)
+):
+    """Массовое удаление брендов (полное удаление из БД)"""
+    if not brand_ids:
+        return {"status": "success", "deleted_count": 0}
+    
+    # Удаляем бренды и связанные данные
+    result = await db.brands.delete_many({"id": {"$in": brand_ids}})
+    await db.brand_items.delete_many({"brand_id": {"$in": brand_ids}})
+    await db.brand_notes.delete_many({"brand_id": {"$in": brand_ids}})
+    await db.brand_events.delete_many({"brand_id": {"$in": brand_ids}})
+    await db.brand_contacts.delete_many({"brand_id": {"$in": brand_ids}})
+    
+    await log_event(EventType.ADMIN_BULK_DELETE, admin["id"], metadata={
+        "action": "bulk_delete",
+        "count": result.deleted_count
+    })
+    
+    return {"status": "success", "deleted_count": result.deleted_count}
+
+# Удалить тестовые бренды
+@api_router.delete("/super-admin/brands/cleanup-test")
+async def cleanup_test_brands(
+    admin: dict = Depends(require_admin)
+):
+    """Удалить тестовые бренды (начинающиеся с Test)"""
+    test_brands = await db.brands.find({
+        "$or": [
+            {"name_original": {"$regex": "^Test", "$options": "i"}},
+            {"name_normalized": {"$regex": "^test", "$options": "i"}}
+        ]
+    }, {"id": 1}).to_list(1000)
+    
+    brand_ids = [b["id"] for b in test_brands]
+    
+    if not brand_ids:
+        return {"status": "success", "deleted_count": 0}
+    
+    await db.brands.delete_many({"id": {"$in": brand_ids}})
+    await db.brand_items.delete_many({"brand_id": {"$in": brand_ids}})
+    await db.brand_notes.delete_many({"brand_id": {"$in": brand_ids}})
+    await db.brand_events.delete_many({"brand_id": {"$in": brand_ids}})
+    await db.brand_contacts.delete_many({"brand_id": {"$in": brand_ids}})
+    
+    await log_event(EventType.ADMIN_BULK_DELETE, admin["id"], metadata={
+        "action": "cleanup_test_brands",
+        "count": len(brand_ids)
+    })
+    
+    return {"status": "success", "deleted_count": len(brand_ids)}
+
+# Удаление одного бренда из архива полностью (динамический роут - должен быть ПОСЛЕ статических!)
 @api_router.delete("/super-admin/brands/{brand_id}")
 async def delete_brand_permanently(
     brand_id: str,
-    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
+    admin: dict = Depends(require_admin)
 ):
     """Полное удаление бренда из системы"""
     brand = await db.brands.find_one({"id": brand_id})
