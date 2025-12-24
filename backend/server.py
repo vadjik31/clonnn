@@ -993,8 +993,8 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
     df = df.dropna(subset=['Brand'])
     brand_counts = df['Brand'].value_counts().to_dict()
     
-    # Фильтруем бренды с менее чем 5 товарами (мусор)
-    MIN_ITEMS_PER_BRAND = 5
+    # Фильтруем бренды с менее чем 2 товарами (мусор)
+    MIN_ITEMS_PER_BRAND = 2
     filtered_brand_counts = {k: v for k, v in brand_counts.items() if v >= MIN_ITEMS_PER_BRAND}
     skipped_brands = len(brand_counts) - len(filtered_brand_counts)
     
