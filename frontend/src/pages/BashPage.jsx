@@ -25,22 +25,19 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-// Editable cell for numbers - improved state management
+// Editable cell for numbers - key-based reset to prevent cascading renders
 const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "", itemId = "" }) => {
   const [localValue, setLocalValue] = useState(value ?? "");
-  const prevValueRef = useRef(value);
   const debouncedUpdate = useDebounce(onChange, 600);
   
-  // Reset local value when external value changes significantly
-  useEffect(() => {
-    if (value !== prevValueRef.current) {
-      // Only update if the difference is significant (not from our own debounced update)
-      if (Math.abs((value || 0) - (prevValueRef.current || 0)) > 0.001) {
-        setLocalValue(value ?? "");
-      }
-      prevValueRef.current = value;
-    }
-  }, [value]);
+  // Use key prop or reset pattern to handle external value changes
+  const valueKey = `${itemId || 'default'}-${value}`;
+  const [lastValueKey, setLastValueKey] = useState(valueKey);
+  
+  if (valueKey !== lastValueKey) {
+    setLocalValue(value ?? "");
+    setLastValueKey(valueKey);
+  }
   
   const handleChange = (e) => {
     const newValue = e.target.value;
