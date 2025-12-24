@@ -2707,7 +2707,10 @@ async def heartbeat_v2(user: dict = Depends(get_current_user)):
         upsert=True
     )
     
-    return {"status": "ok"}
+    # Автоматически продлеваем токен при активности
+    new_token = create_token(user["id"], user["role"])
+    
+    return {"status": "ok", "token": new_token}
 
 @api_router.get("/analytics/activity-heatmap")
 async def get_activity_heatmap(
