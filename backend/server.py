@@ -4012,7 +4012,8 @@ async def upload_bash_file(
                 "referral_fee": referral_fee,
                 "fba_fee": fba_fee,
                 "weight_grams": weight_grams,
-                "shipping_cost": shipping_cost,
+                "shipping_cost": 0.0,  # Пользователь вводит сам
+                "prep_cost": 0.0,  # Преп-кост
                 "cost_price": 0.0,
                 "extra_costs": 0.0,
                 "quantity": 1,
