@@ -333,6 +333,8 @@ const SuperAdminPage = () => {
               total={archiveTotal}
               pages={archivePages}
               onPageChange={(p) => fetchArchivedBrands(p)}
+              onSelectAll={handleSelectAllArchived}
+              selectingAll={selectingAllArchived}
             />
           )}
           {activeTab === "blacklist" && (
