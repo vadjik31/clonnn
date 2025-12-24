@@ -25,7 +25,7 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-// Editable cell
+// Editable cell for numbers
 const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "" }) => {
   const [localValue, setLocalValue] = useState(value ?? "");
   const debouncedUpdate = useDebounce(onChange, 600);
@@ -40,6 +40,35 @@ const EditableCell = ({ value, onChange, type = "number", placeholder = "", clas
       value={localValue} onChange={handleChange}
       className={`px-1 py-0.5 bg-[#0F1115] border border-[#2A2F3A] rounded text-right font-mono text-xs text-[#E6E6E6] focus:border-[#FF9900] focus:outline-none ${className}`}
       placeholder={placeholder} />
+  );
+};
+
+// Text input with debounce - for SKU and other text fields
+const DebouncedTextInput = ({ value, onChange, placeholder = "", className = "" }) => {
+  const [localValue, setLocalValue] = useState(value || "");
+  const timeoutRef = useRef(null);
+  
+  useEffect(() => { 
+    setLocalValue(value || ""); 
+  }, [value]);
+  
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    setLocalValue(newValue);
+    
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      onChange(newValue);
+    }, 800); // Longer debounce for text
+  };
+  
+  return (
+    <Input 
+      value={localValue} 
+      onChange={handleChange}
+      placeholder={placeholder}
+      className={className}
+    />
   );
 };
 
