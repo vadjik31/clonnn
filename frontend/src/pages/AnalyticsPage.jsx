@@ -52,27 +52,55 @@ const AnalyticsPage = () => {
   const [kpiData, setKpiData] = useState(null);
   const [inactiveBrands, setInactiveBrands] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState("7");
   const [deletingInactive, setDeletingInactive] = useState(false);
+  
+  // Cache ref to prevent duplicate fetches
+  const cacheRef = useRef({ kpi: {}, inactive: null, lastFetch: 0 });
+  const CACHE_TTL = 60000; // 1 minute cache
 
-  useEffect(() => {
-    fetchAllData();
-  }, [period]);
-
-  const fetchAllData = async () => {
-    setLoading(true);
+  const fetchAllData = useCallback(async (forceRefresh = false) => {
+    const now = Date.now();
+    const cache = cacheRef.current;
+    
+    // Check cache
+    if (!forceRefresh && cache.kpi[period] && cache.inactive && (now - cache.lastFetch) < CACHE_TTL) {
+      setKpiData(cache.kpi[period]);
+      setInactiveBrands(cache.inactive);
+      setLoading(false);
+      return;
+    }
+    
+    if (!loading) setRefreshing(true);
+    
     try {
       const [kpi, inactive] = await Promise.all([
         api.get(`/analytics/kpi?period_days=${period}`),
         api.get("/analytics/inactive-brands")
       ]);
+      
+      // Update cache
+      cache.kpi[period] = kpi.data;
+      cache.inactive = inactive.data;
+      cache.lastFetch = now;
+      
       setKpiData(kpi.data);
       setInactiveBrands(inactive.data);
     } catch (error) {
       toast.error("Ошибка загрузки аналитики");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [period, loading]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [period]);
+
+  const handleRefresh = () => {
+    fetchAllData(true);
   };
 
   const handleDeleteInactive = async (brandIds) => {
