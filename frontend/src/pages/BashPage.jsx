@@ -25,61 +25,43 @@ const useDebounce = (callback, delay) => {
   }, [callback, delay]);
 };
 
-// Editable cell for numbers - key-based reset to prevent cascading renders
-const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "", itemId = "" }) => {
-  const [localValue, setLocalValue] = useState(value ?? "");
+// Editable cell for numbers - uses key prop for reset
+const EditableCell = ({ value, onChange, type = "number", placeholder = "", className = "" }) => {
+  const inputRef = useRef(null);
   const debouncedUpdate = useDebounce(onChange, 600);
-  
-  // Use key prop or reset pattern to handle external value changes
-  const valueKey = `${itemId || 'default'}-${value}`;
-  const [lastValueKey, setLastValueKey] = useState(valueKey);
-  
-  if (valueKey !== lastValueKey) {
-    setLocalValue(value ?? "");
-    setLastValueKey(valueKey);
-  }
   
   const handleChange = (e) => {
     const newValue = e.target.value;
-    setLocalValue(newValue);
     debouncedUpdate(type === "number" ? (parseFloat(newValue) || 0) : newValue);
   };
   
   return (
-    <input type={type} step={type === "number" ? "0.01" : undefined} min={type === "number" ? "0" : undefined}
-      value={localValue} onChange={handleChange}
+    <input 
+      ref={inputRef}
+      type={type} 
+      step={type === "number" ? "0.01" : undefined} 
+      min={type === "number" ? "0" : undefined}
+      defaultValue={value ?? ""} 
+      onChange={handleChange}
       className={`px-1 py-0.5 bg-[#0F1115] border border-[#2A2F3A] rounded text-right font-mono text-xs text-[#E6E6E6] focus:border-[#FF9900] focus:outline-none ${className}`}
-      placeholder={placeholder} />
+      placeholder={placeholder} 
+    />
   );
 };
 
-// Text input with debounce - key-based reset to prevent cascading renders
+// Text input with debounce - uncontrolled for performance
 const DebouncedTextInput = ({ value, onChange, placeholder = "", className = "" }) => {
-  const [localValue, setLocalValue] = useState(value || "");
   const timeoutRef = useRef(null);
-  
-  // Use key-based reset pattern
-  const valueKey = `${value || 'empty'}`;
-  const [lastValueKey, setLastValueKey] = useState(valueKey);
-  
-  if (valueKey !== lastValueKey) {
-    setLocalValue(value || "");
-    setLastValueKey(valueKey);
-  }
   
   const handleChange = (e) => {
     const newValue = e.target.value;
-    setLocalValue(newValue);
-    
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      onChange(newValue);
-    }, 800);
+    timeoutRef.current = setTimeout(() => onChange(newValue), 800);
   };
   
   return (
     <Input 
-      value={localValue} 
+      defaultValue={value || ""} 
       onChange={handleChange}
       placeholder={placeholder}
       className={className}
