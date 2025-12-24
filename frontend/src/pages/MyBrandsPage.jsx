@@ -57,15 +57,21 @@ const MyBrandsPage = () => {
       params.append("page", filters.page.toString());
       params.append("limit", "50");
 
-      const response = await api.get(`/brands?${params}`);
-      setBrands(response.data.brands || []);
-      setTotal(response.data.total || 0);
-      setPages(response.data.pages || 1);
+      const response = await api.get(`/brands?${params}`, { signal });
+      if (!signal?.aborted) {
+        setBrands(response.data.brands || []);
+        setTotal(response.data.total || 0);
+        setPages(response.data.pages || 1);
+      }
     } catch (error) {
-      toast.error("Ошибка загрузки брендов");
-      setBrands([]);
+      if (error.name !== 'CanceledError' && error.code !== 'ERR_CANCELED') {
+        toast.error("Ошибка загрузки брендов");
+        setBrands([]);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
