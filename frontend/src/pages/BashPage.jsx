@@ -88,6 +88,7 @@ const BashPage = () => {
   const [batchData, setBatchData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const abortControllerRef = useRef(null);
   
   // Modals
   const [uploadModal, setUploadModal] = useState(false);
