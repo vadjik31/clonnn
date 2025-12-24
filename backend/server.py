@@ -1864,6 +1864,9 @@ async def set_replied_status(brand_id: str, req: RepliedStatusRequest, user: dic
     elif req.sub_status == "need_action":
         # По умолчанию через 2 дня
         next_action = (now + timedelta(days=2)).isoformat()
+    elif req.sub_status == "need_searcher_attention":
+        # Срочно - через 1 день
+        next_action = (now + timedelta(days=1)).isoformat()
     elif req.sub_status == "waiting":
         # По умолчанию через 5 дней
         next_action = (now + timedelta(days=5)).isoformat()
