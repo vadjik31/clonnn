@@ -5005,7 +5005,7 @@ async def create_task(task: TaskCreate, admin: dict = Depends(require_super_admi
     }
     
     await db.tasks.insert_one(new_task)
-    del new_task["_id"] if "_id" in new_task else None
+    new_task.pop("_id", None)
     
     return new_task
 
