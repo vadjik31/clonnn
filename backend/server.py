@@ -156,6 +156,18 @@ class NoteType:
     QUALITY_WARNING = "quality_warning"
     STATUS_CHANGE = "status_change"
 
+class TaskStatus:
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+class TaskPriority:
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    URGENT = "urgent"
+
 class EventType:
     USER_LOGIN = "user_login"
     USER_LOGOUT = "user_logout"
