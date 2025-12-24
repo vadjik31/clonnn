@@ -31,7 +31,7 @@ db = client[os.environ['DB_NAME']]
 # JWT Config
 JWT_SECRET = os.environ.get('JWT_SECRET', 'procto13-secret-key-2024')
 JWT_ALGORITHM = 'HS256'
-JWT_EXPIRATION_HOURS = 24
+JWT_EXPIRATION_HOURS = 48  # Увеличено с 24 до 48 часов
 
 app = FastAPI(title="PROCTO 13 Brand Management System")
 api_router = APIRouter(prefix="/api")
