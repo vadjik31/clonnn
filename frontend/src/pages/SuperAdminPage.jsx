@@ -214,6 +214,21 @@ const SuperAdminPage = () => {
     }
   };
 
+  const handleSelectAllArchived = async () => {
+    setSelectingAllArchived(true);
+    try {
+      // Загрузим все ID брендов из архива
+      const res = await api.get(`/super-admin/archived-brands?page=1&limit=10000`);
+      const allIds = (res.data.brands || []).map(b => b.id);
+      setSelectedArchived(new Set(allIds));
+      toast.success(`Выбрано ${allIds.length} брендов`);
+    } catch (error) {
+      toast.error("Ошибка загрузки");
+    } finally {
+      setSelectingAllArchived(false);
+    }
+  };
+
   const handleUnblacklistBrand = async (brandId) => {
     try {
       await api.post(`/super-admin/brands/${brandId}/unblacklist`);
