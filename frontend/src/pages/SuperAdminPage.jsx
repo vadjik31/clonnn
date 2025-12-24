@@ -217,9 +217,9 @@ const SuperAdminPage = () => {
   const handleSelectAllArchived = async () => {
     setSelectingAllArchived(true);
     try {
-      // Загрузим все ID брендов из архива
-      const res = await api.get(`/super-admin/archived-brands?page=1&limit=10000`);
-      const allIds = (res.data.brands || []).map(b => b.id);
+      // Загружаем только ID всех архивных брендов
+      const res = await api.get("/super-admin/archived-brands/all-ids");
+      const allIds = res.data.ids || [];
       setSelectedArchived(new Set(allIds));
       toast.success(`Выбрано ${allIds.length} брендов`);
     } catch (error) {
