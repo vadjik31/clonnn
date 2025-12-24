@@ -356,18 +356,6 @@ const AnalyticsPage = () => {
           )}
         </div>
       </div>
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1 h-auto"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
     </div>
   );
 };
