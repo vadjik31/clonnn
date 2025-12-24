@@ -2117,7 +2117,7 @@ async def get_dashboard(admin: dict = Depends(require_admin)):
             "assigned_count": brand_data.get("assigned_count", 0),
             "overdue_count": brand_data.get("overdue_count", 0),
             "cleared_count": event_data.get("cleared_count", 0),
-            "quick_returns_count": event_data.get("quick_returns", 0),
+            "checked_in_today": user_id in checked_in_today_ids,
             "low_quality_count": brand_data.get("low_quality_count", 0),
             "activity_status": activity_status,
             "last_seen_at": s.get("last_seen_at"),
