@@ -135,10 +135,11 @@ const LoginPage = () => {
                 <input
                   type="text"
                   value={secretCode}
-                  onChange={(e) => setSecretCode(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px] text-[#E6E6E6] placeholder-[#475569] focus:border-[#FF9900] focus:ring-1 focus:ring-[#FF9900] outline-none transition-all font-mono tracking-wider"
+                  onChange={(e) => setSecretCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                  className="w-full pl-10 pr-4 py-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px] text-[#E6E6E6] placeholder-[#475569] focus:border-[#FF9900] focus:ring-1 focus:ring-[#FF9900] outline-none transition-all font-mono tracking-wider uppercase"
                   placeholder="XXXXXXXX"
                   required
+                  autoComplete="off"
                   data-testid="secret-code-input"
                 />
               </div>
