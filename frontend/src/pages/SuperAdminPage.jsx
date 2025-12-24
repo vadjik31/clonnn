@@ -490,7 +490,7 @@ const ImportsTab = ({ imports, onDelete }) => {
   );
 };
 
-const ArchivedTab = ({ brands, onRestore }) => {
+const ArchivedTab = ({ brands, onRestore, onDelete }) => {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
@@ -507,14 +507,24 @@ const ArchivedTab = ({ brands, onRestore }) => {
                 {b.archive_reason} • {new Date(b.archived_at).toLocaleDateString('ru-RU')}
               </p>
             </div>
-            <Button
-              size="sm"
-              className="btn-secondary"
-              onClick={() => onRestore(b.id)}
-            >
-              <RotateCcw size={14} className="mr-1" />
-              Восстановить
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="btn-secondary"
+                onClick={() => onRestore(b.id)}
+              >
+                <RotateCcw size={14} className="mr-1" />
+                В пул
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-red-400 hover:text-red-300"
+                onClick={() => onDelete(b.id, b.name_original)}
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
           </div>
         ))}
       </div>
