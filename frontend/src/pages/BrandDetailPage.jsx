@@ -623,10 +623,10 @@ const StageModal = ({ open, onClose, brandId, onSuccess }) => {
   const [loading, setLoading] = useState(false);
 
   const stages = [
-    { value: "EMAIL_1_DONE", label: "1️⃣ Первое письмо отправлено" },
-    { value: "EMAIL_2_DONE", label: "2️⃣ Второе письмо отправлено" },
-    { value: "MULTI_CHANNEL_DONE", label: "📱 Соцсети / форма сайта" },
-    { value: "CALL_OR_PUSH_RECOMMENDED", label: "📞 Звонок выполнен" },
+    { value: "EMAIL_1_DONE", label: "1️⃣ Письмо 1" },
+    { value: "EMAIL_2_DONE", label: "2️⃣ Письмо 2" },
+    { value: "MULTI_CHANNEL_DONE", label: "📱 Соцсети" },
+    { value: "CALL_OR_PUSH_RECOMMENDED", label: "📞 Звонок" },
   ];
 
   const handleSubmit = async (e) => {
