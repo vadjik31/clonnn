@@ -457,7 +457,11 @@ const BashPage = () => {
       <div className="flex items-center gap-4">
         <Button variant="ghost" onClick={() => setView("list")} className="text-[#94A3B8]"><ChevronLeft size={20} /> Назад</Button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold text-[#E6E6E6] font-mono flex items-center gap-2"><FileSpreadsheet className="text-[#FF9900]" size={20} />{batchData?.name || "Партия"}</h1>
+          <h1 className="text-xl font-bold text-[#E6E6E6] font-mono flex items-center gap-2">
+            <FileSpreadsheet className="text-[#FF9900]" size={20} />
+            {batchData?.name || "Партия"}
+            <button onClick={() => { setEditBatchName(batchData?.name || ""); setEditNameModal(true); }} className="text-[#94A3B8] hover:text-[#FF9900] ml-1"><Pencil size={14} /></button>
+          </h1>
           <p className="text-[#94A3B8] text-sm">{batchData?.supplier || "Без поставщика"} • {batchData?.items_count || 0} товаров</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => openNotesModal()} className="border-[#2A2F3A]"><MessageSquare size={14} className="mr-1" /> Заметки</Button>
