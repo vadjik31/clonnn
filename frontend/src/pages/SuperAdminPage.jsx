@@ -271,6 +271,10 @@ const SuperAdminPage = () => {
               brands={archivedBrands} 
               onRestore={handleRestoreBrand}
               onDelete={handleDeleteBrand}
+              selected={selectedArchived}
+              onSelectChange={setSelectedArchived}
+              onBulkDelete={handleBulkDeleteArchived}
+              onBulkRestore={handleBulkRestoreArchived}
             />
           )}
           {activeTab === "blacklist" && (
