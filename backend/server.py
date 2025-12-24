@@ -2283,29 +2283,58 @@ async def get_review_timeout_brands(admin: dict = Depends(require_admin)):
 
 @api_router.get("/analytics/inactive-brands")
 async def get_inactive_brands(admin: dict = Depends(require_admin)):
-    """Бренды без активности больше N дней (закрывает дыру #7)"""
+    """Бренды без активности больше N дней (оптимизированная версия)"""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
     
-    brands = await db.brands.find({
-        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
-                           BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
-                           BrandStatus.OUTCOME_REPLIED]},
-        "$or": [
-            {"last_action_at": {"$lt": cutoff}},
-            {"last_action_at": None}
-        ]
-    }, {"_id": 0}).to_list(500)
+    # Используем aggregation pipeline для оптимизации
+    pipeline = [
+        {
+            "$match": {
+                "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
+                                   BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
+                                   BrandStatus.OUTCOME_REPLIED]},
+                "$or": [
+                    {"last_action_at": {"$lt": cutoff}},
+                    {"last_action_at": None}
+                ]
+            }
+        },
+        {"$limit": 100},  # Лимитируем для производительности
+        {
+            "$lookup": {
+                "from": "users",
+                "localField": "assigned_to_user_id",
+                "foreignField": "id",
+                "as": "assigned_user"
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "id": 1,
+                "name_original": 1,
+                "last_action_at": 1,
+                "assigned_to_user_id": 1,
+                "assigned_to_nickname": {"$arrayElemAt": ["$assigned_user.nickname", 0]}
+            }
+        }
+    ]
+    
+    brands = await db.brands.aggregate(pipeline).to_list(100)
+    now = datetime.now(timezone.utc)
     
     for brand in brands:
         if brand.get("last_action_at"):
-            last_dt = datetime.fromisoformat(brand["last_action_at"].replace('Z', '+00:00'))
-            brand["days_inactive"] = (datetime.now(timezone.utc) - last_dt).days
+            try:
+                last_dt = datetime.fromisoformat(brand["last_action_at"].replace('Z', '+00:00'))
+                brand["days_inactive"] = (now - last_dt).days
+            except:
+                brand["days_inactive"] = 999
         else:
             brand["days_inactive"] = 999
-            
-        if brand.get("assigned_to_user_id"):
-            user = await db.users.find_one({"id": brand["assigned_to_user_id"]}, {"nickname": 1})
-            brand["assigned_to_nickname"] = user["nickname"] if user else None
+    
+    # Сортируем по дням неактивности
+    brands.sort(key=lambda x: x.get("days_inactive", 0), reverse=True)
     
     return {"brands": brands, "count": len(brands), "threshold_days": INACTIVITY_TIMEOUT_DAYS}
 
