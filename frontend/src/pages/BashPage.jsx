@@ -501,7 +501,8 @@ const BashPage = () => {
               <th className="py-2 px-2 text-right">Buy Box</th>
               <th className="py-2 px-2 text-right">Ref</th>
               <th className="py-2 px-2 text-right">FBA</th>
-              <th className="py-2 px-2 text-right">Ship</th>
+              <th className="py-2 px-2 text-right w-12">Ship</th>
+              <th className="py-2 px-2 text-right w-12">Преп.</th>
               <th className="py-2 px-2 text-right w-14">Себест.</th>
               <th className="py-2 px-2 text-right w-12">Доп.</th>
               <th className="py-2 px-2 text-right w-10">Кол.</th>
