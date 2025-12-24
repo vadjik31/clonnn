@@ -3118,7 +3118,7 @@ async def get_all_check_ins(
 @api_router.post("/super-admin/brands/bulk-archive")
 async def bulk_archive_brands(
     request: BulkArchiveRequest,
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Массовое архивирование брендов"""
     now = datetime.now(timezone.utc)
@@ -3154,7 +3154,7 @@ async def bulk_archive_brands(
 @api_router.post("/super-admin/brands/bulk-blacklist")
 async def bulk_blacklist_brands(
     request: BulkBlacklistRequest,
-    admin: dict = Depends(require_super_admin)
+    admin: dict = Depends(require_admin)  # Доступно админам и супер-админам
 ):
     """Массовое добавление брендов в чёрный список"""
     now = datetime.now(timezone.utc)
