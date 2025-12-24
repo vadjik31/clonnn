@@ -541,10 +541,10 @@ const BashPage = () => {
                   </tr>
                   {expandedItem === item.id && (
                     <tr className="bg-[#0F1115]">
-                      <td colSpan={13} className="p-3">
+                      <td colSpan={14} className="p-3">
                         <div className="grid grid-cols-3 gap-3 text-xs">
-                          <div><Label className="text-[#94A3B8] text-[10px]">SKU поставщика</Label><Input value={item.supplier_sku || ""} onChange={(e) => handleUpdateItem(item.id, "supplier_sku", e.target.value)} placeholder="Артикул" className="bg-[#13161B] border-[#2A2F3A] mt-1 h-7 text-xs" /></div>
-                          <div><Label className="text-[#94A3B8] text-[10px]">Ссылка поставщика</Label><Input value={item.supplier_link || ""} onChange={(e) => handleUpdateItem(item.id, "supplier_link", e.target.value)} placeholder="https://..." className="bg-[#13161B] border-[#2A2F3A] mt-1 h-7 text-xs" /></div>
+                          <div><Label className="text-[#94A3B8] text-[10px]">SKU поставщика</Label><DebouncedTextInput value={item.supplier_sku} onChange={(v) => handleUpdateItem(item.id, "supplier_sku", v)} placeholder="Артикул" className="bg-[#13161B] border-[#2A2F3A] mt-1 h-7 text-xs" /></div>
+                          <div><Label className="text-[#94A3B8] text-[10px]">Ссылка поставщика</Label><DebouncedTextInput value={item.supplier_link} onChange={(v) => handleUpdateItem(item.id, "supplier_link", v)} placeholder="https://..." className="bg-[#13161B] border-[#2A2F3A] mt-1 h-7 text-xs" /></div>
                           <div><Label className="text-[#94A3B8] text-[10px]">Категория</Label><p className="text-[#E6E6E6] mt-2 text-xs">{item.category || "—"}</p></div>
                         </div>
                         <div className="flex gap-2 mt-2">
