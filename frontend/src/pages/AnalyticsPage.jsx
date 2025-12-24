@@ -141,19 +141,6 @@ const AnalyticsPage = () => {
     }
   };
 
-  const handleCleanupTest = async () => {
-    if (!window.confirm("Удалить все тестовые бренды (Test*)?")) return;
-    try {
-      const res = await api.delete("/super-admin/brands/cleanup-test");
-      toast.success(`Удалено тестовых брендов: ${res.data.deleted_count}`);
-      // Invalidate cache and refresh
-      cacheRef.current = { kpi: {}, inactive: null, lastFetch: 0 };
-      fetchAllData(true);
-    } catch (error) {
-      toast.error("Ошибка удаления");
-    }
-  };
-
   // Skeleton loader
   if (loading) {
     return (
