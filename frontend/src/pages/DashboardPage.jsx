@@ -241,8 +241,8 @@ const DashboardPage = () => {
                     </span>
                   </td>
                   <td className="table-cell text-center font-mono">
-                    <span className={searcher.quick_returns_count > 5 ? "text-red-400 font-bold" : ""}>
-                      {searcher.quick_returns_count || 0}
+                    <span className={searcher.checked_in_today ? "text-green-400" : "text-red-400"}>
+                      {searcher.checked_in_today ? "Да" : "Нет"}
                     </span>
                   </td>
                   <td className="table-cell text-center font-mono">
