@@ -4940,6 +4940,124 @@ async def delete_supplier(
     
     return {"status": "success", "message": "Поставщик удалён"}
 
+# ============== TASKS API ==============
+
+class TaskCreate(BaseModel):
+    title: str
+    description: str = ""
+    assigned_to_id: str  # ID админа которому назначена задача
+    priority: str = TaskPriority.MEDIUM
+    deadline: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[str] = None
+    deadline: Optional[str] = None
+    status: Optional[str] = None
+    admin_notes: Optional[str] = None
+
+@api_router.get("/tasks")
+async def get_tasks(user: dict = Depends(require_admin)):
+    """Получить список задач (супер-админ видит все, админ - только свои)"""
+    role = user.get("role")
+    user_id = user.get("id")
+    
+    if role == "super_admin":
+        # Супер-админ видит все задачи
+        tasks = await db.tasks.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    else:
+        # Админ видит только назначенные ему задачи
+        tasks = await db.tasks.find({"assigned_to_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Добавляем имена пользователей
+    user_ids = list(set([t.get("assigned_to_id") for t in tasks if t.get("assigned_to_id")] + 
+                       [t.get("created_by_id") for t in tasks if t.get("created_by_id")]))
+    users = await db.users.find({"id": {"$in": user_ids}}, {"id": 1, "nickname": 1, "_id": 0}).to_list(100)
+    users_map = {u["id"]: u["nickname"] for u in users}
+    
+    for task in tasks:
+        task["assigned_to_name"] = users_map.get(task.get("assigned_to_id"), "")
+        task["created_by_name"] = users_map.get(task.get("created_by_id"), "")
+    
+    return {"tasks": tasks}
+
+@api_router.post("/tasks")
+async def create_task(task: TaskCreate, admin: dict = Depends(require_super_admin)):
+    """Создать задачу (только супер-админ)"""
+    # Проверяем что назначенный пользователь существует
+    assigned_user = await db.users.find_one({"id": task.assigned_to_id})
+    if not assigned_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    
+    new_task = {
+        "id": str(uuid4()),
+        "title": sanitize_input(task.title),
+        "description": sanitize_input(task.description),
+        "assigned_to_id": task.assigned_to_id,
+        "created_by_id": admin["id"],
+        "priority": task.priority,
+        "deadline": task.deadline,
+        "status": TaskStatus.PENDING,
+        "admin_notes": "",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.tasks.insert_one(new_task)
+    del new_task["_id"] if "_id" in new_task else None
+    
+    return new_task
+
+@api_router.put("/tasks/{task_id}")
+async def update_task(task_id: str, update: TaskUpdate, user: dict = Depends(require_admin)):
+    """Обновить задачу"""
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+    
+    role = user.get("role")
+    user_id = user.get("id")
+    
+    # Админ может обновлять только свои задачи (статус и заметки)
+    # Супер-админ может обновлять всё
+    if role != "super_admin" and task.get("assigned_to_id") != user_id:
+        raise HTTPException(status_code=403, detail="Нет прав")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if role == "super_admin":
+        # Супер-админ может менять всё
+        if update.title is not None:
+            update_data["title"] = sanitize_input(update.title)
+        if update.description is not None:
+            update_data["description"] = sanitize_input(update.description)
+        if update.priority is not None:
+            update_data["priority"] = update.priority
+        if update.deadline is not None:
+            update_data["deadline"] = update.deadline
+    
+    # И админ и супер-админ могут менять статус и заметки
+    if update.status is not None:
+        update_data["status"] = update.status
+    if update.admin_notes is not None:
+        update_data["admin_notes"] = sanitize_input(update.admin_notes)
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": update_data})
+    
+    updated = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, admin: dict = Depends(require_super_admin)):
+    """Удалить задачу (только супер-админ)"""
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+    
+    await db.tasks.delete_one({"id": task_id})
+    return {"status": "success"}
+
 @api_router.get("/")
 async def root():
     return {"message": "PROCTO 13 Brand Management API v5.1 - Suppliers Edition"}
