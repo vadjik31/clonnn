@@ -1454,6 +1454,7 @@ const RepliedModal = ({ open, onClose, brandId, onSuccess }) => {
 
   const statusOptions = [
     { value: "need_action", label: "Нужно действие с нашей стороны", description: "Бренд попросил что-то сделать (доп. инфо, предложение и т.д.)" },
+    { value: "need_searcher_attention", label: "Надо внимание сёрчера!", description: "Требуется внимание сёрчера для дальнейших действий" },
     { value: "waiting", label: "Ожидаем от них", description: "Мы сделали свою часть, ждём их решения" },
     { value: "approved", label: "Одобрили сотрудничество", description: "Успех! Бренд согласен работать" },
     { value: "declined", label: "Отказали", description: "Бренд отказался от сотрудничества" },
