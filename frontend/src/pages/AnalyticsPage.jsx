@@ -319,15 +319,19 @@ const AnalyticsPage = () => {
             <AlertTriangle size={18} className="text-orange-400" />
             Без активности ({inactiveBrands?.count || 0})
           </h3>
-          {user?.role === "super_admin" && inactiveBrands?.brands?.length > 0 && (
+          {user?.role === "super_admin" && inactiveBrands?.count > 0 && (
             <Button
-              onClick={() => handleDeleteInactive(inactiveBrands.brands.map(b => b.id))}
+              onClick={handleDeleteAllInactive}
               disabled={deletingInactive}
               variant="outline"
               size="sm"
               className="text-red-400 border-red-400/30 hover:bg-red-900/20"
             >
               <Trash2 size={14} className="mr-1" />
+              {deletingInactive ? "Удаление..." : `Удалить все (${inactiveBrands?.count || 0})`}
+            </Button>
+          )}
+        </div>
               Удалить все
             </Button>
           )}
