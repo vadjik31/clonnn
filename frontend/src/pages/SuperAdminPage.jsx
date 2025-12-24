@@ -38,6 +38,7 @@ const SuperAdminPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("check-ins");
   const [loading, setLoading] = useState(true);
+  const abortControllerRef = useRef(null);
   
   // Data states
   const [checkIns, setCheckIns] = useState(null);
@@ -48,20 +49,29 @@ const SuperAdminPage = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userActivity, setUserActivity] = useState(null);
   const [searchers, setSearchers] = useState([]);
+  const [selectedArchived, setSelectedArchived] = useState(new Set());
+  const [selectedBlacklisted, setSelectedBlacklisted] = useState(new Set());
   
   // Modal states
   const [settingsModal, setSettingsModal] = useState(false);
   const [deleteImportModal, setDeleteImportModal] = useState(null);
 
   useEffect(() => {
-    if (user?.role === "super_admin") {
+    if (user?.role === "super_admin" || user?.role === "admin") {
       fetchData();
     }
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+    };
   }, [activeTab, user]);
 
   const fetchData = async () => {
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+    
     setLoading(true);
     try {
+      const signal = abortControllerRef.current.signal;
       switch (activeTab) {
         case "check-ins":
           const checkInsRes = await api.get("/super-admin/check-ins");
