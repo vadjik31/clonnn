@@ -125,12 +125,22 @@ const AnalyticsPage = () => {
     fetchAllData(true);
   };
 
-  const handleDeleteInactive = async (brandIds) => {
-    if (!window.confirm(`Удалить ${brandIds.length} неактивных брендов?`)) return;
-    setDeletingInactive(true);
+  const handleDeleteAllInactive = async () => {
     try {
-      await api.delete("/super-admin/brands/bulk-delete", { data: brandIds });
-      toast.success(`Удалено ${brandIds.length} брендов`);
+      // Сначала загружаем все ID неактивных брендов
+      const res = await api.get("/analytics/inactive-brands/all-ids");
+      const allIds = res.data.ids || [];
+      
+      if (allIds.length === 0) {
+        toast.info("Нет неактивных брендов для удаления");
+        return;
+      }
+      
+      if (!window.confirm(`Удалить ВСЕ ${allIds.length} неактивных брендов? Это действие нельзя отменить!`)) return;
+      
+      setDeletingInactive(true);
+      await api.delete("/super-admin/brands/bulk-delete", { data: allIds });
+      toast.success(`Удалено ${allIds.length} брендов`);
       // Invalidate cache and refresh
       cacheRef.current.inactive = null;
       fetchAllData(true);
