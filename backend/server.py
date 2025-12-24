@@ -1006,39 +1006,50 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
         "items_added": 0,
         "missing_columns": missing_optional,
         "similar_brands_warnings": [],
-        "skipped_low_items": skipped_brands  # Пропущено брендов с <5 товаров
+        "skipped_low_items": skipped_brands
     }
     
-    # Получаем существующие нормализованные имена для fuzzy matching
-    existing_brands = await db.brands.find({}, {"name_normalized": 1, "name_original": 1}).to_list(10000)
-    existing_normalized = {b["name_normalized"]: b["name_original"] for b in existing_brands}
+    # ОПТИМИЗАЦИЯ: загружаем все нормализованные имена в память ОДИН раз
+    existing_brands_cursor = db.brands.find({}, {"name_normalized": 1, "name_original": 1, "id": 1, "priority_score": 1})
+    existing_brands = await existing_brands_cursor.to_list(None)
+    existing_normalized = {b["name_normalized"]: b for b in existing_brands}
+    
+    # Подготовка batch операций
+    brands_to_insert = []
+    items_to_insert = []
+    updates_to_apply = []
+    now_iso = datetime.now(timezone.utc).isoformat()
     
     for brand_name, count in filtered_brand_counts.items():
         brand_normalized = normalize_brand_name(str(brand_name))
         if not brand_normalized:
             continue
         
-        existing = await db.brands.find_one({"name_normalized": brand_normalized})
+        # ОПТИМИЗАЦИЯ: проверка в памяти вместо запроса к БД
+        existing = existing_normalized.get(brand_normalized)
         
         if existing:
             if count > existing.get("priority_score", 0):
-                await db.brands.update_one(
-                    {"id": existing["id"]},
-                    {"$set": {"priority_score": count, "updated_at": datetime.now(timezone.utc).isoformat()}}
-                )
+                updates_to_apply.append({
+                    "filter": {"id": existing["id"]},
+                    "update": {"$set": {"priority_score": count, "updated_at": now_iso}}
+                })
             stats["duplicate_brands"] += 1
         else:
-            # Fuzzy matching для похожих брендов (закрывает дыру #37)
+            # Упрощённый fuzzy matching (только для первых 100 для скорости)
             similar = []
-            for existing_norm, existing_orig in existing_normalized.items():
+            check_limit = min(100, len(existing_normalized))
+            for i, (existing_norm, existing_data) in enumerate(existing_normalized.items()):
+                if i >= check_limit:
+                    break
                 similarity = calculate_similarity(brand_normalized, existing_norm)
-                if 0.8 <= similarity < 1.0:  # Похожие, но не идентичные
-                    similar.append({"name": existing_orig, "similarity": round(similarity * 100)})
+                if 0.8 <= similarity < 1.0:
+                    similar.append({"name": existing_data["name_original"], "similarity": round(similarity * 100)})
             
             if similar:
                 stats["similar_brands_warnings"].append({
                     "new_brand": str(brand_name),
-                    "similar_to": similar[:3]  # Топ 3 похожих
+                    "similar_to": similar[:3]
                 })
             
             brand_id = str(uuid.uuid4())
@@ -1064,36 +1075,47 @@ async def import_excel(file: UploadFile = File(...), admin: dict = Depends(requi
                 "on_hold_review_date": None,
                 "health_score": 0,
                 "assignment_count": 0,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat()
+                "created_at": now_iso,
+                "updated_at": now_iso
             }
-            await db.brands.insert_one(brand)
-            existing_normalized[brand_normalized] = str(brand_name)
+            brands_to_insert.append(brand)
+            existing_normalized[brand_normalized] = {"name_original": str(brand_name), "id": brand_id, "priority_score": count}
             stats["new_brands"] += 1
             
+            # Подготовка items для batch insert
             brand_items = df[df['Brand'] == brand_name].head(10)
             for _, row in brand_items.iterrows():
                 image_url = str(row.get('Image', '')) if pd.notna(row.get('Image')) else None
                 if image_url and ';' in image_url:
                     image_url = image_url.split(';')[0]
                 
-                item = {
+                items_to_insert.append({
                     "id": str(uuid.uuid4()),
                     "brand_id": brand_id,
                     "asin": str(row.get('ASIN', '')) if pd.notna(row.get('ASIN')) else None,
                     "title": str(row.get('Title', '')) if pd.notna(row.get('Title')) else None,
                     "image_url": image_url,
-                    "created_at": datetime.now(timezone.utc).isoformat()
-                }
-                await db.brand_items.insert_one(item)
+                    "created_at": now_iso
+                })
                 stats["items_added"] += 1
+    
+    # ОПТИМИЗАЦИЯ: Bulk insert вместо отдельных запросов
+    if brands_to_insert:
+        await db.brands.insert_many(brands_to_insert, ordered=False)
+    
+    if items_to_insert:
+        await db.brand_items.insert_many(items_to_insert, ordered=False)
+    
+    # Batch updates для существующих брендов
+    for upd in updates_to_apply:
+        await db.brands.update_one(upd["filter"], upd["update"])
     
     import_record = {
         "id": str(uuid.uuid4()),
         "file_name": file.filename,
         "imported_by_user_id": admin["id"],
         "imported_by_nickname": admin["nickname"],
-        "imported_at": datetime.now(timezone.utc).isoformat(),
+        "imported_at": now_iso,
         "stats": stats
     }
     await db.batch_imports.insert_one(import_record)
