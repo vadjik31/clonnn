@@ -105,32 +105,44 @@ const UsersPage = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {users.map((user) => {
+              // Обычный админ не видит пароль супер-админа
+              const canSeePassword = currentUser?.role === "super_admin" || user.role !== "super_admin";
+              
+              return (
               <tr key={user.id} className="table-row" data-testid={`user-row-${user.id}`}>
                 <td className="table-cell font-medium">{user.nickname}</td>
                 <td className="table-cell font-mono text-sm">{user.email}</td>
                 <td className="table-cell">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm">
-                      {showPasswords[user.id] ? user.password : "••••••••"}
-                    </span>
-                    <button
-                      onClick={() => togglePasswordVisibility(user.id)}
-                      className="text-[#94A3B8] hover:text-[#E6E6E6]"
-                      data-testid={`toggle-password-${user.id}`}
-                    >
-                      {showPasswords[user.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
+                  {canSeePassword ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm">
+                        {showPasswords[user.id] ? user.password : "••••••••"}
+                      </span>
+                      <button
+                        onClick={() => togglePasswordVisibility(user.id)}
+                        className="text-[#94A3B8] hover:text-[#E6E6E6]"
+                        data-testid={`toggle-password-${user.id}`}
+                      >
+                        {showPasswords[user.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-[#94A3B8] text-sm">Скрыто</span>
+                  )}
                 </td>
-                <td className="table-cell font-mono text-sm tracking-wider">{user.secret_code}</td>
+                <td className="table-cell font-mono text-sm tracking-wider">
+                  {canSeePassword ? user.secret_code : "••••••••"}
+                </td>
                 <td className="table-cell">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium border ${
-                    user.role === "admin" 
+                    user.role === "super_admin"
+                      ? "bg-[#FF9900]/20 text-[#FF9900] border-[#FF9900]/50"
+                      : user.role === "admin" 
                       ? "bg-purple-900/20 text-purple-400 border-purple-800" 
                       : "bg-blue-900/20 text-blue-400 border-blue-800"
                   }`}>
-                    {user.role === "admin" ? "Админ" : "Сёрчер"}
+                    {user.role === "super_admin" ? "Супер-админ" : user.role === "admin" ? "Админ" : "Сёрчер"}
                   </span>
                 </td>
                 <td className="table-cell">
