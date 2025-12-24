@@ -36,6 +36,7 @@ const MyBrandsPage = () => {
   }, [filters]);
 
   const fetchBrands = async () => {
+    setLoading(true);
     try {
       const params = new URLSearchParams();
       if (filters.status) params.append("status", filters.status);
@@ -46,11 +47,12 @@ const MyBrandsPage = () => {
       params.append("limit", "50");
 
       const response = await api.get(`/brands?${params}`);
-      setBrands(response.data.brands);
-      setTotal(response.data.total);
-      setPages(response.data.pages);
+      setBrands(response.data.brands || []);
+      setTotal(response.data.total || 0);
+      setPages(response.data.pages || 1);
     } catch (error) {
       toast.error("Ошибка загрузки брендов");
+      setBrands([]);
     } finally {
       setLoading(false);
     }
