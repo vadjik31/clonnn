@@ -39,16 +39,43 @@ const Tooltip = ({ text, children }) => (
 const DashboardPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const abortControllerRef = useRef(null);
+  const cacheRef = useRef({ data: null, timestamp: 0 });
+  const CACHE_TTL = 30000; // 30 sec cache
 
   useEffect(() => {
     fetchDashboard();
+    
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const fetchDashboard = async () => {
+    // Check cache first
+    const now = Date.now();
+    if (cacheRef.current.data && (now - cacheRef.current.timestamp) < CACHE_TTL) {
+      setData(cacheRef.current.data);
+      setLoading(false);
+      return;
+    }
+    
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    
     try {
-      const response = await api.get("/dashboard");
+      const response = await api.get("/dashboard", {
+        signal: abortControllerRef.current.signal
+      });
+      cacheRef.current = { data: response.data, timestamp: Date.now() };
       setData(response.data);
     } catch (error) {
+      if (error.name === 'AbortError' || error.name === 'CanceledError') return;
       toast.error("Ошибка загрузки дашборда");
     } finally {
       setLoading(false);
