@@ -127,24 +127,34 @@ const MyBrandsPage = () => {
           </h1>
           <p className="text-[#94A3B8] mt-1">Всего: {total} брендов</p>
         </div>
-        <Button
-          onClick={handleClaimBrands}
-          disabled={claiming}
-          className="btn-primary flex items-center gap-2 animate-pulse-glow"
-          data-testid="claim-brands-btn"
-        >
-          {claiming ? (
-            <>
-              <RefreshCw size={18} className="animate-spin" />
-              Получение...
-            </>
-          ) : (
-            <>
-              <Download size={18} />
-              Получить бренды
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => fetchBrands()}
+            variant="outline"
+            className="border-[#2A2F3A] text-[#94A3B8] hover:text-white"
+            title="Обновить список"
+          >
+            <RefreshCw size={18} />
+          </Button>
+          <Button
+            onClick={handleClaimBrands}
+            disabled={claiming}
+            className="btn-primary flex items-center gap-2 animate-pulse-glow"
+            data-testid="claim-brands-btn"
+          >
+            {claiming ? (
+              <>
+                <RefreshCw size={18} className="animate-spin" />
+                Получение...
+              </>
+            ) : (
+              <>
+                <Download size={18} />
+                Получить бренды
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
