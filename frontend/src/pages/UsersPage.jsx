@@ -20,6 +20,7 @@ import {
 } from "../components/ui/select";
 
 const UsersPage = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
