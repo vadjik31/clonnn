@@ -41,7 +41,7 @@ const Tooltip = ({ text, children }) => (
   <div className="relative group inline-flex items-center gap-1">
     {children}
     <HelpCircle size={12} className="text-[#94A3B8] opacity-50 group-hover:opacity-100 cursor-help" />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-[#1A1D23] border border-[#FF9900]/30 rounded text-xs text-[#E6E6E6] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-3 py-2 bg-[#1A1D23] border border-[#FF9900]/30 rounded text-xs text-[#E6E6E6] whitespace-normal max-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none z-[100] shadow-lg">
       {text}
     </div>
   </div>
