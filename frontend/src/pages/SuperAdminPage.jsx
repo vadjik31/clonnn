@@ -377,12 +377,19 @@ const SuperAdminPage = () => {
           {activeTab === "archived" && (
             <ArchivedTab 
               brands={archivedBrands} 
+              subSuppliers={archivedSubSuppliers}
               onRestore={handleRestoreBrand}
               onDelete={handleDeleteBrand}
+              onRestoreSS={handleRestoreSubSupplier}
+              onDeleteSS={handleDeleteSubSupplier}
               selected={selectedArchived}
+              selectedSS={selectedArchivedSS}
               onSelectChange={setSelectedArchived}
+              onSelectChangeSS={setSelectedArchivedSS}
               onBulkDelete={handleBulkDeleteArchived}
               onBulkRestore={handleBulkRestoreArchived}
+              onBulkDeleteSS={handleBulkDeleteArchivedSS}
+              onBulkRestoreSS={handleBulkRestoreArchivedSS}
               page={archivePage}
               total={archiveTotal}
               pages={archivePages}
