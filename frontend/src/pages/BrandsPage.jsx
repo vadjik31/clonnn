@@ -511,7 +511,7 @@ const BrandsPage = () => {
                     <tr 
                       key={brand.id} 
                       className={`table-row cursor-pointer ${isOverdue ? "bg-red-900/10" : ""} ${isSelected ? "bg-[#FF9900]/10" : ""}`}
-                      onClick={() => navigate(`/brands/${brand.id}`)}
+                      onClick={() => navigate(brand.is_sub_supplier ? `/sub-suppliers/${brand.id}` : `/brands/${brand.id}`)}
                       data-testid={`brand-row-${brand.id}`}
                     >
                       {isAdmin && (
@@ -526,7 +526,8 @@ const BrandsPage = () => {
                       <td className="table-cell font-medium">
                         <BrandTooltip brandId={brand.id}>
                           <div className="flex items-center gap-2">
-                            <span>{brand.name_original}</span>
+                            {brand.is_sub_supplier && <span className="text-[#FF9900] text-xs">↳</span>}
+                            <span>{brand.is_sub_supplier ? brand.name : brand.name_original}</span>
                             <Info size={12} className="text-[#94A3B8] opacity-50" />
                           </div>
                         </BrandTooltip>
