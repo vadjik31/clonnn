@@ -363,37 +363,59 @@ bash_feature:
         comment: "Страница /staff для просмотра активности сёрчеров админами"
 
 current_agent_communication:
-  - agent: "main_fork_2"
+  - agent: "testing"
     message: |
-      BASH Feature Implementation Complete!
+      UI PARITY TEST COMPLETED - SubSupplierDetailPage vs BrandDetailPage
       
-      Backend APIs (all working):
-      - POST /api/bash/upload - загрузка и парсинг Keepa Excel
-      - GET /api/bash - список партий
-      - GET /api/bash/{id} - партия с товарами и статистикой
-      - PUT /api/bash/{id} - обновление партии
-      - DELETE /api/bash/{id} - удаление партии
-      - PUT /api/bash/item/{id} - обновление товара с пересчётом
-      - PUT /api/bash/items/bulk-update - массовое обновление
-      - GET /api/tracking/{number} - отслеживание через 17track
-      - POST /api/bash/{id}/track - отслеживание партии
+      ✅ COMPREHENSIVE TESTING PERFORMED:
       
-      Frontend (working):
-      - BashPage.jsx - полная страница с UI
-      - StaffPage.jsx - страница логов для админов
-      - Роуты /bash и /staff в App.js
-      - Ссылки в Sidebar.jsx
+      Test Environment:
+      - Frontend: https://brand-pipeline-1.preview.emergentagent.com
+      - Login: searcher@procto13.com / searcher123 / PROCTO13
+      - Test Brand: "Old World Christmas" (ID: cdebdcb5-fd69-4ef0-bfc8-07450002454b)
+      - Sub-supplier: https://app.emergent.sh/chat (stage: REVIEW)
       
-      Формулы расчёта:
-      - Shipping Cost = Weight(g) / 453.592 * 0.8 (фунт на Amazon)
-      - Profit = Buy Box - Ref Fee - FBA Fee - Shipping - Cost - Extra
-      - ROI = (Profit / (Cost + Shipping + Extra)) * 100
+      ✅ VERIFIED PARITY COMPONENTS:
       
-      17track API Key: сохранён в backend/.env как TRACK17_API_KEY
+      1. StatusBadge Consistency:
+         - Both pages use identical StatusBadge component
+         - Same status labels and color schemes
+         - Verified: "В работе" status displays consistently
       
-      Credentials:
-      - Super Admin: admin@procto13.com / admin123 / PROCTO13
-      - Searcher: searcher@procto13.com / searcher123 / PROCTO13
+      2. StageBadge Consistency:
+         - Both pages show "Этап воронки" with identical visual styling
+         - Same stage progression: REVIEW → EMAIL_1_DONE → EMAIL_2_DONE → MULTI_CHANNEL_DONE → CALL_OR_PUSH_RECOMMENDED
+         - Verified: "1️⃣ Письмо 1" stage displays consistently
+      
+      3. Action Buttons Parity:
+         - All 6 buttons present on both pages:
+           ✓ Этап выполнен (data-testid="stage-btn")
+           ✓ Ответил (data-testid="replied-btn") 
+           ✓ Нет ответа (data-testid="no-response-btn")
+           ✓ На паузу (data-testid="onhold-btn")
+           ✓ Проблемный (data-testid="problematic-btn")
+           ✓ Очистить (data-testid="return-btn")
+      
+      4. Stage Options Verification:
+         - Identical stage options in "Этап выполнен" modal:
+           ✓ 1️⃣ Письмо 1
+           ✓ 2️⃣ Письмо 2  
+           ✓ 📱 Соцсети
+           ✓ 📞 Звонок
+         - ✅ NO FORBIDDEN "Переговоры" stage found in sub-supplier
+      
+      5. Modal Fields Consistency:
+         - "Проблемный" modal: reason select + optional review date + required note
+         - "Очистить" modal: reason select + required note
+         - All modals use same validation and styling
+      
+      ✅ CRITICAL REQUIREMENTS SATISFIED:
+      - No extra "Переговоры" stage in sub-supplier
+      - Same field structure in all modals
+      - Consistent visual styling and behavior
+      - No UI errors or console errors during testing
+      
+      CONCLUSION: 100% UI/UX parity achieved between BrandDetailPage and SubSupplierDetailPage
 
 
 # Current Task - Sub-supplier status/stage parity (P0)
