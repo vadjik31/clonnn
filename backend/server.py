@@ -4050,6 +4050,9 @@ async def get_sub_suppliers(brand_id: str, user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Бренд не найден")
     
     sub_suppliers = await db.sub_suppliers.find({"parent_brand_id": brand_id}, {"_id": 0}).to_list(100)
+
+    for ss in sub_suppliers:
+        ss["pipeline_stage"] = normalize_pipeline_stage(ss.get("pipeline_stage"))
     
     # Добавляем данные от родительского бренда и пользователей
     items_count = await db.brand_items.count_documents({"brand_id": brand_id})
