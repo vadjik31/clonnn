@@ -394,3 +394,21 @@ current_agent_communication:
       Credentials:
       - Super Admin: admin@procto13.com / admin123 / PROCTO13
       - Searcher: searcher@procto13.com / searcher123 / PROCTO13
+
+
+# Current Task - Sub-supplier status/stage parity (P0)
+
+ui_parity_task:
+  - task: "SubSupplierDetailPage parity with BrandDetailPage"
+    implemented: true
+    working: "pending_testing"
+    files:
+      - "/app/frontend/src/pages/SubSupplierDetailPage.jsx"
+      - "/app/backend/server.py"
+    notes:
+      - "Убраны лишние этапы (например 'Переговоры'), приведены к тем же этапам и визуальным бейджам, что у бренда"
+      - "Приведены модалки Replied/No response/On hold/Problematic/Return/Note к тем же полям/лейблам/цветам, что у бренда"
+      - "Добавлен backend endpoint POST /api/sub-suppliers/{id}/return и обновлена логика problematic + валидация этапов"
+    testing_required:
+      - method: "Playwright (frontend testing subagent)"
+        scope: "BrandDetailPage + SubSupplierDetailPage: бейджи статусов/этапов, модалки, смена статуса/этапа"
