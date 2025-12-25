@@ -16,7 +16,8 @@ import {
   UserCheck,
   Boxes,
   Building2,
-  ListTodo
+  ListTodo,
+  UsersRound
 } from "lucide-react";
 
 const Sidebar = ({ user }) => {
@@ -66,6 +67,7 @@ const Sidebar = ({ user }) => {
     { to: "/staff", icon: UserCheck, label: "Сотрудники" },
     { to: "/import", icon: Upload, label: "Импорт" },
     { to: "/brands", icon: Package, label: "Все бренды" },
+    { to: "/sub-suppliers", icon: UsersRound, label: "Под-сапплаеры" },
     { to: "/super-admin", icon: Shield, label: "Управление" },
     { to: "/bash", icon: Boxes, label: "BASH" },
     { to: "/suppliers", icon: Building2, label: "Поставщики" },
@@ -80,6 +82,7 @@ const Sidebar = ({ user }) => {
     { to: "/staff", icon: UserCheck, label: "Сотрудники" },
     { to: "/import", icon: Upload, label: "Импорт" },
     { to: "/brands", icon: Package, label: "Все бренды" },
+    { to: "/sub-suppliers", icon: UsersRound, label: "Под-сапплаеры" },
     { to: "/super-admin", icon: Shield, label: "Управление" },
     { to: "/bash", icon: Boxes, label: "BASH" },
     { to: "/suppliers", icon: Building2, label: "Поставщики" },
@@ -88,6 +91,7 @@ const Sidebar = ({ user }) => {
 
   const searcherLinks = [
     { to: "/my-brands", icon: Briefcase, label: "Мои бренды" },
+    { to: "/sub-suppliers", icon: UsersRound, label: "Под-сапплаеры" },
     { to: "/problematic", icon: AlertTriangle, label: "Проблемные" },
     { to: "/suppliers", icon: Building2, label: "Поставщики" },
   ];
