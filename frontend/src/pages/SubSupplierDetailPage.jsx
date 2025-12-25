@@ -251,9 +251,21 @@ const SubSupplierDetailPage = () => {
         subSupplierId={subSupplierId}
         onSuccess={fetchSubSupplier}
       />
+      <NoResponseModal
+        open={noResponseModal}
+        onClose={() => setNoResponseModal(false)}
+        subSupplierId={subSupplierId}
+        onSuccess={fetchSubSupplier}
+      />
       <OnHoldModal
         open={onHoldModal}
         onClose={() => setOnHoldModal(false)}
+        subSupplierId={subSupplierId}
+        onSuccess={fetchSubSupplier}
+      />
+      <ProblematicModal
+        open={problematicModal}
+        onClose={() => setProblematicModal(false)}
         subSupplierId={subSupplierId}
         onSuccess={fetchSubSupplier}
       />
