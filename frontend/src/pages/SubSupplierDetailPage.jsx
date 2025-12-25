@@ -42,6 +42,8 @@ const SubSupplierDetailPage = () => {
   const [repliedModal, setRepliedModal] = useState(false);
   const [onHoldModal, setOnHoldModal] = useState(false);
   const [noteModal, setNoteModal] = useState(false);
+  const [noResponseModal, setNoResponseModal] = useState(false);
+  const [problematicModal, setProblematicModal] = useState(false);
 
   useEffect(() => {
     fetchSubSupplier();
