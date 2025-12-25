@@ -343,15 +343,32 @@ class PROCTO13APITester:
         """Test brand workflow operations"""
         self.log("=== TESTING BRAND WORKFLOW ===")
         
-        if not self.searcher_token or not self.test_brand_id:
-            self.log("❌ Missing searcher token or brand ID")
+        if not self.searcher_token:
+            self.log("❌ Missing searcher token")
             return False
+        
+        # First get the searcher's brands to find one to work with
+        success, response = self.run_test(
+            "Get Searcher Brands for Workflow",
+            "GET",
+            "brands",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success or not response.get('brands'):
+            self.log("❌ No brands available for workflow testing")
+            return False
+        
+        # Use the first brand from searcher's list
+        searcher_brand_id = response['brands'][0]['id']
+        self.log(f"✅ Using searcher's brand ID for workflow: {searcher_brand_id}")
         
         # Test adding a note
         success, response = self.run_test(
             "Add Brand Note",
             "POST",
-            f"brands/{self.test_brand_id}/note",
+            f"brands/{searcher_brand_id}/note",
             200,
             data={
                 "note_text": "Test note from automated testing",
@@ -367,7 +384,7 @@ class PROCTO13APITester:
         success, response = self.run_test(
             "Complete Stage (Valid Transition)",
             "POST",
-            f"brands/{self.test_brand_id}/stage",
+            f"brands/{searcher_brand_id}/stage",
             200,
             data={
                 "stage": "EMAIL_1_DONE",
