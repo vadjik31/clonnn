@@ -4162,7 +4162,7 @@ async def update_sub_supplier_stage(sub_supplier_id: str, req: StageCompleteRequ
             "sub_supplier_id": sub_supplier_id,
             "user_id": user["id"],
             "note_text": req.note_text,
-            "note_type": NoteType.STAGE_CHANGE,
+            "note_type": NoteType.STAGE_DONE,
             "created_at": now
         }
         await db.sub_supplier_notes.insert_one(note)
