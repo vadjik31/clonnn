@@ -345,31 +345,28 @@ const InfoRow = ({ icon: Icon, label, value, valueColor = "text-[#E6E6E6]" }) =>
 );
 
 // Stage Modal for Sub-Supplier
-const StageModal = ({ open, onClose, subSupplierId, currentStage, onSuccess }) => {
+const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
   const [stage, setStage] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
   const stages = [
-    { value: "review", label: "Изучение" },
-    { value: "letter_1", label: "Письмо 1" },
-    { value: "letter_2", label: "Письмо 2" },
-    { value: "letter_3", label: "Письмо 3" },
-    { value: "call", label: "Звонок" },
-    { value: "negotiation", label: "Переговоры" },
-    { value: "completed", label: "Завершено" },
+    { value: "EMAIL_1_DONE", label: "1️⃣ Письмо 1" },
+    { value: "EMAIL_2_DONE", label: "2️⃣ Письмо 2" },
+    { value: "MULTI_CHANNEL_DONE", label: "📱 Соцсети" },
+    { value: "CALL_OR_PUSH_RECOMMENDED", label: "📞 Звонок" },
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!stage) return;
+    if (!stage || !note.trim()) {
+      toast.error("Заполните все поля");
+      return;
+    }
     setLoading(true);
     try {
-      await api.post(`/sub-suppliers/${subSupplierId}/stage`, {
-        stage: stage,
-        note_text: note || "Этап обновлён"
-      });
-      toast.success("Этап обновлён");
+      await api.post(`/sub-suppliers/${subSupplierId}/stage`, { stage, note_text: note });
+      toast.success("Этап завершён");
       onSuccess();
       onClose();
       setStage("");
@@ -383,40 +380,41 @@ const StageModal = ({ open, onClose, subSupplierId, currentStage, onSuccess }) =
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
         <DialogHeader>
           <DialogTitle className="font-mono uppercase tracking-wider">Этап выполнен</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Новый этап</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {stages.map((s) => (
-                <Button
-                  key={s.value}
-                  type="button"
-                  variant={stage === s.value ? "default" : "outline"}
-                  onClick={() => setStage(s.value)}
-                  className={stage === s.value ? "bg-[#FF9900] text-black" : "border-[#2A2F3A]"}
-                >
-                  {s.label}
-                </Button>
-              ))}
-            </div>
+            <Label className="text-[#94A3B8]">Этап</Label>
+            <Select value={stage} onValueChange={setStage}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]" data-testid="stage-select">
+                <SelectValue placeholder="Выберите этап" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                {stages.map(s => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
-            <Label>Заметка</Label>
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="bg-[#0F1115] border-[#2A2F3A]"
-              placeholder="Что было сделано..."
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Опишите результат..."
+              required
+              data-testid="stage-note"
             />
           </div>
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
-            <Button type="submit" disabled={loading || !stage} className="bg-[#FF9900] text-black">
-              {loading ? "..." : "Сохранить"}
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-stage">
+              {loading ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>
         </form>
