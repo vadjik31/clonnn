@@ -428,8 +428,8 @@ class PROCTO13APITester:
         """Test specific security fixes mentioned in the request"""
         self.log("=== TESTING SECURITY FIXES ===")
         
-        if not self.searcher_token or not self.test_brand_id:
-            self.log("❌ Missing searcher token or brand ID")
+        if not self.searcher_token:
+            self.log("❌ Missing searcher token")
             return False
         
         # Test 1: Return reasons reference (закрывает дыру #33)
@@ -463,11 +463,26 @@ class PROCTO13APITester:
         if not success:
             return False
         
-        # Test 3: Invalid stage transition (should fail)
+        # Test 3: Get searcher's brand for testing invalid transition
+        success, response = self.run_test(
+            "Get Searcher Brands for Security Test",
+            "GET",
+            "brands",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success or not response.get('brands'):
+            self.log("❌ No searcher brands available for security testing")
+            return False
+        
+        searcher_brand_id = response['brands'][0]['id']
+        
+        # Test 4: Invalid stage transition (should fail)
         success, response = self.run_test(
             "Invalid Stage Transition",
             "POST",
-            f"brands/{self.test_brand_id}/stage",
+            f"brands/{searcher_brand_id}/stage",
             400,  # Should fail with 400
             data={
                 "stage": "CLOSED",  # Invalid transition from REVIEW
@@ -480,11 +495,11 @@ class PROCTO13APITester:
             self.log("❌ Invalid stage transition was allowed (security hole)")
             return False
         
-        # Test 4: Return brand with reason code (закрывает дыру #33)
+        # Test 5: Return brand with reason code (закрывает дыру #33)
         success, response = self.run_test(
             "Return Brand with Reason Code",
             "POST",
-            f"brands/{self.test_brand_id}/return",
+            f"brands/{searcher_brand_id}/return",
             200,
             data={
                 "reason_code": "invalid_brand",
@@ -496,7 +511,7 @@ class PROCTO13APITester:
         if not success:
             return False
         
-        # Test 5: Outcome with required fields (закрывает дыры #12, #45)
+        # Test 6: Outcome with required fields (закрывает дыры #12, #45)
         # First need to claim a new brand and complete some stages
         claim_success, claim_response = self.run_test(
             "Claim New Brand for Outcome Test",
