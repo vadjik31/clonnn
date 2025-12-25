@@ -231,12 +231,48 @@ const SubSuppliersPage = () => {
       return;
     }
 
-    // TODO: Implement bulk actions for sub-suppliers
-    toast.info("Массовые операции для под-сапплаеров в разработке");
-    setBulkModal({ open: false, action: null });
-    setSelectedItems(new Set());
-    setSelectAllPages(false);
-    setAllItemIds([]);
+    try {
+      switch (action) {
+        case "release":
+          await api.post("/sub-suppliers/bulk-release", {
+            sub_supplier_ids: itemIds,
+            reason: params.reason || "Массовый сброс в пул"
+          });
+          toast.success(`${itemIds.length} под-сапплаеров освобождено`);
+          break;
+        case "archive":
+          await api.post("/sub-suppliers/bulk-archive", {
+            sub_supplier_ids: itemIds,
+            reason: params.reason
+          });
+          toast.success(`${itemIds.length} под-сапплаеров в архив`);
+          break;
+        case "assign":
+          await api.post(`/sub-suppliers/bulk-assign?user_id=${params.userId}`, {
+            sub_supplier_ids: itemIds,
+            reason: params.reason
+          });
+          toast.success(`${itemIds.length} под-сапплаеров назначено`);
+          break;
+        case "blacklist":
+          // Для под-сапплаеров blacklist = удаление (они не основные сущности)
+          if (!window.confirm(`Удалить ${itemIds.length} под-сапплаеров? Это действие нельзя отменить!`)) {
+            return;
+          }
+          await api.delete("/sub-suppliers/bulk-delete", {
+            data: { sub_supplier_ids: itemIds, reason: params.reason }
+          });
+          toast.success(`${itemIds.length} под-сапплаеров удалено`);
+          break;
+      }
+      setBulkModal({ open: false, action: null });
+      setSelectedItems(new Set());
+      setSelectAllPages(false);
+      setAllItemIds([]);
+      fetchSubSuppliers();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка массовой операции");
+    }
   };
 
   const isAdmin = user?.role === "super_admin" || user?.role === "admin";
