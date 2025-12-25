@@ -629,6 +629,12 @@ const BrandDetailPage = () => {
         brandId={brandId}
         onSuccess={fetchBrand}
       />
+      <SubSupplierModal
+        open={subSupplierModal}
+        onClose={() => setSubSupplierModal(false)}
+        brandId={brandId}
+        onSuccess={() => { fetchSubSuppliers(); }}
+      />
     </div>
   );
 };
