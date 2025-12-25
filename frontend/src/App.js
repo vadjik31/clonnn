@@ -10,6 +10,7 @@ import UsersPage from "./pages/UsersPage";
 import ImportPage from "./pages/ImportPage";
 import BrandsPage from "./pages/BrandsPage";
 import BrandDetailPage from "./pages/BrandDetailPage";
+import SubSupplierDetailPage from "./pages/SubSupplierDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import MyBrandsPage from "./pages/MyBrandsPage";
 import ProblematicPage from "./pages/ProblematicPage";
