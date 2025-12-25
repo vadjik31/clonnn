@@ -4210,7 +4210,7 @@ async def sub_supplier_replied(sub_supplier_id: str, req: RepliedStatusRequest, 
         "sub_supplier_id": sub_supplier_id,
         "user_id": user["id"],
         "note_text": req.note_text,
-        "note_type": NoteType.CONTACT,
+        "note_type": NoteType.STATUS_CHANGE,
         "created_at": now.isoformat()
     }
     await db.sub_supplier_notes.insert_one(note)
