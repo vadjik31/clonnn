@@ -447,6 +447,25 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 };
 
 // Stage Badge Component
+const StageBadge = ({ stage }) => {
+  const stageConfig = {
+    "EMAIL_1_PENDING": { label: "📧 Письмо 1", color: "bg-blue-500/20 text-blue-400" },
+    "EMAIL_1_DONE": { label: "✅ Письмо 1", color: "bg-green-500/20 text-green-400" },
+    "EMAIL_2_PENDING": { label: "📧 Письмо 2", color: "bg-blue-500/20 text-blue-400" },
+    "EMAIL_2_DONE": { label: "✅ Письмо 2", color: "bg-green-500/20 text-green-400" },
+    "MULTI_CHANNEL_PENDING": { label: "📱 Соцсети", color: "bg-purple-500/20 text-purple-400" },
+    "MULTI_CHANNEL_DONE": { label: "✅ Соцсети", color: "bg-green-500/20 text-green-400" },
+    "CALL_OR_PUSH_RECOMMENDED": { label: "📞 Звонок", color: "bg-orange-500/20 text-orange-400" },
+  };
+
+  const config = stageConfig[stage] || { label: stage || "—", color: "bg-gray-500/20 text-gray-400" };
+
+  return (
+    <span className={`px-2 py-1 rounded text-xs font-mono ${config.color}`}>
+      {config.label}
+    </span>
+  );
+};
 
 
 // Replied Modal for Sub-Supplier
