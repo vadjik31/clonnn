@@ -691,7 +691,28 @@ const ImportsTab = ({ imports, onDelete }) => {
   );
 };
 
-const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, onBulkDelete, onBulkRestore, page, total, pages, onPageChange, onSelectAll, selectingAll }) => {
+const ArchivedTab = ({ 
+  brands, 
+  subSuppliers = [], 
+  onRestore, 
+  onDelete, 
+  onRestoreSS, 
+  onDeleteSS, 
+  selected, 
+  selectedSS = new Set(), 
+  onSelectChange, 
+  onSelectChangeSS, 
+  onBulkDelete, 
+  onBulkRestore, 
+  onBulkDeleteSS, 
+  onBulkRestoreSS, 
+  page, 
+  total, 
+  pages, 
+  onPageChange, 
+  onSelectAll, 
+  selectingAll 
+}) => {
   const toggleSelect = (id) => {
     const newSelected = new Set(selected);
     if (newSelected.has(id)) {
@@ -702,6 +723,16 @@ const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, on
     onSelectChange(newSelected);
   };
 
+  const toggleSelectSS = (id) => {
+    const newSelected = new Set(selectedSS);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    onSelectChangeSS(newSelected);
+  };
+
   const toggleSelectAllOnPage = () => {
     if (selected.size === brands.length) {
       onSelectChange(new Set());
@@ -710,91 +741,189 @@ const ArchivedTab = ({ brands, onRestore, onDelete, selected, onSelectChange, on
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
-          <Archive size={18} className="text-yellow-400" />
-          Архив ({total})
-        </h3>
-        {selected.size > 0 && (
-          <div className="flex gap-2">
-            <Button size="sm" className="btn-secondary" onClick={onBulkRestore}>
-              <RotateCcw size={14} className="mr-1" />
-              Восстановить ({selected.size})
-            </Button>
-            <Button size="sm" variant="destructive" onClick={onBulkDelete}>
-              <Trash2 size={14} className="mr-1" />
-              Удалить ({selected.size})
-            </Button>
-          </div>
-        )}
-      </div>
+  const toggleSelectAllSS = () => {
+    if (selectedSS.size === subSuppliers.length) {
+      onSelectChangeSS(new Set());
+    } else {
+      onSelectChangeSS(new Set(subSuppliers.map(s => s.id)));
+    }
+  };
 
-      {total > 0 && (
-        <div className="flex items-center gap-4 text-xs text-[#94A3B8]">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={selected.size === brands.length && brands.length > 0}
-              onChange={toggleSelectAllOnPage}
-              className="rounded border-[#2A2F3A]"
-            />
-            <span>Выбрать на странице</span>
-          </label>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={onSelectAll}
-            disabled={selectingAll}
-            className="text-xs border-[#2A2F3A] text-[#94A3B8] hover:text-[#FF9900]"
-          >
-            {selectingAll ? "Загрузка..." : `Выбрать все ${total}`}
-          </Button>
+  return (
+    <div className="space-y-6">
+      {/* Brands Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
+            <Archive size={18} className="text-yellow-400" />
+            Бренды в архиве ({total})
+          </h3>
           {selected.size > 0 && (
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => onSelectChange(new Set())}
-              className="text-xs text-[#94A3B8]"
-            >
-              Сбросить
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" className="btn-secondary" onClick={onBulkRestore}>
+                <RotateCcw size={14} className="mr-1" />
+                Восстановить ({selected.size})
+              </Button>
+              <Button size="sm" variant="destructive" onClick={onBulkDelete}>
+                <Trash2 size={14} className="mr-1" />
+                Удалить ({selected.size})
+              </Button>
+            </div>
           )}
         </div>
-      )}
 
-      <div className="space-y-2 max-h-[400px] overflow-y-auto">
-        {brands.map(b => (
-          <div key={b.id} className="p-3 bg-[#0F1115] rounded-[2px] flex justify-between items-center">
-            <div className="flex items-center gap-3">
+        {total > 0 && (
+          <div className="flex items-center gap-4 text-xs text-[#94A3B8]">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={selected.has(b.id)}
-                onChange={() => toggleSelect(b.id)}
+                checked={selected.size === brands.length && brands.length > 0}
+                onChange={toggleSelectAllOnPage}
                 className="rounded border-[#2A2F3A]"
               />
-              <div>
-                <p className="text-[#E6E6E6]">{b.name_original}</p>
-                <p className="text-xs text-[#94A3B8]">
-                  {b.archive_reason || "Нет причины"} • {b.archived_at ? new Date(b.archived_at).toLocaleDateString('ru-RU') : "—"}
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button size="sm" className="btn-secondary" onClick={() => onRestore(b.id)}>
-                <RotateCcw size={14} className="mr-1" />
-                В пул
+              <span>Выбрать на странице</span>
+            </label>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={onSelectAll}
+              disabled={selectingAll}
+              className="text-xs border-[#2A2F3A] text-[#94A3B8] hover:text-[#FF9900]"
+            >
+              {selectingAll ? "Загрузка..." : `Выбрать все ${total}`}
+            </Button>
+            {selected.size > 0 && (
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => onSelectChange(new Set())}
+                className="text-xs text-[#94A3B8]"
+              >
+                Сбросить
               </Button>
-              <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => onDelete(b.id, b.name_original)}>
-                <Trash2 size={14} />
-              </Button>
-            </div>
+            )}
           </div>
-        ))}
+        )}
+
+        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          {brands.length === 0 ? (
+            <p className="text-[#94A3B8] text-sm py-4 text-center">Нет брендов в архиве</p>
+          ) : (
+            brands.map(b => (
+              <div key={b.id} className="p-3 bg-[#0F1115] rounded-[2px] flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(b.id)}
+                    onChange={() => toggleSelect(b.id)}
+                    className="rounded border-[#2A2F3A]"
+                  />
+                  <div>
+                    <p className="text-[#E6E6E6]">{b.name_original}</p>
+                    <p className="text-xs text-[#94A3B8]">
+                      {b.archive_reason || "Нет причины"} • {b.archived_at ? new Date(b.archived_at).toLocaleDateString('ru-RU') : "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="btn-secondary" onClick={() => onRestore(b.id)}>
+                    <RotateCcw size={14} className="mr-1" />
+                    В пул
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => onDelete(b.id, b.name_original)}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        
+        <Pagination page={page} pages={pages} total={total} onPageChange={onPageChange} />
       </div>
-      
-      <Pagination page={page} pages={pages} total={total} onPageChange={onPageChange} />
+
+      {/* Sub-Suppliers Section */}
+      <div className="space-y-4 pt-4 border-t border-[#2A2F3A]">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
+            <Archive size={18} className="text-orange-400" />
+            Под-сапплаеры в архиве ({subSuppliers.length})
+          </h3>
+          {selectedSS.size > 0 && (
+            <div className="flex gap-2">
+              <Button size="sm" className="btn-secondary" onClick={onBulkRestoreSS}>
+                <RotateCcw size={14} className="mr-1" />
+                Восстановить ({selectedSS.size})
+              </Button>
+              <Button size="sm" variant="destructive" onClick={onBulkDeleteSS}>
+                <Trash2 size={14} className="mr-1" />
+                Удалить ({selectedSS.size})
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {subSuppliers.length > 0 && (
+          <div className="flex items-center gap-4 text-xs text-[#94A3B8]">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedSS.size === subSuppliers.length && subSuppliers.length > 0}
+                onChange={toggleSelectAllSS}
+                className="rounded border-[#2A2F3A]"
+              />
+              <span>Выбрать все</span>
+            </label>
+            {selectedSS.size > 0 && (
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => onSelectChangeSS(new Set())}
+                className="text-xs text-[#94A3B8]"
+              >
+                Сбросить
+              </Button>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          {subSuppliers.length === 0 ? (
+            <p className="text-[#94A3B8] text-sm py-4 text-center">Нет под-сапплаеров в архиве</p>
+          ) : (
+            subSuppliers.map(ss => (
+              <div key={ss.id} className="p-3 bg-[#0F1115] rounded-[2px] flex justify-between items-center border-l-2 border-orange-500/50">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedSS.has(ss.id)}
+                    onChange={() => toggleSelectSS(ss.id)}
+                    className="rounded border-[#2A2F3A]"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF9900] text-xs">↳</span>
+                      <p className="text-[#E6E6E6]">{ss.name}</p>
+                    </div>
+                    <p className="text-xs text-[#94A3B8]">
+                      Родитель: {ss.parent_brand_name} • {ss.archived_at ? new Date(ss.archived_at).toLocaleDateString('ru-RU') : "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="btn-secondary" onClick={() => onRestoreSS(ss.id)}>
+                    <RotateCcw size={14} className="mr-1" />
+                    В пул
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => onDeleteSS(ss.id, ss.name)}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 };
