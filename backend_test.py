@@ -542,7 +542,7 @@ class PROCTO13APITester:
                     "Outcome Without Required Fields",
                     "POST",
                     f"brands/{outcome_brand_id}/outcome",
-                    400,  # Should fail
+                    422,  # Should fail with 422 (validation error)
                     data={
                         "outcome": "OUTCOME_APPROVED",
                         "note_text": "Testing outcome without required fields"
