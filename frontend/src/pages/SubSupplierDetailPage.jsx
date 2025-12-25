@@ -9,7 +9,7 @@ import {
   Clock, 
   MessageSquare,
   CheckCircle,
-  XCircle,
+
   Reply,
   AlertTriangle,
   PauseCircle,
