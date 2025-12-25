@@ -1,96 +1,53 @@
 {
-  "timestamp": "2025-12-25T17:34:30.887405",
+  "timestamp": "2025-12-25T17:35:00.083326",
   "base_url": "https://brand-pipeline-2.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:30.965516"
+      "timestamp": "2025-12-25T17:35:00.161535"
     },
     "super_admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:31.007322"
+      "timestamp": "2025-12-25T17:35:00.209302"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:31.041816"
+      "timestamp": "2025-12-25T17:35:00.251411"
     },
     "searcher_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:31.078793"
+      "timestamp": "2025-12-25T17:35:00.292021"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:31.120015"
+      "timestamp": "2025-12-25T17:35:00.333293"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:31.194574"
+      "timestamp": "2025-12-25T17:35:00.411395"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:31.566355"
+      "timestamp": "2025-12-25T17:35:00.812952"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:31.771103"
+      "timestamp": "2025-12-25T17:35:01.136726"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-25T17:34:33.100932"
+      "timestamp": "2025-12-25T17:35:01.219934"
     },
     "brand_workflow": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:33.329099"
-    },
-    "security_fixes": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:34.462250"
-    },
-    "references_endpoints": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:34.530658"
-    },
-    "dashboard_alerts": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:34.571841"
-    },
-    "brands_health_score": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:34.724047"
-    },
-    "sub_suppliers_api": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:35.105277"
-    },
-    "sub_suppliers_bulk_operations": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:35.331833"
-    },
-    "super_admin_endpoints": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:35.514969"
-    },
-    "admin_bulk_operations": {
-      "passed": true,
-      "timestamp": "2025-12-25T17:34:35.674229"
-    },
-    "searcher_specific_endpoints": {
       "passed": false,
-      "timestamp": "2025-12-25T17:34:35.711289"
+      "timestamp": "2025-12-25T17:35:01.262139"
     }
   },
   "summary": {
-    "total_tests": 53,
-    "passed_tests": 52,
-    "failed_tests": 1,
-    "success_rate": 98.11320754716981
+    "total_tests": 13,
+    "passed_tests": 13,
+    "failed_tests": 0,
+    "success_rate": 100.0
   },
-  "failed_tests": [
-    {
-      "test": "Searcher My Brands",
-      "expected": 200,
-      "actual": 404,
-      "response": "{\"detail\":\"Not Found\"}"
-    }
-  ]
+  "failed_tests": []
 }
