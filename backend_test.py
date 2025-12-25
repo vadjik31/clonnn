@@ -277,7 +277,7 @@ class PROCTO13APITester:
             "import/excel",
             200,
             files=files,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if success and 'stats' in response:
