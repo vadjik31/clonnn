@@ -1141,6 +1141,7 @@ class PROCTO13APITester:
         # Run tests in order
         tests = [
             ("init_admin", self.test_init_admin),
+            ("super_admin_login", self.test_super_admin_login),
             ("admin_login", self.test_admin_login),
             ("searcher_login", self.test_searcher_login),
             ("admin_dashboard", self.test_admin_dashboard),
@@ -1154,6 +1155,10 @@ class PROCTO13APITester:
             ("dashboard_alerts", self.test_dashboard_alerts),
             ("brands_health_score", self.test_brands_health_score),
             ("sub_suppliers_api", self.test_sub_suppliers_api),
+            ("sub_suppliers_bulk_operations", self.test_sub_suppliers_bulk_operations),
+            ("super_admin_endpoints", self.test_super_admin_endpoints),
+            ("admin_bulk_operations", self.test_admin_bulk_operations),
+            ("searcher_specific_endpoints", self.test_searcher_specific_endpoints),
             ("authentication_security", self.test_authentication_security)
         ]
         
