@@ -94,6 +94,26 @@ STAGE_TRANSITIONS = {
     PipelineStage.CLOSED: []  # Нельзя переходить из CLOSED
 }
 
+# Нормализация legacy-значений этапов (ранние версии саб-сапплаеров использовали другие ключи)
+LEGACY_PIPELINE_STAGE_MAP = {
+    "review": PipelineStage.REVIEW,
+    "letter_1": PipelineStage.EMAIL_1_DONE,
+    "letter_2": PipelineStage.EMAIL_2_DONE,
+    "letter_3": PipelineStage.EMAIL_2_DONE,
+    "call": PipelineStage.CALL_OR_PUSH_RECOMMENDED,
+    "negotiation": PipelineStage.CALL_OR_PUSH_RECOMMENDED,
+    "completed": PipelineStage.CLOSED,
+    "closed": PipelineStage.CLOSED,
+}
+
+def normalize_pipeline_stage(stage: Optional[str]) -> str:
+    if not stage:
+        return PipelineStage.REVIEW
+    if stage in STAGE_TRANSITIONS:
+        return stage
+    mapped = LEGACY_PIPELINE_STAGE_MAP.get(stage)
+    return mapped or stage
+
 # Справочники причин (закрывает дыру #33)
 class ReturnReason:
     INVALID_BRAND = "invalid_brand"           # Не бренд
@@ -4072,6 +4092,9 @@ async def get_sub_supplier_detail(sub_supplier_id: str, user: dict = Depends(get
     ss["priority_score"] = brand["priority_score"]
     ss["is_sub_supplier"] = True
     
+    # Нормализуем этап (чтобы UI всегда видел те же значения, что и у брендов)
+    ss["pipeline_stage"] = normalize_pipeline_stage(ss.get("pipeline_stage"))
+
     # Items от родительского бренда
     items = await db.brand_items.find({"brand_id": ss["parent_brand_id"]}, {"_id": 0}).to_list(10)
     ss["items_count"] = await db.brand_items.count_documents({"brand_id": ss["parent_brand_id"]})
@@ -4150,19 +4173,21 @@ async def update_sub_supplier_stage(sub_supplier_id: str, req: StageCompleteRequ
 
     
     # Валидация перехода этапов (как у бренда)
-    current_stage = ss.get("pipeline_stage", PipelineStage.REVIEW)
+    current_stage = normalize_pipeline_stage(ss.get("pipeline_stage", PipelineStage.REVIEW))
+    requested_stage = normalize_pipeline_stage(req.stage)
+
     allowed_transitions = STAGE_TRANSITIONS.get(current_stage, [])
-    if req.stage not in allowed_transitions:
+    if requested_stage not in allowed_transitions:
         raise HTTPException(
             status_code=400,
             detail=f"Недопустимый переход: {current_stage} → {req.stage}. Разрешены: {allowed_transitions}"
         )
 
     settings = await get_settings()
-    next_dt = calculate_next_action(req.stage, settings)
+    next_dt = calculate_next_action(requested_stage, settings)
 
     await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
-        "pipeline_stage": req.stage,
+        "pipeline_stage": requested_stage,
         "status": BrandStatus.IN_WORK,
         "last_action_at": now,
         "next_action_at": next_dt.isoformat() if next_dt else None,
