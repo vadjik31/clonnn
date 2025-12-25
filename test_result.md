@@ -401,7 +401,7 @@ current_agent_communication:
 ui_parity_task:
   - task: "SubSupplierDetailPage parity with BrandDetailPage"
     implemented: true
-    working: "pending_testing"
+    working: true
     files:
       - "/app/frontend/src/pages/SubSupplierDetailPage.jsx"
       - "/app/backend/server.py"
@@ -409,6 +409,35 @@ ui_parity_task:
       - "Убраны лишние этапы (например 'Переговоры'), приведены к тем же этапам и визуальным бейджам, что у бренда"
       - "Приведены модалки Replied/No response/On hold/Problematic/Return/Note к тем же полям/лейблам/цветам, что у бренда"
       - "Добавлен backend endpoint POST /api/sub-suppliers/{id}/return и обновлена логика problematic + валидация этапов"
-    testing_required:
-      - method: "Playwright (frontend testing subagent)"
+    testing_completed:
+      - method: "Playwright UI testing"
         scope: "BrandDetailPage + SubSupplierDetailPage: бейджи статусов/этапов, модалки, смена статуса/этапа"
+        results: "PASSED - UI parity verified between BrandDetailPage and SubSupplierDetailPage"
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: |
+          UI PARITY TEST COMPLETED SUCCESSFULLY:
+          
+          ✅ VERIFIED COMPONENTS:
+          1. StatusBadge - Same visual styling and status labels between brand and sub-supplier pages
+          2. StageBadge - Identical stage progression and visual representation
+          3. Action Buttons - All 6 buttons present: Этап выполнен, Ответил, Нет ответа, На паузу, Проблемный, Очистить
+          4. Stage Options - Same 4 stages available: 1️⃣ Письмо 1, 2️⃣ Письмо 2, 📱 Соцсети, 📞 Звонок
+          5. Modal Fields - Проблемный modal has reason select + optional review date + note; Очистить modal has reason select + note
+          
+          ✅ CRITICAL REQUIREMENTS MET:
+          - No forbidden "Переговоры" stage found in sub-supplier
+          - All modals have same field structure and validation
+          - Visual styling and colors consistent between pages
+          - Same functional behavior for status/stage changes
+          
+          ✅ TESTED SCENARIOS:
+          - Login as searcher@procto13.com
+          - Navigate to brand "Old World Christmas" 
+          - Verified brand detail page StatusBadge, StageBadge, action buttons
+          - Accessed sub-supplier from brand page
+          - Verified sub-supplier detail page has identical UI components
+          - Tested modal functionality and field validation
+          
+          CONCLUSION: 100% UI/UX parity achieved between BrandDetailPage and SubSupplierDetailPage
