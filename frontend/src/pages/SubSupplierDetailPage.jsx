@@ -425,6 +425,24 @@ const StageModal = ({ open, onClose, subSupplierId, currentStage, onSuccess }) =
   );
 };
 
+// Stage Badge Component
+const StageBadge = ({ stage }) => {
+  const stageConfig = {
+    REVIEW: { label: "🔍 Изучение", color: "bg-gray-800 text-gray-400 border-gray-700" },
+    EMAIL_1_DONE: { label: "1️⃣ Письмо 1", color: "bg-blue-900/20 text-blue-400 border-blue-800" },
+    EMAIL_2_DONE: { label: "2️⃣ Письмо 2", color: "bg-indigo-900/20 text-indigo-400 border-indigo-800" },
+    MULTI_CHANNEL_DONE: { label: "📱 Соцсети", color: "bg-purple-900/20 text-purple-400 border-purple-800" },
+    CALL_OR_PUSH_RECOMMENDED: { label: "📞 Звонок", color: "bg-orange-900/20 text-orange-400 border-orange-800" },
+    CLOSED: { label: "✅ Закрыт", color: "bg-green-900/20 text-green-400 border-green-800" },
+  };
+  const config = stageConfig[stage] || { label: stage, color: "bg-gray-800 text-gray-400" };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
+      {config.label}
+    </span>
+  );
+};
+
 // Replied Modal for Sub-Supplier
 const RepliedModal = ({ open, onClose, subSupplierId, onSuccess }) => {
   const [subStatus, setSubStatus] = useState("");
