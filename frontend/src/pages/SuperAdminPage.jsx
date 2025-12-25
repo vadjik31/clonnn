@@ -47,11 +47,13 @@ const SuperAdminPage = () => {
   const [imports, setImports] = useState([]);
   const [settings, setSettings] = useState(null);
   const [archivedBrands, setArchivedBrands] = useState([]);
+  const [archivedSubSuppliers, setArchivedSubSuppliers] = useState([]);
   const [blacklistedBrands, setBlacklistedBrands] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userActivity, setUserActivity] = useState(null);
   const [searchers, setSearchers] = useState([]);
   const [selectedArchived, setSelectedArchived] = useState(new Set());
+  const [selectedArchivedSS, setSelectedArchivedSS] = useState(new Set());
   const [selectedBlacklisted, setSelectedBlacklisted] = useState(new Set());
   const [selectingAllArchived, setSelectingAllArchived] = useState(false);
   
