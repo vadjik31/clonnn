@@ -125,6 +125,11 @@ const SuperAdminPage = () => {
       setArchiveTotal(res.data.total || 0);
       setArchivePages(res.data.pages || 0);
       setSelectedArchived(new Set());
+      
+      // Также загружаем архивных под-сапплаеров
+      const ssRes = await api.get("/sub-suppliers?status=ARCHIVED&include_archived=true&limit=100");
+      setArchivedSubSuppliers(ssRes.data.sub_suppliers || []);
+      setSelectedArchivedSS(new Set());
     } catch (error) {
       if (error.name !== 'AbortError' && error.name !== 'CanceledError') {
         toast.error("Ошибка загрузки архива");
