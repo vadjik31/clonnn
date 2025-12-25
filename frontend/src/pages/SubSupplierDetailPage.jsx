@@ -347,6 +347,7 @@ const InfoRow = ({ icon: Icon, label, value, valueColor = "text-[#E6E6E6]" }) =>
 const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
   const [stage, setStage] = useState("");
   const [note, setNote] = useState("");
+  const [channel, setChannel] = useState("");
   const [loading, setLoading] = useState(false);
 
   const stages = [
@@ -354,6 +355,15 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
     { value: "EMAIL_2_DONE", label: "2️⃣ Письмо 2" },
     { value: "MULTI_CHANNEL_DONE", label: "📱 Соцсети" },
     { value: "CALL_OR_PUSH_RECOMMENDED", label: "📞 Звонок" },
+  ];
+
+  const channels = [
+    { value: "email", label: "Email" },
+    { value: "phone", label: "Телефон" },
+    { value: "social_media", label: "Соцсети" },
+    { value: "website_form", label: "Форма на сайте" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "other", label: "Другое" },
   ];
 
   const handleSubmit = async (e) => {
