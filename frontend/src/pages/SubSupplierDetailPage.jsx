@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { 
   ArrowLeft, 
   Globe, 
-  Users, 
+
   Clock, 
   MessageSquare,
   CheckCircle,
