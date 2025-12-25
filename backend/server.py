@@ -4106,6 +4106,134 @@ async def get_sub_supplier_ids(
     
     return {"ids": ids, "total": len(ids)}
 
+
+# ============== BULK OPERATIONS FOR SUB-SUPPLIERS ==============
+
+class BulkSubSupplierRequest(BaseModel):
+    sub_supplier_ids: List[str]
+    reason: Optional[str] = None
+
+
+@api_router.post("/sub-suppliers/bulk-release")
+async def bulk_release_sub_suppliers(req: BulkSubSupplierRequest, user: dict = Depends(get_current_user)):
+    """Массовое освобождение под-сапплаеров (сброс в пул)"""
+    if user["role"] not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
+    if not req.sub_supplier_ids:
+        raise HTTPException(status_code=400, detail="Список ID пуст")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    updated_count = 0
+    
+    for ss_id in req.sub_supplier_ids:
+        result = await db.sub_suppliers.update_one(
+            {"id": ss_id},
+            {"$set": {
+                "status": BrandStatus.IN_POOL,
+                "assigned_to_user_id": None,
+                "assigned_at": None,
+                "updated_at": now
+            }}
+        )
+        if result.modified_count > 0:
+            updated_count += 1
+            await log_event("sub_supplier_bulk_release", user["id"], ss_id, {"reason": req.reason})
+    
+    return {"status": "success", "released_count": updated_count}
+
+
+@api_router.post("/sub-suppliers/bulk-assign")
+async def bulk_assign_sub_suppliers(req: BulkSubSupplierRequest, user_id: str = Query(...), user: dict = Depends(get_current_user)):
+    """Массовое назначение под-сапплаеров на сёрчера"""
+    if user["role"] not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
+    if not req.sub_supplier_ids:
+        raise HTTPException(status_code=400, detail="Список ID пуст")
+    
+    # Проверяем что целевой пользователь существует
+    target_user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    updated_count = 0
+    
+    for ss_id in req.sub_supplier_ids:
+        result = await db.sub_suppliers.update_one(
+            {"id": ss_id},
+            {"$set": {
+                "status": BrandStatus.ASSIGNED,
+                "assigned_to_user_id": user_id,
+                "assigned_at": now,
+                "updated_at": now
+            }}
+        )
+        if result.modified_count > 0:
+            updated_count += 1
+            await log_event("sub_supplier_bulk_assign", user["id"], ss_id, {
+                "assigned_to": user_id,
+                "reason": req.reason
+            })
+    
+    return {"status": "success", "assigned_count": updated_count}
+
+
+@api_router.delete("/sub-suppliers/bulk-delete")
+async def bulk_delete_sub_suppliers(req: BulkSubSupplierRequest, user: dict = Depends(get_current_user)):
+    """Массовое удаление под-сапплаеров"""
+    if user["role"] != "super_admin":
+        raise HTTPException(status_code=403, detail="Только для супер-админа")
+    
+    if not req.sub_supplier_ids:
+        raise HTTPException(status_code=400, detail="Список ID пуст")
+    
+    deleted_count = 0
+    
+    for ss_id in req.sub_supplier_ids:
+        # Удаляем заметки
+        await db.sub_supplier_notes.delete_many({"sub_supplier_id": ss_id})
+        # Удаляем контакты
+        await db.sub_supplier_contacts.delete_many({"sub_supplier_id": ss_id})
+        # Удаляем под-сапплаера
+        result = await db.sub_suppliers.delete_one({"id": ss_id})
+        if result.deleted_count > 0:
+            deleted_count += 1
+            await log_event("sub_supplier_bulk_delete", user["id"], ss_id, {"reason": req.reason})
+    
+    return {"status": "success", "deleted_count": deleted_count}
+
+
+@api_router.post("/sub-suppliers/bulk-archive")
+async def bulk_archive_sub_suppliers(req: BulkSubSupplierRequest, user: dict = Depends(get_current_user)):
+    """Массовая архивация под-сапплаеров"""
+    if user["role"] not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
+    if not req.sub_supplier_ids:
+        raise HTTPException(status_code=400, detail="Список ID пуст")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    archived_count = 0
+    
+    for ss_id in req.sub_supplier_ids:
+        result = await db.sub_suppliers.update_one(
+            {"id": ss_id},
+            {"$set": {
+                "status": BrandStatus.ARCHIVED,
+                "archived_at": now,
+                "archive_reason": req.reason or "Массовая архивация",
+                "updated_at": now
+            }}
+        )
+        if result.modified_count > 0:
+            archived_count += 1
+            await log_event("sub_supplier_bulk_archive", user["id"], ss_id, {"reason": req.reason})
+    
+    return {"status": "success", "archived_count": archived_count}
+
+
 @api_router.get("/sub-suppliers/{sub_supplier_id}")
 async def get_sub_supplier_detail(sub_supplier_id: str, user: dict = Depends(get_current_user)):
     """Получить детали под-сапплаера"""
