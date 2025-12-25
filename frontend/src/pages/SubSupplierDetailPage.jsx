@@ -368,7 +368,7 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!stage || !note.trim()) {
+    if (!stage || !note.trim() || !channel) {
       toast.error("Заполните все поля");
       return;
     }
