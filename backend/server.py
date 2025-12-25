@@ -4443,6 +4443,114 @@ async def add_sub_supplier_contact(sub_supplier_id: str, req: AddContactRequest,
     
     return {"status": "success", "contact_id": contact["id"]}
 
+# ============== ALL SUB-SUPPLIERS LIST ==============
+
+@api_router.get("/sub-suppliers")
+async def get_all_sub_suppliers(
+    status: Optional[str] = None,
+    pipeline_stage: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    search: Optional[str] = None,
+    overdue: Optional[bool] = False,
+    page: int = 1,
+    limit: int = 50,
+    user: dict = Depends(get_current_user)
+):
+    """Получить список всех под-сапплаеров с фильтрами"""
+    query = {}
+    
+    # Фильтр по статусу
+    if status:
+        query["status"] = status
+    
+    # Фильтр по этапу воронки
+    if pipeline_stage:
+        query["pipeline_stage"] = pipeline_stage
+    
+    # Фильтр по назначенному пользователю
+    if assigned_to:
+        query["assigned_to_user_id"] = assigned_to
+    
+    # Поиск по имени
+    if search:
+        query["name"] = {"$regex": search, "$options": "i"}
+    
+    # Фильтр просроченных
+    if overdue:
+        now = datetime.now(timezone.utc).isoformat()
+        query["next_action_at"] = {"$lt": now, "$ne": None}
+    
+    # Для searcher показываем только его суб-поставщиков
+    if user["role"] == "searcher":
+        query["assigned_to_user_id"] = user["id"]
+    
+    total = await db.sub_suppliers.count_documents(query)
+    skip = (page - 1) * limit
+    
+    sub_suppliers = await db.sub_suppliers.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Обогащаем данные
+    for ss in sub_suppliers:
+        ss["pipeline_stage"] = normalize_pipeline_stage(ss.get("pipeline_stage"))
+        ss["is_sub_supplier"] = True
+        
+        # Получаем родительский бренд
+        brand = await db.brands.find_one({"id": ss["parent_brand_id"]}, {"_id": 0, "name_original": 1, "priority_score": 1})
+        if brand:
+            ss["parent_brand_name"] = brand["name_original"]
+            ss["priority_score"] = brand.get("priority_score", 0)
+            ss["items_count"] = await db.brand_items.count_documents({"brand_id": ss["parent_brand_id"]})
+        else:
+            ss["parent_brand_name"] = "—"
+            ss["priority_score"] = 0
+            ss["items_count"] = 0
+        
+        # Никнеймы
+        if ss.get("assigned_to_user_id"):
+            assigned = await db.users.find_one({"id": ss["assigned_to_user_id"]}, {"nickname": 1})
+            ss["assigned_to_nickname"] = assigned["nickname"] if assigned else None
+        else:
+            ss["assigned_to_nickname"] = None
+        
+        creator = await db.users.find_one({"id": ss.get("created_by_user_id")}, {"nickname": 1})
+        ss["created_by_nickname"] = creator["nickname"] if creator else None
+    
+    return {
+        "sub_suppliers": sub_suppliers,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit if total > 0 else 1
+    }
+
+
+@api_router.get("/sub-suppliers/ids")
+async def get_sub_supplier_ids(
+    status: Optional[str] = None,
+    pipeline_stage: Optional[str] = None,
+    assigned_to: Optional[str] = None,
+    search: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Получить все ID суб-поставщиков для массовых операций"""
+    if user["role"] not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Недостаточно прав")
+    
+    query = {}
+    if status:
+        query["status"] = status
+    if pipeline_stage:
+        query["pipeline_stage"] = pipeline_stage
+    if assigned_to:
+        query["assigned_to_user_id"] = assigned_to
+    if search:
+        query["name"] = {"$regex": search, "$options": "i"}
+    
+    sub_suppliers = await db.sub_suppliers.find(query, {"id": 1, "_id": 0}).to_list(10000)
+    ids = [ss["id"] for ss in sub_suppliers]
+    
+    return {"ids": ids, "total": len(ids)}
+
+
 # ============== BASH FEATURE: BATCH MANAGEMENT ==============
 
 # Кастомные статусы товаров
