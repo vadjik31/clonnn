@@ -778,6 +778,7 @@ class PROCTO13APITester:
             ("references_endpoints", self.test_references_endpoints),
             ("dashboard_alerts", self.test_dashboard_alerts),
             ("brands_health_score", self.test_brands_health_score),
+            ("sub_suppliers_api", self.test_sub_suppliers_api),
             ("authentication_security", self.test_authentication_security)
         ]
         
