@@ -142,9 +142,7 @@ const SubSupplierDetailPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <StageBadge stage={ss.pipeline_stage} />
-        </div>
+
       </div>
 
       {/* Actions */}
