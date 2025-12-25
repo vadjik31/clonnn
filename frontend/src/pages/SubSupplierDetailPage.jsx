@@ -209,7 +209,12 @@ const SubSupplierDetailPage = () => {
             Информация
           </h3>
           <div className="space-y-4">
-            <InfoRow icon={Globe} label="Сайт" value={ss.website_url || "—"} />
+            <InfoRow 
+              icon={Clock} 
+              label="Этап воронки" 
+              value={<StageBadge stage={ss.pipeline_stage} />} 
+            />
+            <InfoRow icon={Globe} label="Сайт" value={ss.website_url || "Не указан"} />
             <InfoRow icon={Mail} label="Email" value={ss.contact_email || "—"} />
             <InfoRow icon={Phone} label="Телефон" value={ss.contact_phone || "—"} />
             <InfoRow icon={Package} label="Товаров" value={ss.items_count} />
@@ -347,7 +352,6 @@ const InfoRow = ({ icon: Icon, label, value, valueColor = "text-[#E6E6E6]" }) =>
 const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
   const [stage, setStage] = useState("");
   const [note, setNote] = useState("");
-  const [channel, setChannel] = useState("");
   const [loading, setLoading] = useState(false);
 
   const stages = [
@@ -357,24 +361,15 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
     { value: "CALL_OR_PUSH_RECOMMENDED", label: "📞 Звонок" },
   ];
 
-  const channels = [
-    { value: "email", label: "Email" },
-    { value: "phone", label: "Телефон" },
-    { value: "social_media", label: "Соцсети" },
-    { value: "website_form", label: "Форма на сайте" },
-    { value: "linkedin", label: "LinkedIn" },
-    { value: "other", label: "Другое" },
-  ];
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!stage || !note.trim() || !channel) {
+    if (!stage || !note.trim()) {
       toast.error("Заполните все поля");
       return;
     }
     setLoading(true);
     try {
-      await api.post(`/sub-suppliers/${subSupplierId}/stage`, { stage, note_text: note, channel });
+      await api.post(`/sub-suppliers/${subSupplierId}/stage`, { stage, note_text: note });
       toast.success("Этап завершён");
       onSuccess();
       onClose();
@@ -449,19 +444,16 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 // Stage Badge Component
 const StageBadge = ({ stage }) => {
   const stageConfig = {
-    "EMAIL_1_PENDING": { label: "📧 Письмо 1", color: "bg-blue-500/20 text-blue-400" },
-    "EMAIL_1_DONE": { label: "✅ Письмо 1", color: "bg-green-500/20 text-green-400" },
-    "EMAIL_2_PENDING": { label: "📧 Письмо 2", color: "bg-blue-500/20 text-blue-400" },
-    "EMAIL_2_DONE": { label: "✅ Письмо 2", color: "bg-green-500/20 text-green-400" },
-    "MULTI_CHANNEL_PENDING": { label: "📱 Соцсети", color: "bg-purple-500/20 text-purple-400" },
-    "MULTI_CHANNEL_DONE": { label: "✅ Соцсети", color: "bg-green-500/20 text-green-400" },
-    "CALL_OR_PUSH_RECOMMENDED": { label: "📞 Звонок", color: "bg-orange-500/20 text-orange-400" },
+    REVIEW: { label: "🔍 Изучение", color: "bg-gray-800 text-gray-400 border-gray-700" },
+    EMAIL_1_DONE: { label: "1️⃣ Письмо 1", color: "bg-blue-900/20 text-blue-400 border-blue-800" },
+    EMAIL_2_DONE: { label: "2️⃣ Письмо 2", color: "bg-indigo-900/20 text-indigo-400 border-indigo-800" },
+    MULTI_CHANNEL_DONE: { label: "📱 Соцсети", color: "bg-purple-900/20 text-purple-400 border-purple-800" },
+    CALL_OR_PUSH_RECOMMENDED: { label: "📞 Звонок", color: "bg-orange-900/20 text-orange-400 border-orange-800" },
+    CLOSED: { label: "✅ Закрыт", color: "bg-green-900/20 text-green-400 border-green-800" },
   };
-
-  const config = stageConfig[stage] || { label: stage || "—", color: "bg-gray-500/20 text-gray-400" };
-
+  const config = stageConfig[stage] || { label: stage, color: "bg-gray-800 text-gray-400" };
   return (
-    <span className={`px-2 py-1 rounded text-xs font-mono ${config.color}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
       {config.label}
     </span>
   );
