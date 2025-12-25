@@ -256,11 +256,14 @@ const MyBrandsPage = () => {
                     <tr 
                       key={brand.id} 
                       className={`table-row cursor-pointer ${isOverdue ? "bg-red-900/10" : isToday ? "bg-amber-900/10" : ""}`}
-                      onClick={() => navigate(`/brands/${brand.id}`)}
+                      onClick={() => navigate(brand.is_sub_supplier ? `/sub-suppliers/${brand.id}` : `/brands/${brand.id}`)}
                       data-testid={`brand-row-${brand.id}`}
                     >
-                      <td className="table-cell font-medium max-w-[200px] truncate" title={brand.name_original}>
-                        {brand.name_original}
+                      <td className="table-cell font-medium max-w-[200px] truncate" title={brand.name_original || brand.name}>
+                        <div className="flex items-center gap-1">
+                          {brand.is_sub_supplier && <span className="text-[#FF9900] text-xs">↳</span>}
+                          <span>{brand.is_sub_supplier ? brand.name : brand.name_original}</span>
+                        </div>
                       </td>
                       <td className="table-cell text-center font-mono text-[#FF9900] text-sm">{brand.priority_score}</td>
                       <td className="table-cell text-center font-mono text-sm">{brand.items_count}</td>
