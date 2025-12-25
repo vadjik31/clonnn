@@ -823,6 +823,310 @@ class PROCTO13APITester:
         
         return True
 
+    def test_sub_suppliers_bulk_operations(self) -> bool:
+        """Test NEW sub-suppliers bulk operations endpoints"""
+        self.log("=== TESTING SUB-SUPPLIERS BULK OPERATIONS (NEW) ===")
+        
+        if not self.super_admin_token:
+            self.log("❌ Missing super admin token for bulk operations testing")
+            return False
+        
+        # First, get some sub-supplier IDs to work with
+        success, response = self.run_test(
+            "Get Sub-Suppliers for Bulk Operations",
+            "GET",
+            "sub-suppliers/ids",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success or not response.get('ids'):
+            self.log("❌ No sub-supplier IDs available for bulk operations testing")
+            return False
+        
+        # Take first 2 IDs for testing (if available)
+        available_ids = response['ids'][:2]
+        if not available_ids:
+            self.log("❌ No sub-supplier IDs available")
+            return False
+        
+        self.log(f"✅ Using {len(available_ids)} sub-supplier IDs for bulk testing")
+        
+        # Test 1: POST /api/sub-suppliers/bulk-release
+        success, response = self.run_test(
+            "Bulk Release Sub-Suppliers",
+            "POST",
+            "sub-suppliers/bulk-release",
+            200,
+            data={
+                "sub_supplier_ids": available_ids,
+                "reason": "Testing bulk release functionality"
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 2: POST /api/sub-suppliers/bulk-assign?user_id=XXX
+        if self.searcher_user_id:
+            success, response = self.run_test(
+                "Bulk Assign Sub-Suppliers",
+                "POST",
+                f"sub-suppliers/bulk-assign?user_id={self.searcher_user_id}",
+                200,
+                data={
+                    "sub_supplier_ids": available_ids,
+                    "reason": "Testing bulk assignment functionality"
+                },
+                token=self.super_admin_token
+            )
+            
+            if not success:
+                return False
+        
+        # Test 3: POST /api/sub-suppliers/bulk-archive
+        success, response = self.run_test(
+            "Bulk Archive Sub-Suppliers",
+            "POST",
+            "sub-suppliers/bulk-archive",
+            200,
+            data={
+                "sub_supplier_ids": available_ids,
+                "reason": "Testing bulk archive functionality"
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 4: DELETE /api/sub-suppliers/bulk-delete (super_admin only)
+        success, response = self.run_test(
+            "Bulk Delete Sub-Suppliers (Super Admin)",
+            "DELETE",
+            "sub-suppliers/bulk-delete",
+            200,
+            data={
+                "sub_supplier_ids": available_ids,
+                "reason": "Testing bulk delete functionality"
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 5: Verify admin cannot bulk delete (should fail)
+        if self.admin_token:
+            success, response = self.run_test(
+                "Bulk Delete Sub-Suppliers (Admin - Should Fail)",
+                "DELETE",
+                "sub-suppliers/bulk-delete",
+                403,  # Should be forbidden
+                data={
+                    "sub_supplier_ids": available_ids,
+                    "reason": "Testing admin restriction"
+                },
+                token=self.admin_token
+            )
+            
+            if not success:
+                self.log("❌ Admin was allowed to bulk delete (security issue)")
+                return False
+        
+        return True
+
+    def test_super_admin_endpoints(self) -> bool:
+        """Test Super Admin specific endpoints"""
+        self.log("=== TESTING SUPER ADMIN ENDPOINTS ===")
+        
+        if not self.super_admin_token:
+            self.log("❌ Missing super admin token")
+            return False
+        
+        # Test 1: GET /api/super-admin/check-ins
+        success, response = self.run_test(
+            "Super Admin Check-ins",
+            "GET",
+            "super-admin/check-ins",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 2: GET /api/super-admin/imports
+        success, response = self.run_test(
+            "Super Admin Imports",
+            "GET",
+            "super-admin/imports",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 3: GET /api/super-admin/settings
+        success, response = self.run_test(
+            "Super Admin Settings",
+            "GET",
+            "super-admin/settings",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 4: GET /api/super-admin/archived-brands
+        success, response = self.run_test(
+            "Super Admin Archived Brands",
+            "GET",
+            "super-admin/archived-brands",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 5: GET /api/super-admin/blacklisted-brands
+        success, response = self.run_test(
+            "Super Admin Blacklisted Brands",
+            "GET",
+            "super-admin/blacklisted-brands",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        return True
+
+    def test_admin_bulk_operations(self) -> bool:
+        """Test Admin bulk operations for brands"""
+        self.log("=== TESTING ADMIN BULK OPERATIONS ===")
+        
+        if not self.admin_token:
+            self.log("❌ Missing admin token")
+            return False
+        
+        # Get some brand IDs for testing
+        success, response = self.run_test(
+            "Get Brand IDs for Bulk Operations",
+            "GET",
+            "brands/ids",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success or not response.get('ids'):
+            self.log("❌ No brand IDs available for bulk operations testing")
+            return False
+        
+        # Take first 2 IDs for testing
+        available_ids = response['ids'][:2]
+        if not available_ids:
+            self.log("❌ No brand IDs available")
+            return False
+        
+        # Test 1: POST /api/admin/brands/bulk-release
+        success, response = self.run_test(
+            "Admin Bulk Release Brands",
+            "POST",
+            "admin/brands/bulk-release",
+            200,
+            data={
+                "brand_ids": available_ids,
+                "reason": "Testing admin bulk release functionality"
+            },
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 2: POST /api/super-admin/brands/bulk-archive (should work with super admin token)
+        if self.super_admin_token:
+            success, response = self.run_test(
+                "Super Admin Bulk Archive Brands",
+                "POST",
+                "super-admin/brands/bulk-archive",
+                200,
+                data={
+                    "brand_ids": available_ids,
+                    "reason": "Testing super admin bulk archive functionality"
+                },
+                token=self.super_admin_token
+            )
+            
+            if not success:
+                return False
+        
+        return True
+
+    def test_searcher_specific_endpoints(self) -> bool:
+        """Test Searcher specific endpoints"""
+        self.log("=== TESTING SEARCHER SPECIFIC ENDPOINTS ===")
+        
+        if not self.searcher_token:
+            self.log("❌ Missing searcher token")
+            return False
+        
+        # Test 1: GET /api/my-brands (searcher's assigned brands)
+        success, response = self.run_test(
+            "Searcher My Brands",
+            "GET",
+            "my-brands",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 2: POST /api/auth/check-in (check-in functionality)
+        success, response = self.run_test(
+            "Searcher Check-in",
+            "POST",
+            "auth/check-in",
+            200,
+            data={
+                "message": "Testing check-in functionality"
+            },
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 3: Verify searcher sees only assigned sub-suppliers
+        success, response = self.run_test(
+            "Searcher Sub-Suppliers (Only Assigned)",
+            "GET",
+            "sub-suppliers",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Verify the response contains only assigned sub-suppliers
+        sub_suppliers = response.get('sub_suppliers', [])
+        for ss in sub_suppliers:
+            if ss.get('assigned_to_user_id') != self.searcher_user_id:
+                self.log(f"❌ Searcher sees unassigned sub-supplier: {ss.get('id')}")
+                return False
+        
+        self.log(f"✅ Searcher correctly sees only {len(sub_suppliers)} assigned sub-suppliers")
+        
+        return True
+
     def run_all_tests(self) -> Dict[str, Any]:
         """Run all tests and return results"""
         self.log("🚀 Starting PROCTO 13 API Testing Suite")
