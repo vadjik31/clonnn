@@ -1633,4 +1633,116 @@ const RepliedModal = ({ open, onClose, brandId, onSuccess }) => {
   );
 };
 
+// Sub-Supplier Modal
+const SubSupplierModal = ({ open, onClose, brandId, onSuccess }) => {
+  const [name, setName] = useState("");
+  const [website, setWebsite] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error("Введите название");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/brands/${brandId}/sub-suppliers`, {
+        name: name.trim(),
+        website_url: website.trim() || null,
+        contact_email: email.trim() || null,
+        contact_phone: phone.trim() || null,
+        notes: notes.trim() || null
+      });
+      toast.success("Под-сапплаер добавлен");
+      onSuccess();
+      onClose();
+      setName("");
+      setWebsite("");
+      setEmail("");
+      setPhone("");
+      setNotes("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Добавить под-сапплаера</DialogTitle>
+          <DialogDescription className="text-[#94A3B8]">
+            Авторизованный дистрибьютор бренда
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Название компании *</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="Например: Amazon EU"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Сайт</Label>
+            <Input
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="example.com"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Email</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-[#0F1115] border-[#2A2F3A]"
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Телефон</Label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="bg-[#0F1115] border-[#2A2F3A]"
+                placeholder="+1234567890"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[80px]"
+              placeholder="Дополнительная информация..."
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-[#FF9900] hover:bg-[#FF9900]/90 text-black">
+              {loading ? "Добавление..." : "Добавить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default BrandDetailPage;
