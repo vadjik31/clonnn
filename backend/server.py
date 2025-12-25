@@ -4246,6 +4246,60 @@ async def sub_supplier_on_hold(sub_supplier_id: str, req: MarkOnHoldRequest, use
     
     return {"status": "success"}
 
+@api_router.post("/sub-suppliers/{sub_supplier_id}/no-response")
+async def sub_supplier_no_response(sub_supplier_id: str, req: BrandNoteCreate, user: dict = Depends(get_current_user)):
+    """Отметить что под-сапплаер не ответил"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
+        "status": BrandStatus.NO_RESPONSE,
+        "last_action_at": now,
+        "next_action_at": None,
+        "updated_at": now
+    }})
+    
+    note = {
+        "id": str(uuid.uuid4()),
+        "sub_supplier_id": sub_supplier_id,
+        "user_id": user["id"],
+        "note_text": req.note_text,
+        "note_type": NoteType.NO_RESPONSE,
+        "created_at": now
+    }
+    await db.sub_supplier_notes.insert_one(note)
+    
+    return {"status": "success"}
+
+@api_router.post("/sub-suppliers/{sub_supplier_id}/problematic")
+async def sub_supplier_problematic(sub_supplier_id: str, req: MarkProblematicRequest, user: dict = Depends(get_current_user)):
+    """Отметить под-сапплаера как проблемного"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
+        "status": BrandStatus.PROBLEMATIC,
+        "problematic_reason": req.reason,
+        "last_action_at": now,
+        "updated_at": now
+    }})
+    
+    note = {
+        "id": str(uuid.uuid4()),
+        "sub_supplier_id": sub_supplier_id,
+        "user_id": user["id"],
+        "note_text": f"[{req.reason}] {req.note_text}",
+        "note_type": NoteType.PROBLEMATIC,
+        "created_at": now
+    }
+    await db.sub_supplier_notes.insert_one(note)
+    
+    return {"status": "success"}
+
 @api_router.post("/sub-suppliers/{sub_supplier_id}/note")
 async def add_sub_supplier_note(sub_supplier_id: str, req: BrandNoteCreate, user: dict = Depends(get_current_user)):
     """Добавить заметку к под-сапплаеру"""
