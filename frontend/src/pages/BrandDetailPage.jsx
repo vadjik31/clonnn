@@ -49,6 +49,10 @@ const BrandDetailPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [undoInfo, setUndoInfo] = useState(null);
+  
+  // Sub-suppliers state
+  const [subSuppliers, setSubSuppliers] = useState([]);
+  const [subSupplierModal, setSubSupplierModal] = useState(false);
 
   // Modal states
   const [stageModal, setStageModal] = useState(false);
@@ -65,7 +69,17 @@ const BrandDetailPage = () => {
   useEffect(() => {
     fetchBrand();
     fetchUndoInfo();
+    fetchSubSuppliers();
   }, [brandId]);
+  
+  const fetchSubSuppliers = async () => {
+    try {
+      const response = await api.get(`/brands/${brandId}/sub-suppliers`);
+      setSubSuppliers(response.data.sub_suppliers || []);
+    } catch (error) {
+      console.error("Error fetching sub-suppliers:", error);
+    }
+  };
 
   const fetchBrand = async () => {
     try {
