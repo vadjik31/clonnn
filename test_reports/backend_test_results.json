@@ -1,64 +1,90 @@
 {
-  "timestamp": "2025-12-25T17:33:09.372376",
+  "timestamp": "2025-12-25T17:33:50.459948",
   "base_url": "https://brand-pipeline-2.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:09.451656"
+      "timestamp": "2025-12-25T17:33:50.539822"
     },
     "super_admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:09.499387"
+      "timestamp": "2025-12-25T17:33:50.578276"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:09.537068"
+      "timestamp": "2025-12-25T17:33:50.617265"
     },
     "searcher_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:09.613041"
+      "timestamp": "2025-12-25T17:33:50.658091"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:09.653337"
+      "timestamp": "2025-12-25T17:33:50.702394"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:09.763048"
+      "timestamp": "2025-12-25T17:33:50.773872"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:10.215763"
+      "timestamp": "2025-12-25T17:33:51.183690"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:10.395047"
+      "timestamp": "2025-12-25T17:33:51.381425"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:13.441642"
+      "timestamp": "2025-12-25T17:33:53.846870"
     },
     "brand_workflow": {
       "passed": true,
-      "timestamp": "2025-12-25T17:33:13.645862"
+      "timestamp": "2025-12-25T17:33:54.057423"
     },
     "security_fixes": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:33:56.368950"
+    },
+    "references_endpoints": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:33:56.445232"
+    },
+    "dashboard_alerts": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:33:56.485079"
+    },
+    "brands_health_score": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:33:56.629210"
+    },
+    "sub_suppliers_api": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:33:57.080774"
+    },
+    "sub_suppliers_bulk_operations": {
       "passed": false,
-      "timestamp": "2025-12-25T17:33:13.751266"
+      "timestamp": "2025-12-25T17:33:57.255217"
     }
   },
   "summary": {
-    "total_tests": 18,
-    "passed_tests": 17,
-    "failed_tests": 1,
-    "success_rate": 94.44444444444444
+    "total_tests": 43,
+    "passed_tests": 41,
+    "failed_tests": 2,
+    "success_rate": 95.34883720930233
   },
   "failed_tests": [
     {
-      "test": "Invalid Stage Transition",
+      "test": "Outcome Without Required Fields",
       "expected": 400,
-      "actual": 403,
-      "response": "{\"detail\":\"Бренд не закреплён за вами\"}"
+      "actual": 422,
+      "response": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"channel\"],\"msg\":\"Field required\",\"input\":{\"outcome\":\"OUTCOME_APPROVED\",\"note_text\":\"Testing outcome without required fields\"},\"url\":\"https://errors.pydantic"
+    },
+    {
+      "test": "Bulk Delete Sub-Suppliers (Super Admin)",
+      "expected": 200,
+      "actual": 422,
+      "response": "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\"],\"msg\":\"Field required\",\"input\":null,\"url\":\"https://errors.pydantic.dev/2.12/v/missing\"}]}"
     }
   ]
 }
