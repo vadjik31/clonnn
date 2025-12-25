@@ -210,6 +210,11 @@ function AppContent() {
               <Layout><BrandDetailPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/sub-suppliers/:subSupplierId" element={
+            <ProtectedRoute>
+              <Layout><SubSupplierDetailPage /></Layout>
+            </ProtectedRoute>
+          } />
           <Route path="/settings" element={
             <ProtectedRoute adminOnly>
               <Layout><SettingsPage /></Layout>
