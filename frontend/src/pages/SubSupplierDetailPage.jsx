@@ -652,13 +652,13 @@ const NoteModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!note.trim()) return;
+    if (!note.trim()) {
+      toast.error("Введите текст заметки");
+      return;
+    }
     setLoading(true);
     try {
-      await api.post(`/sub-suppliers/${subSupplierId}/note`, {
-        note_text: note,
-        note_type: "general"
-      });
+      await api.post(`/sub-suppliers/${subSupplierId}/note`, { note_text: note });
       toast.success("Заметка добавлена");
       onSuccess();
       onClose();
@@ -672,22 +672,28 @@ const NoteModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
         <DialogHeader>
-          <DialogTitle className="font-mono uppercase tracking-wider">Добавить заметку</DialogTitle>
+          <DialogTitle className="font-mono uppercase tracking-wider">Новая заметка</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="bg-[#0F1115] border-[#2A2F3A] min-h-[120px]"
-            placeholder="Заметка..."
-            required
-          />
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Текст заметки</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[120px]"
+              placeholder="Введите заметку..."
+              required
+              data-testid="note-text"
+            />
+          </div>
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
-            <Button type="submit" disabled={loading} className="bg-[#FF9900] text-black">
-              {loading ? "..." : "Добавить"}
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-note">
+              {loading ? "Сохранение..." : "Добавить"}
             </Button>
           </div>
         </form>
