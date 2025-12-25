@@ -590,7 +590,7 @@ class PROCTO13APITester:
             "GET",
             "dashboard",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if success:
