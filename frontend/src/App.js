@@ -11,6 +11,7 @@ import ImportPage from "./pages/ImportPage";
 import BrandsPage from "./pages/BrandsPage";
 import BrandDetailPage from "./pages/BrandDetailPage";
 import SubSupplierDetailPage from "./pages/SubSupplierDetailPage";
+import SubSuppliersPage from "./pages/SubSuppliersPage";
 import SettingsPage from "./pages/SettingsPage";
 import MyBrandsPage from "./pages/MyBrandsPage";
 import ProblematicPage from "./pages/ProblematicPage";
@@ -208,6 +209,11 @@ function AppContent() {
           <Route path="/brands/:brandId" element={
             <ProtectedRoute>
               <Layout><BrandDetailPage /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/sub-suppliers" element={
+            <ProtectedRoute>
+              <Layout><SubSuppliersPage /></Layout>
             </ProtectedRoute>
           } />
           <Route path="/sub-suppliers/:subSupplierId" element={
