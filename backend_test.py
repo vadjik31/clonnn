@@ -793,6 +793,7 @@ class PROCTO13APITester:
         tests = [
             ("init_admin", self.test_init_admin),
             ("admin_login", self.test_admin_login),
+            ("searcher_login", self.test_searcher_login),
             ("admin_dashboard", self.test_admin_dashboard),
             ("user_management", self.test_user_management),
             ("excel_import", self.test_excel_import),
