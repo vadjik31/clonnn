@@ -374,7 +374,7 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
     }
     setLoading(true);
     try {
-      await api.post(`/sub-suppliers/${subSupplierId}/stage`, { stage, note_text: note });
+      await api.post(`/sub-suppliers/${subSupplierId}/stage`, { stage, note_text: note, channel });
       toast.success("Этап завершён");
       onSuccess();
       onClose();
