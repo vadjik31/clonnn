@@ -218,7 +218,7 @@ class PROCTO13APITester:
             "users",
             200,
             data=searcher_data,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if success and 'id' in response:
