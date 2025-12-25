@@ -29,7 +29,6 @@ import {
   DialogTitle,
 } from "../components/ui/dialog";
 import StatusBadge from "../components/StatusBadge";
-import StageBadge from "../components/StageBadge";
 
 const SubSupplierDetailPage = () => {
   const { subSupplierId } = useParams();
