@@ -1,56 +1,49 @@
 {
-  "timestamp": "2025-12-25T17:17:31.532791",
+  "timestamp": "2025-12-25T17:17:52.318187",
   "base_url": "https://brand-pipeline-2.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:31.626664"
+      "timestamp": "2025-12-25T17:17:52.383527"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:31.702926"
+      "timestamp": "2025-12-25T17:17:52.419065"
     },
     "searcher_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:31.781445"
+      "timestamp": "2025-12-25T17:17:52.458464"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:31.831311"
+      "timestamp": "2025-12-25T17:17:52.496438"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:31.918101"
+      "timestamp": "2025-12-25T17:17:52.573453"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:32.539211"
+      "timestamp": "2025-12-25T17:17:52.977465"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:32.723773"
+      "timestamp": "2025-12-25T17:17:53.184733"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:32.861847"
+      "timestamp": "2025-12-25T17:17:53.261095"
     },
     "brand_workflow": {
       "passed": false,
-      "timestamp": "2025-12-25T17:17:32.902501"
+      "timestamp": "2025-12-25T17:17:53.342294"
     }
   },
   "summary": {
     "total_tests": 12,
-    "passed_tests": 11,
-    "failed_tests": 1,
-    "success_rate": 91.66666666666666
+    "passed_tests": 12,
+    "failed_tests": 0,
+    "success_rate": 100.0
   },
-  "failed_tests": [
-    {
-      "test": "Add Brand Note",
-      "expected": 200,
-      "actual": 403,
-      "response": "{\"detail\":\"Бренд не закреплён за вами\"}"
-    }
-  ]
+  "failed_tests": []
 }
