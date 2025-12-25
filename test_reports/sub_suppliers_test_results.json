@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-12-25T17:18:47.760353",
+  "base_url": "https://brand-pipeline-2.preview.emergentagent.com",
+  "tests": {
+    "admin_login": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:18:47.839596"
+    },
+    "searcher_login": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:18:47.882016"
+    },
+    "sub_suppliers_list_admin": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:18:47.924616"
+    },
+    "sub_suppliers_list_searcher": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:18:47.968424"
+    },
+    "sub_suppliers_pagination": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:18:48.010453"
+    },
+    "sub_suppliers_filters": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:18:48.203822"
+    },
+    "sub_suppliers_ids_admin": {
+      "passed": false,
+      "timestamp": "2025-12-25T17:18:48.239883"
+    }
+  },
+  "summary": {
+    "total_tests": 11,
+    "passed_tests": 10,
+    "failed_tests": 1,
+    "success_rate": 90.9090909090909
+  },
+  "failed_tests": [
+    {
+      "test": "Get Sub-Suppliers IDs (Admin)",
+      "expected": 200,
+      "actual": 404,
+      "response": "{\"detail\":\"Под-сапплаер не найден\"}"
+    }
+  ]
+}
