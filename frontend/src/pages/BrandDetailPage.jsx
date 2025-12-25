@@ -205,14 +205,6 @@ const BrandDetailPage = () => {
               Ответил
             </Button>
             <Button
-              onClick={() => setContactModal(true)}
-              className="btn-secondary text-green-400"
-              data-testid="contact-btn"
-            >
-              <Users size={16} className="mr-2" />
-              + Контакт
-            </Button>
-            <Button
               onClick={() => setNoResponseModal(true)}
               className="btn-secondary text-gray-400"
               data-testid="no-response-btn"
