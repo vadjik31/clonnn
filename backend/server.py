@@ -3994,6 +3994,8 @@ async def create_sub_supplier(brand_id: str, req: SubSupplierCreate, user: dict 
         "status": BrandStatus.ASSIGNED,
         "pipeline_stage": PipelineStage.REVIEW,
         "assigned_to_user_id": user["id"],
+        "assigned_at": now,
+        "funnel_started_at": None,
         "last_action_at": now,
         "next_action_at": None,
         "on_hold_reason": None,
@@ -4273,31 +4275,83 @@ async def sub_supplier_no_response(sub_supplier_id: str, req: BrandNoteCreate, u
     
     return {"status": "success"}
 
+
+@api_router.post("/sub-suppliers/{sub_supplier_id}/return")
+async def sub_supplier_return_to_pool(sub_supplier_id: str, req: ReturnToPoolRequest, user: dict = Depends(get_current_user)):
+    """Вернуть под-сапплаера в пул (полный сброс состояния)"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+
+    # Валидация причины
+    if req.reason_code not in RETURN_REASONS:
+        raise HTTPException(status_code=400, detail=f"Неверная причина. Допустимые: {list(RETURN_REASONS.keys())}")
+
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Полный сброс состояния (аналогично бренду)
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
+        "status": BrandStatus.IN_POOL,
+        "pipeline_stage": PipelineStage.REVIEW,
+        "assigned_to_user_id": None,
+        "next_action_at": None,
+        "funnel_started_at": None,
+        "on_hold_reason": None,
+        "on_hold_review_date": None,
+        "updated_at": now
+    }})
+
+    note = {
+        "id": str(uuid.uuid4()),
+        "sub_supplier_id": sub_supplier_id,
+        "user_id": user["id"],
+        "note_text": req.note_text,
+        "note_type": NoteType.RETURN_TO_POOL,
+        "reason_code": req.reason_code,
+        "reason_label": RETURN_REASONS[req.reason_code],
+        "created_at": now
+    }
+    await db.sub_supplier_notes.insert_one(note)
+
+    return {"status": "success"}
+
 @api_router.post("/sub-suppliers/{sub_supplier_id}/problematic")
 async def sub_supplier_problematic(sub_supplier_id: str, req: MarkProblematicRequest, user: dict = Depends(get_current_user)):
     """Отметить под-сапплаера как проблемного"""
     ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
     if not ss:
         raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
-    
+
+    # Валидация причины
+    if req.reason_code not in PROBLEMATIC_REASONS:
+        raise HTTPException(status_code=400, detail=f"Неверная причина. Допустимые: {list(PROBLEMATIC_REASONS.keys())}")
+
     now = datetime.now(timezone.utc).isoformat()
+
+    # Дата пересмотра по умолчанию через 30 дней
+    review_date = req.review_date or (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d")
+
     await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
         "status": BrandStatus.PROBLEMATIC,
-        "problematic_reason": req.reason,
+        "on_hold_reason": req.reason_code,
+        "on_hold_review_date": review_date,
         "last_action_at": now,
         "updated_at": now
     }})
-    
+
     note = {
         "id": str(uuid.uuid4()),
         "sub_supplier_id": sub_supplier_id,
         "user_id": user["id"],
-        "note_text": f"[{req.reason}] {req.note_text}",
+        "note_text": req.note_text,
         "note_type": NoteType.PROBLEMATIC,
+        "reason_code": req.reason_code,
+        "reason_label": PROBLEMATIC_REASONS[req.reason_code],
+        "review_date": review_date,
         "created_at": now
     }
     await db.sub_supplier_notes.insert_one(note)
-    
+
     return {"status": "success"}
 
 @api_router.post("/sub-suppliers/{sub_supplier_id}/note")
