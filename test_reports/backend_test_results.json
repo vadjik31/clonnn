@@ -1,49 +1,64 @@
 {
-  "timestamp": "2025-12-25T17:17:52.318187",
+  "timestamp": "2025-12-25T17:33:09.372376",
   "base_url": "https://brand-pipeline-2.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:52.383527"
+      "timestamp": "2025-12-25T17:33:09.451656"
+    },
+    "super_admin_login": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:33:09.499387"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:52.419065"
+      "timestamp": "2025-12-25T17:33:09.537068"
     },
     "searcher_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:52.458464"
+      "timestamp": "2025-12-25T17:33:09.613041"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:52.496438"
+      "timestamp": "2025-12-25T17:33:09.653337"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:52.573453"
+      "timestamp": "2025-12-25T17:33:09.763048"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:52.977465"
+      "timestamp": "2025-12-25T17:33:10.215763"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:53.184733"
+      "timestamp": "2025-12-25T17:33:10.395047"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-25T17:17:53.261095"
+      "timestamp": "2025-12-25T17:33:13.441642"
     },
     "brand_workflow": {
+      "passed": true,
+      "timestamp": "2025-12-25T17:33:13.645862"
+    },
+    "security_fixes": {
       "passed": false,
-      "timestamp": "2025-12-25T17:17:53.342294"
+      "timestamp": "2025-12-25T17:33:13.751266"
     }
   },
   "summary": {
-    "total_tests": 12,
-    "passed_tests": 12,
-    "failed_tests": 0,
-    "success_rate": 100.0
+    "total_tests": 18,
+    "passed_tests": 17,
+    "failed_tests": 1,
+    "success_rate": 94.44444444444444
   },
-  "failed_tests": []
+  "failed_tests": [
+    {
+      "test": "Invalid Stage Transition",
+      "expected": 400,
+      "actual": 403,
+      "response": "{\"detail\":\"Бренд не закреплён за вами\"}"
+    }
+  ]
 }
