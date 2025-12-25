@@ -4149,12 +4149,25 @@ async def update_sub_supplier_stage(sub_supplier_id: str, req: StageCompleteRequ
     now = datetime.now(timezone.utc).isoformat()
     next_action = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
     
+    # Валидация перехода этапов (как у бренда)
+    current_stage = ss.get("pipeline_stage", PipelineStage.REVIEW)
+    allowed_transitions = STAGE_TRANSITIONS.get(current_stage, [])
+    if req.stage not in allowed_transitions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Недопустимый переход: {current_stage} → {req.stage}. Разрешены: {allowed_transitions}"
+        )
+
+    settings = await get_settings()
+    next_dt = calculate_next_action(req.stage, settings)
+
     await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
         "pipeline_stage": req.stage,
         "status": BrandStatus.IN_WORK,
         "last_action_at": now,
-        "next_action_at": next_action,
-        "updated_at": now
+        "next_action_at": next_dt.isoformat() if next_dt else None,
+        "updated_at": now,
+        "funnel_started_at": ss.get("funnel_started_at") or now
     }})
     
     # Добавляем заметку
