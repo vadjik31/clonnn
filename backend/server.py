@@ -4147,7 +4147,7 @@ async def update_sub_supplier_stage(sub_supplier_id: str, req: StageCompleteRequ
         raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
     
     now = datetime.now(timezone.utc).isoformat()
-    next_action = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+
     
     # Валидация перехода этапов (как у бренда)
     current_stage = ss.get("pipeline_stage", PipelineStage.REVIEW)
