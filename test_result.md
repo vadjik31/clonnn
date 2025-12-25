@@ -370,7 +370,7 @@ current_agent_communication:
       ✅ COMPREHENSIVE TESTING PERFORMED:
       
       Test Environment:
-      - Frontend: https://brand-pipeline-1.preview.emergentagent.com
+      - Frontend: https://brand-pipeline-2.preview.emergentagent.com
       - Login: searcher@procto13.com / searcher123 / PROCTO13
       - Test Brand: "Old World Christmas" (ID: cdebdcb5-fd69-4ef0-bfc8-07450002454b)
       - Sub-supplier: https://app.emergent.sh/chat (stage: REVIEW)

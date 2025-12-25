@@ -1,6 +1,6 @@
 {
   "timestamp": "2025-12-23T12:04:28.266283",
-  "base_url": "https://brand-pipeline-1.preview.emergentagent.com",
+  "base_url": "https://brand-pipeline-2.preview.emergentagent.com",
   "tests": {
     "no_response_status": {
       "passed": true,
