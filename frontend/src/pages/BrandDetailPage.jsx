@@ -436,6 +436,66 @@ const BrandDetailPage = () => {
           </div>
         </div>
 
+        {/* Sub-Suppliers Section */}
+        <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[#E6E6E6] font-mono uppercase tracking-wider flex items-center gap-2">
+              <Users size={18} className="text-[#FF9900]" />
+              Под-сапплаеры ({subSuppliers.length})
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSubSupplierModal(true)}
+              className="text-[#94A3B8] hover:text-[#FF9900]"
+            >
+              <Plus size={16} className="mr-1" />
+              Добавить
+            </Button>
+          </div>
+          
+          <div className="space-y-2">
+            {subSuppliers.length === 0 ? (
+              <p className="text-[#94A3B8] text-center py-4">Нет под-сапплаеров</p>
+            ) : (
+              subSuppliers.map((ss) => (
+                <div 
+                  key={ss.id}
+                  onClick={() => navigate(`/sub-suppliers/${ss.id}`)}
+                  className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px] cursor-pointer hover:border-[#FF9900] transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-medium text-[#E6E6E6]">{ss.name}</span>
+                      {ss.website_url && (
+                        <a 
+                          href={ss.website_url.startsWith('http') ? ss.website_url : `https://${ss.website_url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-2 text-xs text-[#FF9900] hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {ss.website_url}
+                        </a>
+                      )}
+                    </div>
+                    <StatusBadge status={ss.status} />
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-[#94A3B8]">
+                    <span>Этап: {ss.pipeline_stage}</span>
+                    {ss.contact_email && <span>📧 {ss.contact_email}</span>}
+                    {ss.next_action_at && (
+                      <span className={new Date(ss.next_action_at) <= new Date() ? "text-amber-400" : ""}>
+                        📅 {new Date(ss.next_action_at).toLocaleDateString('ru-RU')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Notes */}
         <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
           <div className="flex items-center justify-between mb-4">
