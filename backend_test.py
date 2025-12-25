@@ -123,6 +123,31 @@ class PROCTO13APITester:
         self.log("❌ Failed to get admin token")
         return False
 
+    def test_searcher_login(self) -> bool:
+        """Test searcher login with provided credentials"""
+        self.log("=== TESTING SEARCHER LOGIN ===")
+        success, response = self.run_test(
+            "Searcher Login",
+            "POST",
+            "auth/login",
+            200,
+            data={
+                "email": "searcher@procto13.com",
+                "password": "searcher123",
+                "secret_code": "PROCTO13"
+            }
+        )
+        
+        if success and 'token' in response:
+            self.searcher_token = response['token']
+            self.searcher_user_id = response['user']['id']
+            self.log(f"✅ Searcher token obtained: {self.searcher_token[:20]}...")
+            self.log(f"✅ Searcher user ID: {self.searcher_user_id}")
+            return True
+        
+        self.log("❌ Failed to get searcher token")
+        return False
+
     def test_admin_dashboard(self) -> bool:
         """Test admin dashboard access"""
         self.log("=== TESTING ADMIN DASHBOARD ===")
