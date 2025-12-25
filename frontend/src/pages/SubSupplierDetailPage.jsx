@@ -281,8 +281,8 @@ const StageModal = ({ open, onClose, subSupplierId, currentStage, onSuccess }) =
     setLoading(true);
     try {
       await api.post(`/sub-suppliers/${subSupplierId}/stage`, {
-        new_stage: stage,
-        note_text: note
+        stage: stage,
+        note_text: note || "Этап обновлён"
       });
       toast.success("Этап обновлён");
       onSuccess();
