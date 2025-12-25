@@ -847,23 +847,33 @@ const ProblematicModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 
 // Return Modal for Sub-Supplier
 const ReturnModal = ({ open, onClose, subSupplierId, onSuccess }) => {
+  const [reasonCode, setReasonCode] = useState("");
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const reasons = [
+    { value: "invalid_brand", label: "Не является брендом" },
+    { value: "duplicate", label: "Дубликат другого бренда" },
+    { value: "wrong_category", label: "Не подходит по категории" },
+    { value: "no_contacts", label: "Невозможно найти контакты" },
+    { value: "site_down", label: "Сайт недоступен" },
+    { value: "language_barrier", label: "Языковой барьер" },
+    { value: "other", label: "Другая причина" },
+  ];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!note.trim()) {
-      toast.error("Добавьте заметку");
+    if (!reasonCode || !note.trim()) {
+      toast.error("Заполните все поля");
       return;
     }
     setLoading(true);
     try {
-      await api.post(`/sub-suppliers/${subSupplierId}/return`, {
-        note_text: note
-      });
+      await api.post(`/sub-suppliers/${subSupplierId}/return`, { reason_code: reasonCode, note_text: note });
       toast.success("Под-сапплаер возвращён в пул");
       onSuccess();
       onClose();
+      setReasonCode("");
       setNote("");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ошибка");
@@ -874,25 +884,41 @@ const ReturnModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
         <DialogHeader>
-          <DialogTitle className="font-mono uppercase tracking-wider">Очистить под-сапплаера</DialogTitle>
+          <DialogTitle className="font-mono uppercase tracking-wider text-red-400">Вернуть в пул</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Заметка *</Label>
+            <Label className="text-[#94A3B8]">Причина *</Label>
+            <Select value={reasonCode} onValueChange={setReasonCode}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]" data-testid="return-reason">
+                <SelectValue placeholder="Выберите причину" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                {reasons.map(r => (
+                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="bg-[#0F1115] border-[#2A2F3A] min-h-[80px]"
-              placeholder="Причина возврата..."
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Подробное объяснение..."
               required
+              data-testid="return-note"
             />
           </div>
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
-            <Button type="submit" disabled={loading} className="bg-red-600">
-              {loading ? "..." : "Очистить"}
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-red-600 hover:bg-red-700 text-white" data-testid="submit-return">
+              {loading ? "Возврат..." : "Вернуть в пул"}
             </Button>
           </div>
         </form>
