@@ -659,53 +659,50 @@ const NoteModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 };
 
 // No Response Modal for Sub-Supplier
-const NoResponseModal = ({ open, onClose, subSupplierId, onSuccess }) => {
+const NoResponseModal = ({ open, onClose, onSubmit }) => {
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!note.trim()) {
-      toast.error("Добавьте заметку");
+      toast.error("Введите заметку");
       return;
     }
     setLoading(true);
-    try {
-      await api.post(`/sub-suppliers/${subSupplierId}/no-response`, {
-        note_text: note
-      });
-      toast.success("Статус обновлён");
-      onSuccess();
-      onClose();
-      setNote("");
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Ошибка");
-    } finally {
-      setLoading(false);
-    }
+    await onSubmit(note);
+    setLoading(false);
+    setNote("");
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
         <DialogHeader>
-          <DialogTitle className="font-mono uppercase tracking-wider">Нет ответа</DialogTitle>
+          <DialogTitle className="font-mono uppercase tracking-wider text-gray-400">Нет ответа</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-[#94A3B8]">
+            Используйте этот статус, когда связались с под-сапплаером, но не получили ответа.
+            Это отличается от "Отказал" или "Ответил".
+          </p>
           <div className="space-y-2">
-            <Label>Заметка *</Label>
+            <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="bg-[#0F1115] border-[#2A2F3A] min-h-[80px]"
-              placeholder="Сколько писем отправлено, какие каналы использовались..."
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Описание попыток связаться..."
               required
+              data-testid="no-response-note"
             />
           </div>
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
-            <Button type="submit" disabled={loading} className="bg-gray-600">
-              {loading ? "..." : "Подтвердить"}
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-secondary" data-testid="submit-no-response">
+              {loading ? "Сохранение..." : "Пометить"}
             </Button>
           </div>
         </form>
