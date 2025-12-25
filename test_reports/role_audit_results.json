@@ -1,0 +1,192 @@
+{
+  "passed": 23,
+  "failed": 0,
+  "errors": 0,
+  "results": [
+    {
+      "timestamp": "17:36:05",
+      "status": "INFO",
+      "message": "\ud83d\ude80 Starting PROCTO 13 Full Role Audit"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "INFO",
+      "message": "=== LOGGING IN AS ALL ROLES ==="
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "PASS",
+      "message": "\u2705 Super Admin Login - Status: 200"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "INFO",
+      "message": "\u2705 Super Admin token obtained"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "PASS",
+      "message": "\u2705 Admin Login - Status: 200"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "INFO",
+      "message": "\u2705 Admin token obtained"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "PASS",
+      "message": "\u2705 Searcher Login - Status: 200"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "INFO",
+      "message": "\u2705 Searcher token obtained, ID: de800ed0-7db0-4d7d-b487-a396c86ffb4a"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "INFO",
+      "message": "=== TESTING SUB-SUPPLIER BULK OPERATIONS ==="
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "PASS",
+      "message": "\u2705 Get Sub-Supplier IDs - Status: 200"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "INFO",
+      "message": "\u2705 Found 1 sub-supplier IDs for testing"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "PASS",
+      "message": "\u2705 Bulk Release Sub-Suppliers - Status: 200"
+    },
+    {
+      "timestamp": "17:36:05",
+      "status": "PASS",
+      "message": "\u2705 Bulk Assign Sub-Suppliers - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Bulk Archive Sub-Suppliers - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Bulk Delete Sub-Suppliers - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "INFO",
+      "message": "=== TESTING SUPER ADMIN ENDPOINTS ==="
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Super Admin Check-Ins - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Super Admin Imports - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Super Admin Settings - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Super Admin Archived-Brands - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Super Admin Blacklisted-Brands - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "INFO",
+      "message": "=== TESTING ADMIN ENDPOINTS ==="
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Admin Dashboard - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Get Brand IDs - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "INFO",
+      "message": "\u2705 Found 2 brand IDs for testing"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Admin Bulk Release Brands - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Super Admin Bulk Archive Brands - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "INFO",
+      "message": "=== TESTING SEARCHER ENDPOINTS ==="
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Searcher Brands - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Searcher Sub-Suppliers - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Searcher Check-in - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Searcher Claim Brands - Status: 200"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "INFO",
+      "message": "=== TESTING ROLE RESTRICTIONS ==="
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Searcher Sub-Suppliers IDs (Should Fail) - Status: 403"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "PASS",
+      "message": "\u2705 Admin Bulk Delete Sub-Suppliers (Should Fail) - Status: 403"
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "INFO",
+      "message": "=================================================="
+    },
+    {
+      "timestamp": "17:36:06",
+      "status": "INFO",
+      "message": "\ud83d\udcca AUDIT COMPLETE: 23 passed, 0 failed, 0 errors"
+    }
+  ]
+}
