@@ -597,6 +597,162 @@ class PROCTO13APITester:
         
         return success
 
+    def test_sub_suppliers_api(self) -> bool:
+        """Test sub-suppliers standalone API endpoints"""
+        self.log("=== TESTING SUB-SUPPLIERS API ===")
+        
+        if not self.admin_token or not self.searcher_token:
+            self.log("❌ Missing required tokens for sub-suppliers testing")
+            return False
+        
+        # Test 1: GET /api/sub-suppliers as admin (should see all)
+        success, response = self.run_test(
+            "List All Sub-Suppliers (Admin)",
+            "GET",
+            "sub-suppliers",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Validate response structure
+        required_fields = ['sub_suppliers', 'total', 'page', 'pages']
+        for field in required_fields:
+            if field not in response:
+                self.log(f"❌ Missing field in sub-suppliers response: {field}")
+                return False
+        
+        self.log(f"✅ Admin sees {response['total']} sub-suppliers")
+        
+        # Test 2: GET /api/sub-suppliers as searcher (should see only assigned)
+        success, response = self.run_test(
+            "List My Sub-Suppliers (Searcher)",
+            "GET",
+            "sub-suppliers",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        searcher_count = response.get('total', 0)
+        self.log(f"✅ Searcher sees {searcher_count} sub-suppliers")
+        
+        # Test 3: Test pagination
+        success, response = self.run_test(
+            "Sub-Suppliers Pagination",
+            "GET",
+            "sub-suppliers?page=1&limit=10",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        if response.get('page') != 1:
+            self.log("❌ Pagination page parameter not working")
+            return False
+        
+        # Test 4: Test filters - status filter
+        success, response = self.run_test(
+            "Sub-Suppliers Status Filter",
+            "GET",
+            "sub-suppliers?status=IN_POOL",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 5: Test filters - pipeline_stage filter
+        success, response = self.run_test(
+            "Sub-Suppliers Pipeline Stage Filter",
+            "GET",
+            "sub-suppliers?pipeline_stage=REVIEW",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 6: Test search filter
+        success, response = self.run_test(
+            "Sub-Suppliers Search Filter",
+            "GET",
+            "sub-suppliers?search=test",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 7: Test overdue filter
+        success, response = self.run_test(
+            "Sub-Suppliers Overdue Filter",
+            "GET",
+            "sub-suppliers?overdue=true",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Test 8: GET /api/sub-suppliers/ids as admin (should work)
+        success, response = self.run_test(
+            "Get Sub-Suppliers IDs (Admin)",
+            "GET",
+            "sub-suppliers/ids",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        if 'ids' not in response:
+            self.log("❌ Missing 'ids' field in sub-suppliers/ids response")
+            return False
+        
+        self.log(f"✅ Admin can access {len(response['ids'])} sub-supplier IDs")
+        
+        # Test 9: GET /api/sub-suppliers/ids as searcher (should be forbidden - 403)
+        success, response = self.run_test(
+            "Get Sub-Suppliers IDs (Searcher - Should Fail)",
+            "GET",
+            "sub-suppliers/ids",
+            403,  # Should be forbidden
+            token=self.searcher_token
+        )
+        
+        if not success:
+            self.log("❌ Searcher was allowed to access sub-suppliers/ids (security issue)")
+            return False
+        
+        self.log("✅ Searcher correctly forbidden from accessing sub-suppliers/ids")
+        
+        # Test 10: Test assigned_to filter (admin only)
+        if self.searcher_user_id:
+            success, response = self.run_test(
+                "Sub-Suppliers Assigned To Filter",
+                "GET",
+                f"sub-suppliers?assigned_to={self.searcher_user_id}",
+                200,
+                token=self.admin_token
+            )
+            
+            if not success:
+                return False
+        
+        return True
+
     def run_all_tests(self) -> Dict[str, Any]:
         """Run all tests and return results"""
         self.log("🚀 Starting PROCTO 13 API Testing Suite")
