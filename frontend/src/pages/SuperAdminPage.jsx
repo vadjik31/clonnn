@@ -236,6 +236,53 @@ const SuperAdminPage = () => {
     }
   };
 
+  // Sub-supplier archive handlers
+  const handleRestoreSubSupplier = async (ssId) => {
+    try {
+      await api.post("/sub-suppliers/bulk-release", { sub_supplier_ids: [ssId], reason: "Восстановлен из архива" });
+      toast.success("Под-сапплаер восстановлен");
+      fetchArchivedBrands(archivePage);
+    } catch (error) {
+      toast.error("Ошибка восстановления");
+    }
+  };
+
+  const handleDeleteSubSupplier = async (ssId, name) => {
+    if (!window.confirm(`Удалить под-сапплаера "${name}" навсегда?`)) return;
+    try {
+      await api.delete("/sub-suppliers/bulk-delete", { data: { sub_supplier_ids: [ssId], reason: "Удалён из архива" } });
+      toast.success("Под-сапплаер удалён");
+      fetchArchivedBrands(archivePage);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка удаления");
+    }
+  };
+
+  const handleBulkDeleteArchivedSS = async () => {
+    if (selectedArchivedSS.size === 0) return;
+    if (!window.confirm(`Удалить ${selectedArchivedSS.size} под-сапплаеров навсегда?`)) return;
+    try {
+      await api.delete("/sub-suppliers/bulk-delete", { data: { sub_supplier_ids: Array.from(selectedArchivedSS), reason: "Массовое удаление из архива" } });
+      toast.success(`Удалено ${selectedArchivedSS.size} под-сапплаеров`);
+      setSelectedArchivedSS(new Set());
+      fetchArchivedBrands(archivePage);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка удаления");
+    }
+  };
+
+  const handleBulkRestoreArchivedSS = async () => {
+    if (selectedArchivedSS.size === 0) return;
+    try {
+      await api.post("/sub-suppliers/bulk-release", { sub_supplier_ids: Array.from(selectedArchivedSS), reason: "Массовое восстановление" });
+      toast.success(`Восстановлено ${selectedArchivedSS.size} под-сапплаеров`);
+      setSelectedArchivedSS(new Set());
+      fetchArchivedBrands(archivePage);
+    } catch (error) {
+      toast.error("Ошибка восстановления");
+    }
+  };
+
   const handleUnblacklistBrand = async (brandId) => {
     try {
       await api.post(`/super-admin/brands/${brandId}/unblacklist`);
