@@ -373,7 +373,7 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
       onClose();
       setStage("");
       setNote("");
-      setChannel("");
+
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ошибка");
     } finally {
