@@ -602,4 +602,144 @@ const NoteModal = ({ open, onClose, subSupplierId, onSuccess }) => {
   );
 };
 
+// No Response Modal for Sub-Supplier
+const NoResponseModal = ({ open, onClose, subSupplierId, onSuccess }) => {
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!note.trim()) {
+      toast.error("Добавьте заметку");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/sub-suppliers/${subSupplierId}/no-response`, {
+        note_text: note
+      });
+      toast.success("Статус обновлён");
+      onSuccess();
+      onClose();
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Нет ответа</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Заметка *</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[80px]"
+              placeholder="Сколько писем отправлено, какие каналы использовались..."
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
+            <Button type="submit" disabled={loading} className="bg-gray-600">
+              {loading ? "..." : "Подтвердить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Problematic Modal for Sub-Supplier
+const ProblematicModal = ({ open, onClose, subSupplierId, onSuccess }) => {
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const reasons = [
+    { value: "no_response", label: "Не отвечают" },
+    { value: "bad_communication", label: "Плохая коммуникация" },
+    { value: "high_moq", label: "Высокий MOQ" },
+    { value: "bad_terms", label: "Плохие условия" },
+    { value: "other", label: "Другое" },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!reason || !note.trim()) {
+      toast.error("Заполните все поля");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/sub-suppliers/${subSupplierId}/problematic`, {
+        reason,
+        note_text: note
+      });
+      toast.success("Отмечен как проблемный");
+      onSuccess();
+      onClose();
+      setReason("");
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Проблемный под-сапплаер</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Причина</Label>
+            <div className="space-y-2">
+              {reasons.map((r) => (
+                <label key={r.value} className="flex items-center gap-2 p-2 border border-[#2A2F3A] rounded cursor-pointer hover:border-[#FF9900]">
+                  <input
+                    type="radio"
+                    name="reason"
+                    value={r.value}
+                    checked={reason === r.value}
+                    onChange={(e) => setReason(e.target.value)}
+                  />
+                  <span>{r.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Заметка *</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="Детали проблемы..."
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
+            <Button type="submit" disabled={loading} className="bg-orange-600">
+              {loading ? "..." : "Отметить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default SubSupplierDetailPage;
