@@ -4607,6 +4607,7 @@ async def get_all_sub_suppliers(
     assigned_to: Optional[str] = None,
     search: Optional[str] = None,
     overdue: Optional[bool] = False,
+    include_archived: Optional[bool] = False,
     page: int = 1,
     limit: int = 50,
     user: dict = Depends(get_current_user)
@@ -4617,6 +4618,9 @@ async def get_all_sub_suppliers(
     # Фильтр по статусу
     if status:
         query["status"] = status
+    elif not include_archived:
+        # По умолчанию исключаем архивированные и blacklisted
+        query["status"] = {"$nin": [BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}
     
     # Фильтр по этапу воронки
     if pipeline_stage:
