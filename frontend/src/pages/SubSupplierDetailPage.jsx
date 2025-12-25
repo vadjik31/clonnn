@@ -102,7 +102,9 @@ const SubSupplierDetailPage = () => {
         </div>
         <div className="flex items-center gap-4">
           <StatusBadge status={ss.status} />
-          <StageBadge stage={ss.pipeline_stage} />
+          <span className="px-2 py-1 text-xs bg-[#1A1D24] text-[#94A3B8] rounded font-mono">
+            {ss.pipeline_stage}
+          </span>
         </div>
       </div>
 
