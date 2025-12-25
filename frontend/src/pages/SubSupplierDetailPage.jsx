@@ -813,4 +813,60 @@ const ProblematicModal = ({ open, onClose, subSupplierId, onSuccess }) => {
   );
 };
 
+// Return Modal for Sub-Supplier
+const ReturnModal = ({ open, onClose, subSupplierId, onSuccess }) => {
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!note.trim()) {
+      toast.error("Добавьте заметку");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/sub-suppliers/${subSupplierId}/return`, {
+        note_text: note
+      });
+      toast.success("Под-сапплаер возвращён в пул");
+      onSuccess();
+      onClose();
+      setNote("");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider">Очистить под-сапплаера</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Заметка *</Label>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[80px]"
+              placeholder="Причина возврата..."
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
+            <Button type="submit" disabled={loading} className="bg-red-600">
+              {loading ? "..." : "Очистить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default SubSupplierDetailPage;
