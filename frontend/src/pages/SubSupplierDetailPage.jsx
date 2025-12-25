@@ -89,6 +89,18 @@ const SubSupplierDetailPage = () => {
   const isAssigned = ss.assigned_to_user_id === user?.id || user?.role === "admin" || user?.role === "super_admin";
   const canAct = ss.status !== "IN_POOL" && isAssigned;
 
+  const handleNoResponse = async (noteText) => {
+    try {
+      await api.post(`/sub-suppliers/${subSupplierId}/no-response`, { note_text: noteText });
+      toast.success("Статус 'Нет ответа' установлен");
+      setNoResponseModal(false);
+      fetchSubSupplier();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    }
+  };
+
+
   return (
     <div className="space-y-6 animate-fade-in" data-testid="sub-supplier-detail-page">
       {/* Header */}
