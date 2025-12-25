@@ -129,11 +129,25 @@ const SubSupplierDetailPage = () => {
           Ответил
         </Button>
         <Button
+          onClick={() => setNoResponseModal(true)}
+          className="btn-secondary text-gray-400"
+        >
+          <Ban size={16} className="mr-2" />
+          Нет ответа
+        </Button>
+        <Button
           onClick={() => setOnHoldModal(true)}
           className="btn-secondary text-yellow-400"
         >
           <PauseCircle size={16} className="mr-2" />
           На паузу
+        </Button>
+        <Button
+          onClick={() => setProblematicModal(true)}
+          className="btn-secondary text-orange-400"
+        >
+          <AlertTriangle size={16} className="mr-2" />
+          Проблемный
         </Button>
       </div>
 
