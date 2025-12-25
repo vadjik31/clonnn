@@ -408,6 +408,19 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
             </Select>
           </div>
           <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Канал связи</Label>
+            <Select value={channel} onValueChange={setChannel}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]" data-testid="channel-select">
+                <SelectValue placeholder="Выберите канал" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                {channels.map(c => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label className="text-[#94A3B8]">Заметка (обязательно)</Label>
             <Textarea
               value={note}
