@@ -430,36 +430,40 @@ const StageModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 const RepliedModal = ({ open, onClose, subSupplierId, onSuccess }) => {
   const [subStatus, setSubStatus] = useState("");
   const [note, setNote] = useState("");
-  const [nextDate, setNextDate] = useState("");
+  const [nextActionDate, setNextActionDate] = useState("");
   const [loading, setLoading] = useState(false);
 
   const statusOptions = [
-    { value: "need_action", label: "Нужно действие" },
-    { value: "need_searcher_attention", label: "Внимание сёрчера!" },
-    { value: "waiting", label: "Ожидаем от них" },
-    { value: "approved", label: "Одобрили" },
-    { value: "declined", label: "Отказали" },
+    { value: "need_action", label: "Нужно действие с нашей стороны", description: "Под-сапплаер попросил что-то сделать (доп. инфо, предложение и т.д.)" },
+    { value: "need_searcher_attention", label: "Надо внимание сёрчера!", description: "Требуется внимание сёрчера для дальнейших действий" },
+    { value: "waiting", label: "Ожидаем от них", description: "Мы сделали свою часть, ждём их решения" },
+    { value: "approved", label: "Одобрили сотрудничество", description: "Успех! Под-сапплаер согласен работать" },
+    { value: "declined", label: "Отказали", description: "Под-сапплаер отказался от сотрудничества" },
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!subStatus || !note.trim()) {
-      toast.error("Заполните все поля");
+    if (!subStatus) {
+      toast.error("Выберите подстатус");
+      return;
+    }
+    if (!note.trim()) {
+      toast.error("Введите заметку");
       return;
     }
     setLoading(true);
     try {
       await api.post(`/sub-suppliers/${subSupplierId}/replied`, {
         sub_status: subStatus,
-        note_text: note,
-        next_action_date: nextDate || null
+        note_text: note.trim(),
+        next_action_date: nextActionDate || null
       });
       toast.success("Статус обновлён");
-      onSuccess();
-      onClose();
       setSubStatus("");
       setNote("");
-      setNextDate("");
+      setNextActionDate("");
+      onClose();
+      onSuccess();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ошибка");
     } finally {
@@ -469,53 +473,74 @@ const RepliedModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6] max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-mono uppercase tracking-wider">Под-сапплаер ответил</DialogTitle>
+          <DialogTitle className="font-mono uppercase tracking-wider text-blue-400">
+            Под-сапплаер ответил
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-[#94A3B8]">
+            Выберите что именно произошло после ответа под-сапплаера
+          </p>
+          
           <div className="space-y-2">
-            <Label>Результат</Label>
-            <div className="space-y-2">
-              {statusOptions.map((opt) => (
-                <label key={opt.value} className="flex items-center gap-2 p-2 border border-[#2A2F3A] rounded cursor-pointer hover:border-[#FF9900]">
+            {statusOptions.map(opt => (
+              <label
+                key={opt.value}
+                className={`block p-3 rounded-[2px] border cursor-pointer transition-all ${
+                  subStatus === opt.value 
+                    ? "border-blue-500 bg-blue-900/20" 
+                    : "border-[#2A2F3A] hover:border-[#FF9900]/50"
+                }`}
+              >
+                <div className="flex items-start gap-3">
                   <input
                     type="radio"
                     name="subStatus"
                     value={opt.value}
                     checked={subStatus === opt.value}
                     onChange={(e) => setSubStatus(e.target.value)}
+                    className="mt-1"
                   />
-                  <span>{opt.label}</span>
-                </label>
-              ))}
-            </div>
+                  <div>
+                    <div className="font-medium text-[#E6E6E6]">{opt.label}</div>
+                    <div className="text-xs text-[#94A3B8]">{opt.description}</div>
+                  </div>
+                </div>
+              </label>
+            ))}
           </div>
+          
           {(subStatus === "need_action" || subStatus === "need_searcher_attention" || subStatus === "waiting") && (
             <div className="space-y-2">
-              <Label>Когда вернуться</Label>
+              <Label className="text-[#94A3B8]">Когда вернуться (опционально)</Label>
               <Input
                 type="date"
-                value={nextDate}
-                onChange={(e) => setNextDate(e.target.value)}
+                value={nextActionDate}
+                onChange={(e) => setNextActionDate(e.target.value)}
                 className="bg-[#0F1115] border-[#2A2F3A]"
               />
             </div>
           )}
+          
           <div className="space-y-2">
-            <Label>Заметка *</Label>
+            <Label className="text-[#94A3B8]">Подробности (обязательно)</Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="bg-[#0F1115] border-[#2A2F3A]"
-              placeholder="Детали разговора..."
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
+              placeholder="Что именно ответил под-сапплаер, какие следующие шаги..."
               required
             />
           </div>
+          
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
-            <Button type="submit" disabled={loading || !subStatus} className="bg-blue-600">
-              {loading ? "..." : "Сохранить"}
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-replied">
+              {loading ? "Сохранение..." : "Сохранить"}
             </Button>
           </div>
         </form>
