@@ -103,11 +103,11 @@ class PROCTO13APITester:
         )
         return success
 
-    def test_admin_login(self) -> bool:
-        """Test admin login with provided credentials"""
-        self.log("=== TESTING ADMIN LOGIN ===")
+    def test_super_admin_login(self) -> bool:
+        """Test super admin login with provided credentials"""
+        self.log("=== TESTING SUPER ADMIN LOGIN ===")
         success, response = self.run_test(
-            "Admin Login",
+            "Super Admin Login",
             "POST",
             "auth/login",
             200,
@@ -119,8 +119,33 @@ class PROCTO13APITester:
         )
         
         if success and 'token' in response:
+            self.super_admin_token = response['token']
+            self.log(f"✅ Super Admin token obtained: {self.super_admin_token[:20]}...")
+            return True
+        
+        self.log("❌ Failed to get super admin token")
+        return False
+
+    def test_admin_login(self) -> bool:
+        """Test admin login with provided credentials"""
+        self.log("=== TESTING ADMIN LOGIN ===")
+        success, response = self.run_test(
+            "Admin Login",
+            "POST",
+            "auth/login",
+            200,
+            data={
+                "email": "azamat@gmail.com",
+                "password": "azamat",
+                "secret_code": "AZAMAT"
+            }
+        )
+        
+        if success and 'token' in response:
             self.admin_token = response['token']
+            self.admin_user_id = response['user']['id']
             self.log(f"✅ Admin token obtained: {self.admin_token[:20]}...")
+            self.log(f"✅ Admin user ID: {self.admin_user_id}")
             return True
         
         self.log("❌ Failed to get admin token")
