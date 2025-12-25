@@ -13,10 +13,13 @@ from typing import Dict, Any, Optional
 class PROCTO13APITester:
     def __init__(self, base_url: str = "https://brand-pipeline-2.preview.emergentagent.com"):
         self.base_url = base_url
+        self.super_admin_token = None
         self.admin_token = None
         self.searcher_token = None
         self.searcher_user_id = None
+        self.admin_user_id = None
         self.test_brand_id = None
+        self.test_sub_supplier_ids = []
         self.tests_run = 0
         self.tests_passed = 0
         self.failed_tests = []
