@@ -508,12 +508,6 @@ const BrandDetailPage = () => {
         brandId={brandId}
         onSuccess={fetchBrand}
       />
-      <OutcomeModal 
-        open={outcomeModal} 
-        onClose={() => setOutcomeModal(false)} 
-        brandId={brandId}
-        onSuccess={fetchBrand}
-      />
       <ReturnModal 
         open={returnModal} 
         onClose={() => setReturnModal(false)} 
