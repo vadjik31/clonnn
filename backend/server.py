@@ -4148,7 +4148,7 @@ async def update_sub_supplier_stage(sub_supplier_id: str, req: StageCompleteRequ
     next_action = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
     
     await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
-        "pipeline_stage": req.new_stage,
+        "pipeline_stage": req.stage,
         "status": BrandStatus.IN_WORK,
         "last_action_at": now,
         "next_action_at": next_action,
