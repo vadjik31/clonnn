@@ -131,7 +131,13 @@ const SubSuppliersPage = () => {
     
     try {
       const params = new URLSearchParams();
-      if (filters.status) params.append("status", filters.status);
+      if (filters.status) {
+        params.append("status", filters.status);
+        // Если запрашиваем архивные, добавляем флаг
+        if (filters.status === "ARCHIVED") {
+          params.append("include_archived", "true");
+        }
+      }
       if (filters.pipeline_stage) params.append("pipeline_stage", filters.pipeline_stage);
       if (filters.assigned_to) params.append("assigned_to", filters.assigned_to);
       if (filters.search) params.append("search", filters.search);
