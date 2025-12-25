@@ -1296,13 +1296,73 @@ async def get_brands(
             brand["last_note_at"] = None
         
         brand["contacts_count"] = await db.brand_contacts.count_documents({"brand_id": brand["id"]})
+        brand["is_sub_supplier"] = False
+        
+        # Количество под-сапплаеров у бренда
+        brand["sub_suppliers_count"] = await db.sub_suppliers.count_documents({"parent_brand_id": brand["id"]})
+    
+    # Добавляем под-сапплаеров в общий список (для админов и сёрчеров)
+    ss_query = {}
+    if user["role"] == UserRole.SEARCHER:
+        ss_query["assigned_to_user_id"] = user["id"]
+    
+    if search:
+        search_lower = search.lower()
+        ss_query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"website_url": {"$regex": search, "$options": "i"}},
+            {"contact_email": {"$regex": search, "$options": "i"}}
+        ]
+    
+    if status:
+        ss_query["status"] = status
+    
+    sub_suppliers = await db.sub_suppliers.find(ss_query, {"_id": 0}).to_list(100)
+    
+    # Обогащаем данные под-сапплаеров
+    for ss in sub_suppliers:
+        parent_brand = await db.brands.find_one({"id": ss["parent_brand_id"]}, {"_id": 0, "name_original": 1, "priority_score": 1})
+        if parent_brand:
+            ss["parent_brand_name"] = parent_brand["name_original"]
+            ss["priority_score"] = parent_brand["priority_score"]
+            ss["items_count"] = await db.brand_items.count_documents({"brand_id": ss["parent_brand_id"]})
+        else:
+            ss["parent_brand_name"] = "Unknown"
+            ss["priority_score"] = 0
+            ss["items_count"] = 0
+        
+        ss["is_sub_supplier"] = True
+        ss["name_original"] = f"↳ {ss['name']}"  # Маркер что это под-сапплаер
+        ss["name_normalized"] = ss["name"].lower()
+        
+        if ss.get("assigned_to_user_id"):
+            assigned = await db.users.find_one({"id": ss["assigned_to_user_id"]}, {"nickname": 1})
+            ss["assigned_to_nickname"] = assigned["nickname"] if assigned else None
+        else:
+            ss["assigned_to_nickname"] = None
+        
+        # Последняя заметка
+        last_note = await db.sub_supplier_notes.find_one(
+            {"sub_supplier_id": ss["id"]},
+            {"_id": 0, "note_text": 1}
+        )
+        ss["last_note"] = last_note.get("note_text", "")[:100] if last_note else None
+        ss["contacts_count"] = await db.sub_supplier_contacts.count_documents({"sub_supplier_id": ss["id"]})
+        ss["sub_suppliers_count"] = 0
+    
+    # Объединяем и сортируем
+    all_items = brands + sub_suppliers
+    all_items.sort(key=lambda x: (-x.get("priority_score", 0), x.get("created_at", "")))
+    
+    # Пагинация для объединённого списка
+    total_combined = total + len(sub_suppliers)
     
     return {
-        "brands": brands,
-        "total": total,
+        "brands": all_items[:limit],
+        "total": total_combined,
         "page": page,
         "limit": limit,
-        "pages": (total + limit - 1) // limit
+        "pages": (total_combined + limit - 1) // limit
     }
 
 @api_router.get("/brands/{brand_id}/timeline")
