@@ -671,7 +671,7 @@ class PROCTO13APITester:
         """Test sub-suppliers standalone API endpoints"""
         self.log("=== TESTING SUB-SUPPLIERS API ===")
         
-        if not self.admin_token or not self.searcher_token:
+        if not self.super_admin_token or not self.searcher_token:
             self.log("❌ Missing required tokens for sub-suppliers testing")
             return False
         
@@ -681,7 +681,7 @@ class PROCTO13APITester:
             "GET",
             "sub-suppliers",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -717,7 +717,7 @@ class PROCTO13APITester:
             "GET",
             "sub-suppliers?page=1&limit=10",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -733,7 +733,7 @@ class PROCTO13APITester:
             "GET",
             "sub-suppliers?status=IN_POOL",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -745,7 +745,7 @@ class PROCTO13APITester:
             "GET",
             "sub-suppliers?pipeline_stage=REVIEW",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -757,7 +757,7 @@ class PROCTO13APITester:
             "GET",
             "sub-suppliers?search=test",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -769,7 +769,7 @@ class PROCTO13APITester:
             "GET",
             "sub-suppliers?overdue=true",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -781,7 +781,7 @@ class PROCTO13APITester:
             "GET",
             "sub-suppliers/ids",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -815,7 +815,7 @@ class PROCTO13APITester:
                 "GET",
                 f"sub-suppliers?assigned_to={self.searcher_user_id}",
                 200,
-                token=self.admin_token
+                token=self.super_admin_token
             )
             
             if not success:
