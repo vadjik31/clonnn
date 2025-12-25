@@ -463,6 +463,44 @@ class RepliedStatusRequest(BaseModel):
     note_text: str
     next_action_date: Optional[str] = None
 
+# ============== SUB-SUPPLIER MODELS ==============
+class SubSupplierCreate(BaseModel):
+    name: str
+    website_url: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    notes: Optional[str] = None
+
+class SubSupplierResponse(BaseModel):
+    id: str
+    parent_brand_id: str
+    parent_brand_name: str
+    name: str
+    website_url: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    status: str
+    pipeline_stage: str
+    priority_score: int  # Наследуется от родительского бренда
+    items_count: int = 0  # Наследуется от родительского бренда
+    assigned_to_user_id: Optional[str] = None
+    assigned_to_nickname: Optional[str] = None
+    last_action_at: Optional[str] = None
+    next_action_at: Optional[str] = None
+    on_hold_reason: Optional[str] = None
+    on_hold_review_date: Optional[str] = None
+    contacts_count: int = 0
+    created_at: str
+    created_by_user_id: str
+    created_by_nickname: Optional[str] = None
+    is_sub_supplier: bool = True
+
+class SubSupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    website_url: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+
 # Idempotency tracking (закрывает дыру #2)
 claim_requests_in_progress = set()
 
