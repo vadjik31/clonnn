@@ -4,7 +4,6 @@ import { api, useAuth } from "../App";
 import { toast } from "sonner";
 import { 
   ArrowLeft, 
-  ExternalLink, 
   Globe, 
   Users, 
   Clock, 
