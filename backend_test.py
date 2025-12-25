@@ -297,7 +297,7 @@ class PROCTO13APITester:
             "GET",
             "brands",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if not success:
@@ -318,7 +318,7 @@ class PROCTO13APITester:
             "GET",
             f"brands/{self.test_brand_id}",
             200,
-            token=self.admin_token
+            token=self.super_admin_token
         )
         
         if success:
