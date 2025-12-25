@@ -562,14 +562,26 @@ const OnHoldModal = ({ open, onClose, subSupplierId, onSuccess }) => {
       toast.error("Заполните все поля");
       return;
     }
+
+    // Валидация даты (как у бренда)
+    const selectedDate = new Date(reviewDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+    if (selectedDate < today) {
+      toast.error("Дата не может быть в прошлом");
+      return;
+    }
+    if (selectedDate > maxDate) {
+      toast.error("Дата не может быть больше чем через год");
+      return;
+    }
+
     setLoading(true);
     try {
-      await api.post(`/sub-suppliers/${subSupplierId}/on-hold`, {
-        reason,
-        review_date: reviewDate,
-        note_text: note
-      });
-      toast.success("На паузе");
+      await api.post(`/sub-suppliers/${subSupplierId}/on-hold`, { reason, review_date: reviewDate, note_text: note });
+      toast.success("Под-сапплаер поставлен на паузу");
       onSuccess();
       onClose();
       setReason("");
@@ -584,13 +596,13 @@ const OnHoldModal = ({ open, onClose, subSupplierId, onSuccess }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-[#13161B] border border-[#2A2F3A] text-[#E6E6E6] max-w-md">
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
         <DialogHeader>
           <DialogTitle className="font-mono uppercase tracking-wider">На паузу</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Причина</Label>
+            <Label className="text-[#94A3B8]">Причина</Label>
             <Input
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -600,30 +612,31 @@ const OnHoldModal = ({ open, onClose, subSupplierId, onSuccess }) => {
             />
           </div>
           <div className="space-y-2">
-            <Label>Дата пересмотра</Label>
+            <Label className="text-[#94A3B8]">Дата пересмотра</Label>
             <Input
               type="date"
               value={reviewDate}
               onChange={(e) => setReviewDate(e.target.value)}
               className="bg-[#0F1115] border-[#2A2F3A]"
-              min={new Date().toISOString().split('T')[0]}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label>Заметка</Label>
+            <Label className="text-[#94A3B8]">Заметка</Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="bg-[#0F1115] border-[#2A2F3A]"
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[100px]"
               placeholder="Дополнительно..."
               required
             />
           </div>
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Отмена</Button>
-            <Button type="submit" disabled={loading} className="bg-yellow-600">
-              {loading ? "..." : "На паузу"}
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="btn-primary" data-testid="submit-onhold">
+              {loading ? "Сохранение..." : "Поставить на паузу"}
             </Button>
           </div>
         </form>
