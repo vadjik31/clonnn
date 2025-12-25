@@ -4550,34 +4550,6 @@ async def get_all_sub_suppliers(
     }
 
 
-@api_router.get("/sub-suppliers/ids")
-async def get_sub_supplier_ids(
-    status: Optional[str] = None,
-    pipeline_stage: Optional[str] = None,
-    assigned_to: Optional[str] = None,
-    search: Optional[str] = None,
-    user: dict = Depends(get_current_user)
-):
-    """Получить все ID суб-поставщиков для массовых операций"""
-    if user["role"] not in ["admin", "super_admin"]:
-        raise HTTPException(status_code=403, detail="Недостаточно прав")
-    
-    query = {}
-    if status:
-        query["status"] = status
-    if pipeline_stage:
-        query["pipeline_stage"] = pipeline_stage
-    if assigned_to:
-        query["assigned_to_user_id"] = assigned_to
-    if search:
-        query["name"] = {"$regex": search, "$options": "i"}
-    
-    sub_suppliers = await db.sub_suppliers.find(query, {"id": 1, "_id": 0}).to_list(10000)
-    ids = [ss["id"] for ss in sub_suppliers]
-    
-    return {"ids": ids, "total": len(ids)}
-
-
 # ============== BASH FEATURE: BATCH MANAGEMENT ==============
 
 # Кастомные статусы товаров
