@@ -10,19 +10,22 @@ import {
   Clock, 
   MessageSquare,
   CheckCircle,
+  XCircle,
   Reply,
+  AlertTriangle,
   PauseCircle,
+  RotateCcw,
   Plus,
   Phone,
   Mail,
   Package,
-  Ban,
-  AlertTriangle
+  Ban
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
+import { Checkbox } from "../components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +33,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import StatusBadge from "../components/StatusBadge";
 
 const SubSupplierDetailPage = () => {
@@ -46,6 +56,7 @@ const SubSupplierDetailPage = () => {
   const [noteModal, setNoteModal] = useState(false);
   const [noResponseModal, setNoResponseModal] = useState(false);
   const [problematicModal, setProblematicModal] = useState(false);
+  const [returnModal, setReturnModal] = useState(false);
 
   useEffect(() => {
     fetchSubSupplier();
@@ -75,81 +86,109 @@ const SubSupplierDetailPage = () => {
 
   const { sub_supplier: ss, items, notes, contacts } = data;
 
+  const isAssigned = ss.assigned_to_user_id === user?.id || user?.role === "admin" || user?.role === "super_admin";
+  const canAct = ss.status !== "IN_POOL" && isAssigned;
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in" data-testid="sub-supplier-detail-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             onClick={() => navigate(`/brands/${ss.parent_brand_id}`)}
-            className="text-[#94A3B8] hover:text-white"
+            className="text-[#94A3B8] hover:text-[#E6E6E6] p-2"
+            data-testid="back-btn"
           >
             <ArrowLeft size={20} />
           </Button>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-[#FF9900] bg-[#FF9900]/10 px-2 py-0.5 rounded">ПОД-САППЛАЕР</span>
-              <h1 className="text-2xl font-bold text-[#E6E6E6] font-mono uppercase tracking-wider">
+              <h1 className="text-2xl font-bold text-[#E6E6E6] font-mono">
                 {ss.name}
               </h1>
             </div>
-            <p className="text-sm text-[#94A3B8] mt-1">
-              Бренд: <span 
-                className="text-[#FF9900] cursor-pointer hover:underline"
-                onClick={() => navigate(`/brands/${ss.parent_brand_id}`)}
-              >
-                {ss.parent_brand_name}
+            <div className="flex items-center gap-3 mt-2">
+              <StatusBadge status={ss.status} />
+              <span className="text-[#94A3B8] text-sm">
+                Приоритет: <span className="text-[#FF9900] font-mono">{ss.priority_score}</span>
               </span>
-            </p>
+              {ss.assigned_to_nickname && (
+                <span className="text-[#94A3B8] text-sm">
+                  Сёрчер: <span className="text-[#E6E6E6]">{ss.assigned_to_nickname}</span>
+                </span>
+              )}
+              <span className="text-[#94A3B8] text-sm">
+                Бренд: <span 
+                  className="text-[#FF9900] cursor-pointer hover:underline"
+                  onClick={() => navigate(`/brands/${ss.parent_brand_id}`)}
+                >
+                  {ss.parent_brand_name}
+                </span>
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <StatusBadge status={ss.status} />
-          <span className="px-2 py-1 text-xs bg-[#1A1D24] text-[#94A3B8] rounded font-mono">
-            {ss.pipeline_stage}
-          </span>
+
+        <div className="flex items-center gap-2">
+          <StageBadge stage={ss.pipeline_stage} />
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={() => setStageModal(true)}
-          className="btn-secondary"
-        >
-          <CheckCircle size={16} className="mr-2" />
-          Этап выполнен
-        </Button>
-        <Button
-          onClick={() => setRepliedModal(true)}
-          className="btn-secondary text-blue-400"
-        >
-          <Reply size={16} className="mr-2" />
-          Ответил
-        </Button>
-        <Button
-          onClick={() => setNoResponseModal(true)}
-          className="btn-secondary text-gray-400"
-        >
-          <Ban size={16} className="mr-2" />
-          Нет ответа
-        </Button>
-        <Button
-          onClick={() => setOnHoldModal(true)}
-          className="btn-secondary text-yellow-400"
-        >
-          <PauseCircle size={16} className="mr-2" />
-          На паузу
-        </Button>
-        <Button
-          onClick={() => setProblematicModal(true)}
-          className="btn-secondary text-orange-400"
-        >
-          <AlertTriangle size={16} className="mr-2" />
-          Проблемный
-        </Button>
-      </div>
+      {/* Actions */}
+      {canAct && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={() => setStageModal(true)}
+            className="btn-secondary"
+            data-testid="stage-btn"
+          >
+            <CheckCircle size={16} className="mr-2" />
+            Этап выполнен
+          </Button>
+          <Button
+            onClick={() => setRepliedModal(true)}
+            className="btn-secondary text-blue-400"
+            data-testid="replied-btn"
+          >
+            <Reply size={16} className="mr-2" />
+            Ответил
+          </Button>
+          <Button
+            onClick={() => setNoResponseModal(true)}
+            className="btn-secondary text-gray-400"
+            data-testid="no-response-btn"
+          >
+            <Ban size={16} className="mr-2" />
+            Нет ответа
+          </Button>
+          <Button
+            onClick={() => setOnHoldModal(true)}
+            className="btn-secondary"
+            data-testid="onhold-btn"
+          >
+            <PauseCircle size={16} className="mr-2" />
+            На паузу
+          </Button>
+          <Button
+            onClick={() => setProblematicModal(true)}
+            className="btn-secondary text-yellow-400"
+            data-testid="problematic-btn"
+          >
+            <AlertTriangle size={16} className="mr-2" />
+            Проблемный
+          </Button>
+          <Button
+            onClick={() => setReturnModal(true)}
+            className="btn-secondary text-red-400"
+            data-testid="return-btn"
+          >
+            <RotateCcw size={16} className="mr-2" />
+            Очистить
+          </Button>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -242,7 +281,6 @@ const SubSupplierDetailPage = () => {
         open={stageModal}
         onClose={() => setStageModal(false)}
         subSupplierId={subSupplierId}
-        currentStage={ss.pipeline_stage}
         onSuccess={fetchSubSupplier}
       />
       <RepliedModal
@@ -250,6 +288,24 @@ const SubSupplierDetailPage = () => {
         onClose={() => setRepliedModal(false)}
         subSupplierId={subSupplierId}
         onSuccess={fetchSubSupplier}
+
+const StageBadge = ({ stage }) => {
+  const stageConfig = {
+    REVIEW: { label: "🔍 Изучение", color: "bg-gray-800 text-gray-400 border-gray-700" },
+    EMAIL_1_DONE: { label: "1️⃣ Письмо 1", color: "bg-blue-900/20 text-blue-400 border-blue-800" },
+    EMAIL_2_DONE: { label: "2️⃣ Письмо 2", color: "bg-indigo-900/20 text-indigo-400 border-indigo-800" },
+    MULTI_CHANNEL_DONE: { label: "📱 Соцсети", color: "bg-purple-900/20 text-purple-400 border-purple-800" },
+    CALL_OR_PUSH_RECOMMENDED: { label: "📞 Звонок", color: "bg-orange-900/20 text-orange-400 border-orange-800" },
+    CLOSED: { label: "✅ Закрыт", color: "bg-green-900/20 text-green-400 border-green-800" },
+  };
+  const config = stageConfig[stage] || { label: stage, color: "bg-gray-800 text-gray-400" };
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.color}`}>
+      {config.label}
+    </span>
+  );
+};
+
       />
       <NoResponseModal
         open={noResponseModal}
@@ -266,6 +322,12 @@ const SubSupplierDetailPage = () => {
       <ProblematicModal
         open={problematicModal}
         onClose={() => setProblematicModal(false)}
+        subSupplierId={subSupplierId}
+        onSuccess={fetchSubSupplier}
+      />
+      <ReturnModal
+        open={returnModal}
+        onClose={() => setReturnModal(false)}
         subSupplierId={subSupplierId}
         onSuccess={fetchSubSupplier}
       />
