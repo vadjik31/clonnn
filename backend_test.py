@@ -1095,11 +1095,11 @@ class PROCTO13APITester:
             self.log("❌ Missing searcher token")
             return False
         
-        # Test 1: GET /api/my-brands (searcher's assigned brands)
+        # Test 1: GET /api/brands (searcher's assigned brands)
         success, response = self.run_test(
             "Searcher My Brands",
             "GET",
-            "my-brands",
+            "brands",
             200,
             token=self.searcher_token
         )
