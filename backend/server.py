@@ -1182,8 +1182,31 @@ async def get_brands(
     
     if pipeline_stage:
         query["pipeline_stage"] = pipeline_stage
+    
+    # Расширенный поиск: по названию, сайту, заметкам, контактам
     if search:
-        query["name_normalized"] = {"$regex": search.lower(), "$options": "i"}
+        search_lower = search.lower()
+        # Получаем IDs брендов из заметок и контактов
+        notes_brand_ids = await db.brand_notes.distinct(
+            "brand_id",
+            {"note_text": {"$regex": search, "$options": "i"}}
+        )
+        contacts_brand_ids = await db.brand_contacts.distinct(
+            "brand_id",
+            {"$or": [
+                {"email": {"$regex": search, "$options": "i"}},
+                {"name": {"$regex": search, "$options": "i"}},
+                {"notes": {"$regex": search, "$options": "i"}}
+            ]}
+        )
+        
+        # Объединяем поиск
+        query["$or"] = [
+            {"name_normalized": {"$regex": search_lower, "$options": "i"}},
+            {"name_original": {"$regex": search, "$options": "i"}},
+            {"website_url": {"$regex": search, "$options": "i"}},
+            {"id": {"$in": notes_brand_ids + contacts_brand_ids}}
+        ]
     
     if overdue:
         now = datetime.now(timezone.utc).isoformat()
