@@ -3913,6 +3913,327 @@ async def get_admin_permissions(user: dict = Depends(require_admin)):
         "permissions": permissions
     }
 
+# ============== SUB-SUPPLIER ROUTES ==============
+
+@api_router.post("/brands/{brand_id}/sub-suppliers")
+async def create_sub_supplier(brand_id: str, req: SubSupplierCreate, user: dict = Depends(get_current_user)):
+    """Создать под-сапплаера для бренда"""
+    # Проверяем что бренд существует
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    sub_supplier = {
+        "id": str(uuid.uuid4()),
+        "parent_brand_id": brand_id,
+        "name": req.name.strip(),
+        "website_url": req.website_url.strip() if req.website_url else None,
+        "contact_email": req.contact_email.strip() if req.contact_email else None,
+        "contact_phone": req.contact_phone.strip() if req.contact_phone else None,
+        "status": BrandStatus.ASSIGNED,
+        "pipeline_stage": PipelineStage.REVIEW,
+        "assigned_to_user_id": user["id"],
+        "last_action_at": now,
+        "next_action_at": None,
+        "on_hold_reason": None,
+        "on_hold_review_date": None,
+        "created_at": now,
+        "created_by_user_id": user["id"],
+        "updated_at": now
+    }
+    
+    # Добавляем начальную заметку если есть
+    if req.notes:
+        note = {
+            "id": str(uuid.uuid4()),
+            "sub_supplier_id": sub_supplier["id"],
+            "user_id": user["id"],
+            "note_text": req.notes,
+            "note_type": NoteType.GENERAL,
+            "created_at": now
+        }
+        await db.sub_supplier_notes.insert_one(note)
+    
+    await db.sub_suppliers.insert_one(sub_supplier)
+    await log_event("sub_supplier_created", user["id"], brand_id, {"sub_supplier_id": sub_supplier["id"], "name": req.name})
+    
+    return {"status": "success", "id": sub_supplier["id"]}
+
+@api_router.get("/brands/{brand_id}/sub-suppliers")
+async def get_sub_suppliers(brand_id: str, user: dict = Depends(get_current_user)):
+    """Получить под-сапплаеров бренда"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0, "name_original": 1, "priority_score": 1})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    sub_suppliers = await db.sub_suppliers.find({"parent_brand_id": brand_id}, {"_id": 0}).to_list(100)
+    
+    # Добавляем данные от родительского бренда и пользователей
+    items_count = await db.brand_items.count_documents({"brand_id": brand_id})
+    
+    for ss in sub_suppliers:
+        ss["parent_brand_name"] = brand["name_original"]
+        ss["priority_score"] = brand["priority_score"]
+        ss["items_count"] = items_count
+        ss["is_sub_supplier"] = True
+        
+        # Получаем никнейм создателя
+        creator = await db.users.find_one({"id": ss["created_by_user_id"]}, {"nickname": 1})
+        ss["created_by_nickname"] = creator["nickname"] if creator else None
+        
+        # Получаем никнейм назначенного
+        if ss.get("assigned_to_user_id"):
+            assigned = await db.users.find_one({"id": ss["assigned_to_user_id"]}, {"nickname": 1})
+            ss["assigned_to_nickname"] = assigned["nickname"] if assigned else None
+        else:
+            ss["assigned_to_nickname"] = None
+        
+        # Количество контактов
+        ss["contacts_count"] = await db.sub_supplier_contacts.count_documents({"sub_supplier_id": ss["id"]})
+    
+    return {"sub_suppliers": sub_suppliers}
+
+@api_router.get("/sub-suppliers/{sub_supplier_id}")
+async def get_sub_supplier_detail(sub_supplier_id: str, user: dict = Depends(get_current_user)):
+    """Получить детали под-сапплаера"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    # Получаем родительский бренд
+    brand = await db.brands.find_one({"id": ss["parent_brand_id"]}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Родительский бренд не найден")
+    
+    ss["parent_brand_name"] = brand["name_original"]
+    ss["priority_score"] = brand["priority_score"]
+    ss["is_sub_supplier"] = True
+    
+    # Items от родительского бренда
+    items = await db.brand_items.find({"brand_id": ss["parent_brand_id"]}, {"_id": 0}).to_list(10)
+    ss["items_count"] = await db.brand_items.count_documents({"brand_id": ss["parent_brand_id"]})
+    
+    # Заметки под-сапплаера
+    notes = await db.sub_supplier_notes.find({"sub_supplier_id": sub_supplier_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for note in notes:
+        note_user = await db.users.find_one({"id": note["user_id"]}, {"nickname": 1})
+        note["user_nickname"] = note_user["nickname"] if note_user else "Unknown"
+    
+    # Контакты под-сапплаера
+    contacts = await db.sub_supplier_contacts.find({"sub_supplier_id": sub_supplier_id}, {"_id": 0}).to_list(100)
+    
+    # Получаем никнеймы
+    creator = await db.users.find_one({"id": ss["created_by_user_id"]}, {"nickname": 1})
+    ss["created_by_nickname"] = creator["nickname"] if creator else None
+    
+    if ss.get("assigned_to_user_id"):
+        assigned = await db.users.find_one({"id": ss["assigned_to_user_id"]}, {"nickname": 1})
+        ss["assigned_to_nickname"] = assigned["nickname"] if assigned else None
+    else:
+        ss["assigned_to_nickname"] = None
+    
+    ss["contacts_count"] = len(contacts)
+    
+    return {
+        "sub_supplier": ss,
+        "items": items,
+        "notes": notes,
+        "contacts": contacts
+    }
+
+@api_router.put("/sub-suppliers/{sub_supplier_id}")
+async def update_sub_supplier(sub_supplier_id: str, req: SubSupplierUpdate, user: dict = Depends(get_current_user)):
+    """Обновить под-сапплаера"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if req.name:
+        update_data["name"] = req.name.strip()
+    if req.website_url is not None:
+        update_data["website_url"] = req.website_url.strip() if req.website_url else None
+    if req.contact_email is not None:
+        update_data["contact_email"] = req.contact_email.strip() if req.contact_email else None
+    if req.contact_phone is not None:
+        update_data["contact_phone"] = req.contact_phone.strip() if req.contact_phone else None
+    
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": update_data})
+    return {"status": "success"}
+
+@api_router.delete("/sub-suppliers/{sub_supplier_id}")
+async def delete_sub_supplier(sub_supplier_id: str, user: dict = Depends(get_current_user)):
+    """Удалить под-сапплаера"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    # Удаляем заметки и контакты
+    await db.sub_supplier_notes.delete_many({"sub_supplier_id": sub_supplier_id})
+    await db.sub_supplier_contacts.delete_many({"sub_supplier_id": sub_supplier_id})
+    await db.sub_suppliers.delete_one({"id": sub_supplier_id})
+    
+    await log_event("sub_supplier_deleted", user["id"], ss["parent_brand_id"], {"sub_supplier_id": sub_supplier_id})
+    return {"status": "success"}
+
+@api_router.post("/sub-suppliers/{sub_supplier_id}/stage")
+async def update_sub_supplier_stage(sub_supplier_id: str, req: StageCompleteRequest, user: dict = Depends(get_current_user)):
+    """Обновить этап под-сапплаера"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    next_action = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+    
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
+        "pipeline_stage": req.new_stage,
+        "status": BrandStatus.IN_WORK,
+        "last_action_at": now,
+        "next_action_at": next_action,
+        "updated_at": now
+    }})
+    
+    # Добавляем заметку
+    if req.note_text:
+        note = {
+            "id": str(uuid.uuid4()),
+            "sub_supplier_id": sub_supplier_id,
+            "user_id": user["id"],
+            "note_text": req.note_text,
+            "note_type": NoteType.STAGE_CHANGE,
+            "created_at": now
+        }
+        await db.sub_supplier_notes.insert_one(note)
+    
+    return {"status": "success"}
+
+@api_router.post("/sub-suppliers/{sub_supplier_id}/replied")
+async def sub_supplier_replied(sub_supplier_id: str, req: RepliedStatusRequest, user: dict = Depends(get_current_user)):
+    """Отметить что под-сапплаер ответил"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    status_map = {
+        "need_action": BrandStatus.REPLIED_NEED_ACTION,
+        "need_searcher_attention": BrandStatus.REPLIED_NEED_SEARCHER,
+        "waiting": BrandStatus.REPLIED_WAITING,
+        "approved": BrandStatus.REPLIED_APPROVED,
+        "declined": BrandStatus.REPLIED_DECLINED
+    }
+    
+    new_status = status_map.get(req.sub_status, BrandStatus.OUTCOME_REPLIED)
+    now = datetime.now(timezone.utc)
+    
+    next_action = None
+    if req.next_action_date:
+        next_action = req.next_action_date
+    elif req.sub_status == "need_action":
+        next_action = (now + timedelta(days=2)).isoformat()
+    elif req.sub_status == "need_searcher_attention":
+        next_action = (now + timedelta(days=1)).isoformat()
+    elif req.sub_status == "waiting":
+        next_action = (now + timedelta(days=5)).isoformat()
+    
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
+        "status": new_status,
+        "last_action_at": now.isoformat(),
+        "next_action_at": next_action,
+        "updated_at": now.isoformat()
+    }})
+    
+    # Добавляем заметку
+    note = {
+        "id": str(uuid.uuid4()),
+        "sub_supplier_id": sub_supplier_id,
+        "user_id": user["id"],
+        "note_text": req.note_text,
+        "note_type": NoteType.CONTACT,
+        "created_at": now.isoformat()
+    }
+    await db.sub_supplier_notes.insert_one(note)
+    
+    return {"status": "success"}
+
+@api_router.post("/sub-suppliers/{sub_supplier_id}/on-hold")
+async def sub_supplier_on_hold(sub_supplier_id: str, req: MarkOnHoldRequest, user: dict = Depends(get_current_user)):
+    """Поставить под-сапплаера на паузу"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
+        "status": BrandStatus.ON_HOLD,
+        "on_hold_reason": req.reason,
+        "on_hold_review_date": req.review_date,
+        "last_action_at": now,
+        "next_action_at": req.review_date,
+        "updated_at": now
+    }})
+    
+    note = {
+        "id": str(uuid.uuid4()),
+        "sub_supplier_id": sub_supplier_id,
+        "user_id": user["id"],
+        "note_text": req.note_text,
+        "note_type": NoteType.ON_HOLD,
+        "created_at": now
+    }
+    await db.sub_supplier_notes.insert_one(note)
+    
+    return {"status": "success"}
+
+@api_router.post("/sub-suppliers/{sub_supplier_id}/note")
+async def add_sub_supplier_note(sub_supplier_id: str, req: BrandNoteCreate, user: dict = Depends(get_current_user)):
+    """Добавить заметку к под-сапплаеру"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    note = {
+        "id": str(uuid.uuid4()),
+        "sub_supplier_id": sub_supplier_id,
+        "user_id": user["id"],
+        "note_text": req.note_text,
+        "note_type": req.note_type,
+        "created_at": now
+    }
+    await db.sub_supplier_notes.insert_one(note)
+    
+    await db.sub_suppliers.update_one({"id": sub_supplier_id}, {"$set": {
+        "last_action_at": now,
+        "updated_at": now
+    }})
+    
+    return {"status": "success", "note_id": note["id"]}
+
+@api_router.post("/sub-suppliers/{sub_supplier_id}/contact")
+async def add_sub_supplier_contact(sub_supplier_id: str, req: AddContactRequest, user: dict = Depends(get_current_user)):
+    """Добавить контакт к под-сапплаеру"""
+    ss = await db.sub_suppliers.find_one({"id": sub_supplier_id}, {"_id": 0})
+    if not ss:
+        raise HTTPException(status_code=404, detail="Под-сапплаер не найден")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    contact = {
+        "id": str(uuid.uuid4()),
+        "sub_supplier_id": sub_supplier_id,
+        "name": req.name,
+        "role": req.role,
+        "email": req.email,
+        "phone": req.phone,
+        "notes": req.notes,
+        "created_at": now,
+        "created_by_user_id": user["id"]
+    }
+    await db.sub_supplier_contacts.insert_one(contact)
+    
+    return {"status": "success", "contact_id": contact["id"]}
+
 # ============== BASH FEATURE: BATCH MANAGEMENT ==============
 
 # Кастомные статусы товаров
