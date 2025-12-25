@@ -292,6 +292,7 @@ const SubSuppliersPage = () => {
     { value: "REPLIED_APPROVED", label: "Одобрили" },
     { value: "REPLIED_DECLINED", label: "Отказали" },
     { value: "PROBLEMATIC", label: "Проблемный" },
+    { value: "ARCHIVED", label: "📦 В архиве" },
   ];
 
   const stageOptions = [
