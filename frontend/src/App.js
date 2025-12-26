@@ -22,6 +22,7 @@ import BashPage from "./pages/BashPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import TasksPage from "./pages/TasksPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import ChatPage from "./pages/ChatPage";
 
 // Components
 import Sidebar from "./components/Sidebar";
