@@ -22,7 +22,8 @@ import {
   Mail,
   Archive,
   Pencil,
-  Trash2
+  Trash2,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
