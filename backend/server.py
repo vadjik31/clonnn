@@ -5890,16 +5890,23 @@ class SupplierUpdate(BaseModel):
 async def get_suppliers(
     user: dict = Depends(get_current_user)
 ):
-    """Получить список поставщиков (админы видят всё, сёрчеры - только свои)"""
+    """Получить список поставщиков (супер-админы видят всё, админы - только назначенных, сёрчеры - только свои)"""
     role = user.get("role")
+    user_id = user.get("id")
     
-    if role in ["admin", "super_admin"]:
-        # Админы видят всех поставщиков
+    if role == "super_admin":
+        # Супер-админы видят всех поставщиков
         suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    elif role == "admin":
+        # Админы видят только назначенных им поставщиков
+        suppliers = await db.suppliers.find(
+            {"assigned_to_admin_id": user_id}, 
+            {"_id": 0}
+        ).to_list(1000)
     else:
         # Сёрчеры видят только своих поставщиков
         suppliers = await db.suppliers.find(
-            {"created_by": user.get("id")}, 
+            {"created_by": user_id}, 
             {"_id": 0}
         ).to_list(1000)
     
