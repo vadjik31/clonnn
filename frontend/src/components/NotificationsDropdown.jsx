@@ -317,6 +317,19 @@ const NotificationsDropdown = () => {
               ))
             )}
           </div>
+          
+          {/* Footer - View All */}
+          <div className="border-t border-[#2A2F3A] px-4 py-3">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate("/notifications");
+              }}
+              className="w-full text-center text-sm text-[#FF9900] hover:text-[#E68A00] transition-colors font-medium"
+            >
+              Посмотреть все уведомления →
+            </button>
+          </div>
         </div>
       )}
     </div>
