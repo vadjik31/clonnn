@@ -62,9 +62,9 @@ const NotificationsDropdown = () => {
             });
           }
         } catch (e) {
-          // Handle ping/pong
-          if (event.data === "ping") {
-            wsRef.current?.send("pong");
+          // Handle ping/pong - check readyState before sending
+          if (event.data === "ping" && wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send("pong");
           }
         }
       };
