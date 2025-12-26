@@ -6486,6 +6486,325 @@ async def delete_notification(notification_id: str, user: dict = Depends(get_cur
     return {"status": "success"}
 
 
+# ============== CHAT API ==============
+
+# WebSocket manager for chat
+class ChatConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[str, Dict[str, WebSocket]] = {}  # chat_id -> {user_id: websocket}
+    
+    async def connect(self, websocket: WebSocket, chat_id: str, user_id: str):
+        await websocket.accept()
+        if chat_id not in self.active_connections:
+            self.active_connections[chat_id] = {}
+        self.active_connections[chat_id][user_id] = websocket
+    
+    def disconnect(self, chat_id: str, user_id: str):
+        if chat_id in self.active_connections:
+            if user_id in self.active_connections[chat_id]:
+                del self.active_connections[chat_id][user_id]
+            if not self.active_connections[chat_id]:
+                del self.active_connections[chat_id]
+    
+    async def broadcast_to_chat(self, chat_id: str, message: dict, exclude_user: str = None):
+        if chat_id in self.active_connections:
+            for user_id, connection in self.active_connections[chat_id].items():
+                if user_id != exclude_user:
+                    try:
+                        await connection.send_json(message)
+                    except Exception:
+                        pass
+
+chat_manager = ChatConnectionManager()
+
+
+class ChatCreate(BaseModel):
+    type: str  # general, direct, group, brand
+    name: Optional[str] = None
+    participant_ids: Optional[List[str]] = None  # For direct/group chats
+    brand_id: Optional[str] = None  # For brand chats
+
+
+class MessageCreate(BaseModel):
+    text: str
+    image_url: Optional[str] = None
+
+
+@api_router.get("/chats")
+async def get_chats(user: dict = Depends(get_current_user)):
+    """Получить список чатов пользователя"""
+    # Get all chats where user is participant
+    chats = await db.chats.find(
+        {"$or": [
+            {"type": ChatType.GENERAL},
+            {"participant_ids": user["id"]},
+            {"created_by": user["id"]}
+        ]},
+        {"_id": 0}
+    ).sort("last_message_at", -1).to_list(100)
+    
+    # Add unread counts
+    for chat in chats:
+        unread = await db.chat_messages.count_documents({
+            "chat_id": chat["id"],
+            "sender_id": {"$ne": user["id"]},
+            "read_by": {"$nin": [user["id"]]}
+        })
+        chat["unread_count"] = unread
+    
+    return {"chats": chats}
+
+
+@api_router.post("/chats")
+async def create_chat(req: ChatCreate, user: dict = Depends(get_current_user)):
+    """Создать новый чат"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # For direct chat, check if already exists
+    if req.type == ChatType.DIRECT and req.participant_ids:
+        other_user_id = req.participant_ids[0] if req.participant_ids[0] != user["id"] else (req.participant_ids[1] if len(req.participant_ids) > 1 else None)
+        if other_user_id:
+            existing = await db.chats.find_one({
+                "type": ChatType.DIRECT,
+                "participant_ids": {"$all": [user["id"], other_user_id]}
+            })
+            if existing:
+                existing.pop("_id", None)
+                return existing
+    
+    # Create chat
+    participant_ids = list(set([user["id"]] + (req.participant_ids or [])))
+    
+    # Get participant info
+    participants = []
+    for pid in participant_ids:
+        p = await db.users.find_one({"id": pid}, {"_id": 0, "id": 1, "nickname": 1, "role": 1})
+        if p:
+            participants.append(p)
+    
+    chat_name = req.name
+    if req.type == ChatType.DIRECT and len(participants) == 2:
+        other = [p for p in participants if p["id"] != user["id"]][0]
+        chat_name = other.get("nickname", "Чат")
+    elif req.type == ChatType.BRAND and req.brand_id:
+        brand = await db.brands.find_one({"id": req.brand_id}, {"name_original": 1})
+        chat_name = f"Бренд: {brand.get('name_original', 'Без названия')}" if brand else "Чат по бренду"
+    elif req.type == ChatType.GENERAL:
+        chat_name = "Общий чат"
+    
+    chat = {
+        "id": str(uuid4()),
+        "type": req.type,
+        "name": chat_name,
+        "participant_ids": participant_ids,
+        "participants": participants,
+        "brand_id": req.brand_id,
+        "created_by": user["id"],
+        "created_at": now,
+        "last_message_at": now,
+        "last_message": None
+    }
+    
+    await db.chats.insert_one(chat)
+    chat.pop("_id", None)
+    
+    return chat
+
+
+@api_router.get("/chats/general")
+async def get_or_create_general_chat(user: dict = Depends(get_current_user)):
+    """Получить или создать общий чат"""
+    chat = await db.chats.find_one({"type": ChatType.GENERAL}, {"_id": 0})
+    if not chat:
+        # Create general chat
+        chat = {
+            "id": str(uuid4()),
+            "type": ChatType.GENERAL,
+            "name": "Общий чат",
+            "participant_ids": [],
+            "participants": [],
+            "created_by": "system",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "last_message_at": datetime.now(timezone.utc).isoformat(),
+            "last_message": None
+        }
+        await db.chats.insert_one(chat)
+        chat.pop("_id", None)
+    return chat
+
+
+@api_router.get("/chats/{chat_id}")
+async def get_chat(chat_id: str, user: dict = Depends(get_current_user)):
+    """Получить информацию о чате"""
+    chat = await db.chats.find_one({"id": chat_id}, {"_id": 0})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Чат не найден")
+    
+    # Check access
+    if chat["type"] != ChatType.GENERAL and user["id"] not in chat.get("participant_ids", []):
+        raise HTTPException(status_code=403, detail="Нет доступа к чату")
+    
+    return chat
+
+
+@api_router.get("/chats/{chat_id}/messages")
+async def get_messages(
+    chat_id: str, 
+    limit: int = Query(50, ge=1, le=200),
+    before: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Получить сообщения чата"""
+    chat = await db.chats.find_one({"id": chat_id})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Чат не найден")
+    
+    # Check access
+    if chat["type"] != ChatType.GENERAL and user["id"] not in chat.get("participant_ids", []):
+        raise HTTPException(status_code=403, detail="Нет доступа к чату")
+    
+    query = {"chat_id": chat_id}
+    if before:
+        query["created_at"] = {"$lt": before}
+    
+    messages = await db.chat_messages.find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    # Mark messages as read
+    await db.chat_messages.update_many(
+        {"chat_id": chat_id, "sender_id": {"$ne": user["id"]}},
+        {"$addToSet": {"read_by": user["id"]}}
+    )
+    
+    return {"messages": list(reversed(messages))}
+
+
+@api_router.post("/chats/{chat_id}/messages")
+async def send_message(chat_id: str, req: MessageCreate, user: dict = Depends(get_current_user)):
+    """Отправить сообщение в чат"""
+    chat = await db.chats.find_one({"id": chat_id})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Чат не найден")
+    
+    # Check access (general chat is open to all)
+    if chat["type"] != ChatType.GENERAL and user["id"] not in chat.get("participant_ids", []):
+        # Add user to participants if it's not a direct chat
+        if chat["type"] != ChatType.DIRECT:
+            await db.chats.update_one(
+                {"id": chat_id},
+                {"$addToSet": {"participant_ids": user["id"]}}
+            )
+        else:
+            raise HTTPException(status_code=403, detail="Нет доступа к чату")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    message = {
+        "id": str(uuid4()),
+        "chat_id": chat_id,
+        "sender_id": user["id"],
+        "sender_nickname": user.get("nickname", user.get("email")),
+        "sender_role": user.get("role"),
+        "text": sanitize_input(req.text),
+        "image_url": req.image_url,
+        "read_by": [user["id"]],
+        "created_at": now
+    }
+    
+    await db.chat_messages.insert_one(message)
+    message.pop("_id", None)
+    
+    # Update chat last message
+    await db.chats.update_one(
+        {"id": chat_id},
+        {"$set": {
+            "last_message_at": now,
+            "last_message": {
+                "text": message["text"][:50] + "..." if len(message["text"]) > 50 else message["text"],
+                "sender_nickname": message["sender_nickname"],
+                "created_at": now
+            }
+        }}
+    )
+    
+    # Broadcast via WebSocket
+    await chat_manager.broadcast_to_chat(chat_id, {
+        "type": "new_message",
+        "message": message
+    }, exclude_user=user["id"])
+    
+    # Send notifications to participants (except sender and those in chat)
+    for participant_id in chat.get("participant_ids", []):
+        if participant_id != user["id"] and participant_id not in chat_manager.active_connections.get(chat_id, {}):
+            await create_notification(
+                user_id=participant_id,
+                notification_type=NotificationType.CHAT_MESSAGE,
+                title=f"Сообщение от {user.get('nickname')}",
+                message=message["text"][:100],
+                link=f"/chat/{chat_id}",
+                from_user_id=user["id"]
+            )
+    
+    return message
+
+
+@api_router.get("/users/available-for-chat")
+async def get_users_for_chat(user: dict = Depends(get_current_user)):
+    """Получить список пользователей для создания чата"""
+    users = await db.users.find(
+        {"id": {"$ne": user["id"]}},
+        {"_id": 0, "id": 1, "nickname": 1, "email": 1, "role": 1}
+    ).to_list(100)
+    return {"users": users}
+
+
+@app.websocket("/api/ws/chat/{chat_id}")
+async def websocket_chat(websocket: WebSocket, chat_id: str, token: str = Query(...)):
+    """WebSocket endpoint for real-time chat"""
+    # Verify token
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("user_id")
+        if not user_id:
+            await websocket.close(code=4001)
+            return
+    except jwt.ExpiredSignatureError:
+        await websocket.close(code=4002)
+        return
+    except jwt.InvalidTokenError:
+        await websocket.close(code=4003)
+        return
+    
+    # Verify chat access
+    chat = await db.chats.find_one({"id": chat_id})
+    if not chat:
+        await websocket.close(code=4004)
+        return
+    
+    if chat["type"] != ChatType.GENERAL and user_id not in chat.get("participant_ids", []):
+        await websocket.close(code=4005)
+        return
+    
+    await chat_manager.connect(websocket, chat_id, user_id)
+    
+    try:
+        while True:
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
+                if data == "ping":
+                    await websocket.send_text("pong")
+            except asyncio.TimeoutError:
+                try:
+                    await websocket.send_text("ping")
+                except Exception:
+                    break
+    except WebSocketDisconnect:
+        pass
+    finally:
+        chat_manager.disconnect(chat_id, user_id)
+
+
 @api_router.get("/")
 async def root():
     return {"message": "PROCTO 13 Brand Management API v5.1 - Suppliers Edition"}
