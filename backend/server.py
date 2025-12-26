@@ -2064,6 +2064,7 @@ async def set_replied_status(brand_id: str, req: RepliedStatusRequest, user: dic
         raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
     
     now = datetime.now(timezone.utc)
+    old_status = brand.get("status")
     
     # Маппинг подстатусов
     status_map = {
@@ -2124,6 +2125,28 @@ async def set_replied_status(brand_id: str, req: RepliedStatusRequest, user: dic
         "sub_status": req.sub_status,
         "prev_status": brand.get("status")
     })
+    
+    # Создаем уведомление для назначенного пользователя при изменении статуса
+    assigned_user_id = brand.get("assigned_to_user_id")
+    if assigned_user_id and assigned_user_id != user["id"]:
+        brand_name = brand.get("name", "Бренд")
+        sub_status_labels = {
+            "need_action": "Нужно действие",
+            "need_searcher_attention": "Нужно внимание сёрчера",
+            "waiting": "Ожидание",
+            "approved": "Одобрен",
+            "declined": "Отказ"
+        }
+        status_label = sub_status_labels.get(req.sub_status, req.sub_status)
+        await create_notification(
+            user_id=assigned_user_id,
+            notification_type=NotificationType.STATUS_CHANGED,
+            title="Изменение статуса",
+            message=f'Статус бренда "{brand_name}" изменён: "{status_label}"',
+            brand_id=brand_id,
+            link=f"/brand/{brand_id}",
+            from_user_id=user["id"]
+        )
     
     return {"status": "success", "new_status": new_status, "new_stage": new_stage}
 
