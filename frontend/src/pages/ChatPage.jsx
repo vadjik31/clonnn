@@ -488,6 +488,18 @@ const ChatPage = () => {
               </div>
               {/* Chat action buttons */}
               <div className="flex items-center gap-2">
+                {/* Sound toggle - only for non-direct chats */}
+                {currentChat.type !== "direct" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSoundEnabled(!soundEnabled)}
+                    className={`${soundEnabled ? "text-green-400" : "text-[#94A3B8]"} hover:bg-[#2A2F3A]`}
+                    title={soundEnabled ? "Звук включён" : "Звук выключен"}
+                  >
+                    {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                  </Button>
+                )}
                 {/* Edit participants button - for creator or super_admin, non-general chats */}
                 {currentChat.type !== "general" && (currentChat.created_by === user?.id || user?.role === "super_admin") && (
                   <Button
