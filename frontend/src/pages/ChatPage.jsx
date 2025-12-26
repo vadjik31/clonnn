@@ -106,8 +106,8 @@ const ChatPage = () => {
       wsRef.current.close();
     }
 
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const apiUrl = new URL(API);
+    const wsProtocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${wsProtocol}//${apiUrl.host}/api/ws/chat/${id}?token=${token}`;
 
     try {
