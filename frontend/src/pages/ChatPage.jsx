@@ -660,11 +660,11 @@ const ChatPage = () => {
                           <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                           
                           {/* Action buttons (on hover) */}
-                          <div className={`absolute -bottom-2 ${isOwn ? "left-0" : "right-0"} opacity-0 group-hover:opacity-100 transition-opacity flex gap-1`}>
+                          <div className={`absolute -top-3 ${isOwn ? "left-0" : "right-0"} opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20`}>
                             {/* Reaction button */}
                             <button
                               onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
-                              className="bg-[#2A2F3A] hover:bg-[#3A3F4A] rounded-full p-1 text-xs"
+                              className="bg-[#1F2328] hover:bg-[#3A3F4A] rounded-full p-1.5 text-sm shadow-lg border border-[#2A2F3A]"
                             >
                               😊
                             </button>
@@ -681,9 +681,9 @@ const ChatPage = () => {
                                     toast.error("Ошибка удаления");
                                   }
                                 }}
-                                className="bg-[#2A2F3A] hover:bg-red-500/30 text-red-400 rounded-full p-1 text-xs"
+                                className="bg-[#1F2328] hover:bg-red-500/30 text-red-400 rounded-full p-1.5 text-sm shadow-lg border border-[#2A2F3A]"
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={14} />
                               </button>
                             )}
                           </div>
