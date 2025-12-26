@@ -269,6 +269,17 @@ INACTIVITY_TIMEOUT_DAYS = 7  # Закрывает дыру #7
 HEARTBEAT_AGGREGATE_MINUTES = 60  # Закрывает дыру #22 - агрегация heartbeat
 UNDO_WINDOW_MINUTES = 10  # Закрывает дыру #31 - окно отмены
 
+
+# ============== NOTIFICATION TYPES ==============
+class NotificationType:
+    NOTE_ADDED = "note_added"
+    BRAND_ASSIGNED = "brand_assigned"
+    TASK_ASSIGNED = "task_assigned"
+    TASK_UPDATED = "task_updated"
+    STAGE_COMPLETED = "stage_completed"
+    STATUS_CHANGED = "status_changed"
+
+
 # ============== PYDANTIC MODELS ==============
 class UserCreate(BaseModel):
     email: EmailStr
