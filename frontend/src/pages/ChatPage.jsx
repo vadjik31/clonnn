@@ -246,24 +246,28 @@ const ChatPage = () => {
 
   // Create new chat
   const handleCreateChat = async () => {
-    if (chatType === "direct" && !selectedUserId) {
-      toast.error("Выберите пользователя");
+    if (chatType === "direct" && selectedUserIds.length !== 1) {
+      toast.error("Выберите одного пользователя для личного чата");
       return;
     }
     if (chatType === "group" && !groupName.trim()) {
       toast.error("Введите название группы");
       return;
     }
+    if (chatType === "group" && selectedUserIds.length === 0) {
+      toast.error("Добавьте хотя бы одного участника");
+      return;
+    }
 
     try {
       const payload = {
         type: chatType,
-        participant_ids: selectedUserId ? [selectedUserId] : [],
+        participant_ids: selectedUserIds,
         name: chatType === "group" ? groupName : null
       };
       const res = await api.post("/chats", payload);
       setShowNewChatModal(false);
-      setSelectedUserId("");
+      setSelectedUserIds([]);
       setGroupName("");
       setChatType("direct");
       fetchChats();
@@ -271,6 +275,41 @@ const ChatPage = () => {
     } catch (error) {
       toast.error("Ошибка создания чата");
     }
+  };
+
+  // Toggle user selection
+  const toggleUserSelection = (userId) => {
+    setSelectedUserIds(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // Update chat participants
+  const handleUpdateParticipants = async () => {
+    if (!currentChat || currentChat.type === "general") return;
+    
+    try {
+      await api.put(`/chats/${currentChat.id}/participants`, {
+        participant_ids: selectedUserIds
+      });
+      toast.success("Участники обновлены");
+      setShowEditChatModal(false);
+      fetchCurrentChat(currentChat.id);
+      fetchChats();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка обновления");
+    }
+  };
+
+  // Open edit chat modal
+  const openEditChatModal = () => {
+    if (!currentChat) return;
+    setSelectedUserIds(currentChat.participant_ids || []);
+    setGroupName(currentChat.name || "");
+    fetchAvailableUsers();
+    setShowEditChatModal(true);
   };
 
   // Open general chat
