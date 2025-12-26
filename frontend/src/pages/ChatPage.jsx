@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { 
   MessageSquare, Send, Plus, Users, User, Hash, Search, X, 
-  Image as ImageIcon, Smile, Upload, Loader2
+  Image as ImageIcon, Smile, Upload, Loader2, Trash2
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
