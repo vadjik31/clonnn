@@ -1,70 +1,70 @@
 {
-  "timestamp": "2025-12-26T14:26:40.907800",
+  "timestamp": "2025-12-26T16:16:57.299295",
   "base_url": "https://notifybrands.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:40.990174"
+      "timestamp": "2025-12-26T16:16:57.378145"
     },
     "super_admin_login": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:41.028684"
+      "timestamp": "2025-12-26T16:16:57.421850"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:41.068877"
+      "timestamp": "2025-12-26T16:16:57.467714"
     },
     "searcher_login": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:41.108298"
+      "timestamp": "2025-12-26T16:16:57.512491"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:41.149253"
+      "timestamp": "2025-12-26T16:16:57.558089"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:41.229821"
+      "timestamp": "2025-12-26T16:16:57.648314"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:41.729601"
+      "timestamp": "2025-12-26T16:16:58.613546"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:41.899449"
+      "timestamp": "2025-12-26T16:16:58.779651"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:43.392829"
+      "timestamp": "2025-12-26T16:17:01.082611"
     },
     "brand_workflow": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:43.618568"
+      "timestamp": "2025-12-26T16:17:01.325005"
     },
     "security_fixes": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:44.780190"
+      "timestamp": "2025-12-26T16:17:03.417564"
     },
     "references_endpoints": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:44.892658"
+      "timestamp": "2025-12-26T16:17:03.492692"
     },
     "dashboard_alerts": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:44.932911"
+      "timestamp": "2025-12-26T16:17:03.535241"
     },
     "brands_health_score": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:45.088226"
+      "timestamp": "2025-12-26T16:17:03.667171"
     },
     "sub_suppliers_api": {
       "passed": true,
-      "timestamp": "2025-12-26T14:26:45.543150"
+      "timestamp": "2025-12-26T16:17:04.158368"
     },
     "sub_suppliers_bulk_operations": {
       "passed": false,
-      "timestamp": "2025-12-26T14:26:45.576880"
+      "timestamp": "2025-12-26T16:17:04.196971"
     }
   },
   "summary": {
