@@ -161,7 +161,8 @@ const BrandsPage = () => {
   const fetchUsers = async () => {
     try {
       const response = await api.get("/users");
-      setUsers(response.data.filter(u => u.role === "searcher"));
+      // Включаем сёрчеров и админов для назначения
+      setUsers(response.data.filter(u => u.role === "searcher" || u.role === "admin"));
     } catch (error) {
       console.error("Error fetching users:", error);
     }
