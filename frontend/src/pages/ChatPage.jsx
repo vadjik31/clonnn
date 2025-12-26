@@ -123,19 +123,14 @@ const ChatPage = () => {
       };
 
       wsRef.current.onmessage = (event) => {
-        console.log("[WS] Message received:", event.data);
         try {
           const data = JSON.parse(event.data);
           if (data.type === "new_message") {
-            console.log("[WS] New message:", data.message?.text?.substring(0, 30));
             setMessages(prev => [...prev, data.message]);
             scrollToBottom();
             // Play sound based on chat type and settings
-            // Direct messages always play sound, group/general respect settings
             const isDirectMessage = currentChatRef.current?.type === "direct";
-            console.log("[WS] Chat type:", currentChatRef.current?.type, "Sound enabled:", soundEnabledRef.current);
             if (isDirectMessage || soundEnabledRef.current) {
-              console.log("[WS] Playing sound");
               playNotificationSound();
             }
           } else if (data.type === "reaction_update") {
