@@ -178,11 +178,11 @@ const ChatPage = () => {
       const gainNode = audioContext.createGain();
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      oscillator.frequency.value = 800;
+      oscillator.frequency.value = 880; // Higher pitch
       oscillator.type = "sine";
-      gainNode.gain.value = 0.2;
+      gainNode.gain.value = 0.5; // Louder
       oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.1);
+      oscillator.stop(audioContext.currentTime + 0.2); // Longer duration
     } catch (e) {}
   };
 
