@@ -335,6 +335,14 @@ const BrandDetailPage = () => {
                   <Ban size={16} className="mr-2" />
                   В ЧС
                 </Button>
+                <Button
+                  onClick={handleClearBrand}
+                  className="btn-secondary text-yellow-500"
+                  data-testid="clear-btn"
+                >
+                  <RefreshCw size={16} className="mr-2" />
+                  Очистить
+                </Button>
               </>
             )}
           </div>
