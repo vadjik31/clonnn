@@ -227,11 +227,6 @@ const NotificationsDropdown = () => {
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
-        {/* WebSocket connection indicator */}
-        <span 
-          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'}`}
-          title={wsConnected ? 'Подключено' : 'Переподключение...'}
-        />
       </button>
 
       {/* Dropdown */}
