@@ -112,6 +112,10 @@ const ChatPage = () => {
 
     try {
       wsRef.current = new WebSocket(wsUrl);
+      
+      wsRef.current.onopen = () => {
+        console.log("Chat WebSocket connected:", id);
+      };
 
       wsRef.current.onmessage = (event) => {
         try {
