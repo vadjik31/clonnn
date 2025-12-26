@@ -570,8 +570,8 @@ const ChatPage = () => {
                     {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                   </Button>
                 )}
-                {/* Edit participants button - for creator or super_admin, non-general chats */}
-                {currentChat.type !== "general" && (currentChat.created_by === user?.id || user?.role === "super_admin") && (
+                {/* Edit participants button - for creator, admin or super_admin, non-general chats */}
+                {currentChat.type !== "general" && (currentChat.created_by === user?.id || ["admin", "super_admin"].includes(user?.role)) && (
                   <Button
                     variant="ghost"
                     size="sm"
