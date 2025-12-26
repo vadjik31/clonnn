@@ -884,14 +884,16 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
           
           {action === "assign" && (
             <div className="space-y-2">
-              <Label className="text-[#94A3B8]">Сёрчер</Label>
+              <Label className="text-[#94A3B8]">Пользователь</Label>
               <Select value={userId} onValueChange={setUserId}>
                 <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]">
-                  <SelectValue placeholder="Выберите сёрчера" />
+                  <SelectValue placeholder="Выберите пользователя" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
                   {users.map(u => (
-                    <SelectItem key={u.id} value={u.id}>{u.nickname}</SelectItem>
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.nickname} {u.role === 'admin' ? '(Админ)' : u.role === 'super_admin' ? '(Супер-админ)' : ''}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
