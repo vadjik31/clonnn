@@ -82,6 +82,7 @@ const Sidebar = ({ user }) => {
   const adminLinks = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
     { to: "/analytics", icon: BarChart3, label: "Аналитика" },
+    { to: "/chat", icon: MessageSquare, label: "Чат" },
     { to: "/tasks", icon: ListTodo, label: "Задачи" },
     { to: "/notifications", icon: Bell, label: "Уведомления" },
     { to: "/users", icon: Users, label: "Пользователи" },
@@ -98,6 +99,7 @@ const Sidebar = ({ user }) => {
   const superAdminLinks = [
     { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
     { to: "/analytics", icon: BarChart3, label: "Аналитика" },
+    { to: "/chat", icon: MessageSquare, label: "Чат" },
     { to: "/tasks", icon: ListTodo, label: "Задачи" },
     { to: "/users", icon: Users, label: "Пользователи" },
     { to: "/staff", icon: UserCheck, label: "Сотрудники" },
@@ -112,6 +114,7 @@ const Sidebar = ({ user }) => {
 
   const searcherLinks = [
     { to: "/my-brands", icon: Briefcase, label: "Мои бренды" },
+    { to: "/chat", icon: MessageSquare, label: "Чат" },
     { to: "/sub-suppliers", icon: UsersRound, label: "Под-сапплаеры" },
     { to: "/problematic", icon: AlertTriangle, label: "Проблемные" },
     { to: "/suppliers", icon: Building2, label: "Поставщики" },
