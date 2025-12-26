@@ -200,9 +200,11 @@ const ChatPage = () => {
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
-  }, [chatId, fetchCurrentChat, fetchMessages, connectWebSocket]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId]); // Only reconnect when chatId changes
 
   // Scroll to bottom
   const scrollToBottom = () => {
