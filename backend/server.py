@@ -6509,17 +6509,12 @@ class ChatConnectionManager:
     async def broadcast_to_chat(self, chat_id: str, message: dict, exclude_user: str = None):
         """Broadcast message to all users in chat except sender"""
         if chat_id in self.active_connections:
-            connections = self.active_connections[chat_id]
-            print(f"[BROADCAST] Chat {chat_id[:8]}: {len(connections)} connections, excluding {exclude_user[:8] if exclude_user else 'none'}")
-            for user_id, connection in connections.items():
+            for user_id, connection in self.active_connections[chat_id].items():
                 if user_id != exclude_user:
                     try:
                         await connection.send_json(message)
-                        print(f"[BROADCAST] Sent to user {user_id[:8]}")
-                    except Exception as e:
-                        print(f"[BROADCAST] Error sending to {user_id[:8]}: {e}")
-        else:
-            print(f"[BROADCAST] No connections for chat {chat_id[:8]}")
+                    except Exception:
+                        pass
 
 chat_manager = ChatConnectionManager()
 
