@@ -3768,7 +3768,7 @@ async def clear_brand(brand_id: str, user: dict = Depends(get_current_user)):
         {
             "$set": {
                 "status": BrandStatus.IN_POOL,
-                "pipeline_stage": PipelineStage.DISCOVERY,
+                "pipeline_stage": PipelineStage.REVIEW,
                 "assigned_to_user_id": None,
                 "assigned_to_nickname": None,
                 "assigned_at": None,
