@@ -495,3 +495,40 @@ test_requests:
       - "Admin can access /notifications page"
       - "Notifications display with correct filtering"
       - "Mark as read, delete actions work"
+
+  - task: "Test Chat System"
+    endpoints:
+      - "GET /api/chats - list all chats for current user"
+      - "POST /api/chats - create new chat (direct or group)"
+      - "GET /api/chats/general - get general chat (creates if not exists)"
+      - "GET /api/chats/{chat_id} - get chat details"
+      - "GET /api/chats/{chat_id}/messages - get messages (with limit param)"
+      - "POST /api/chats/{chat_id}/messages - send message"
+      - "POST /api/chats/{chat_id}/messages/{message_id}/reactions - add reaction to message"
+      - "POST /api/chat/upload-image - upload image (multipart/form-data)"
+      - "GET /api/users/available-for-chat - get users available for creating chats"
+    credentials:
+      - super_admin: "admin@procto13.com / admin123 / PROCTO13"
+      - admin: "azamat@gmail.com / azamat / AZAMAT"
+      - searcher: "searcher@procto13.com / searcher123 / PROCTO13"
+    test_scenarios:
+      - "All roles can access general chat"
+      - "Users can create direct (1-to-1) chats"
+      - "Users can create group chats with name"
+      - "Messages can be sent and retrieved"
+      - "Reactions can be added to messages (toggle behavior - add/remove)"
+      - "Image upload works"
+      - "Chat access is properly restricted (user can only access own chats or general)"
+
+  - task: "Test Clear Brand Endpoint"
+    endpoints:
+      - "POST /api/brands/{brand_id}/clear - clear/reset brand to initial state"
+    credentials:
+      - super_admin: "admin@procto13.com / admin123 / PROCTO13"
+      - admin: "azamat@gmail.com / azamat / AZAMAT"
+      - searcher: "searcher@procto13.com / searcher123 / PROCTO13"
+    test_scenarios:
+      - "Should delete notes, contacts, and reset status"
+      - "Only admin/super_admin should have access to clear any brand"
+      - "Searcher can only clear own assigned brands"
+      - "Proper error handling for non-existent brands and unauthorized access"
