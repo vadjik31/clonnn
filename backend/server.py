@@ -6675,10 +6675,10 @@ async def get_chat(chat_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.delete("/chats/{chat_id}")
 async def delete_chat(chat_id: str, user: dict = Depends(get_current_user)):
-    """Удалить чат (только для супер-админа)"""
-    # Only super_admin can delete chats
-    if user.get("role") != "super_admin":
-        raise HTTPException(status_code=403, detail="Только супер-админ может удалять чаты")
+    """Удалить чат (для админа или супер-админа)"""
+    # Only admin or super_admin can delete chats
+    if user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Только админ или супер-админ может удалять чаты")
     
     chat = await db.chats.find_one({"id": chat_id})
     if not chat:
