@@ -1739,6 +1739,7 @@ async def set_outcome(brand_id: str, req: OutcomeRequest, user: dict = Depends(g
         raise HTTPException(status_code=400, detail=f"Неверный канал. Допустимые: {list(OUTCOME_CHANNELS.keys())}")
     
     now = datetime.now(timezone.utc).isoformat()
+    old_status = brand.get("status")
     
     update_data = {
         "status": req.outcome,
@@ -1775,6 +1776,26 @@ async def set_outcome(brand_id: str, req: OutcomeRequest, user: dict = Depends(g
         "channel": req.channel,
         "contact_date": req.contact_date
     })
+    
+    # Создаем уведомление для назначенного пользователя при изменении статуса
+    assigned_user_id = brand.get("assigned_to_user_id")
+    if assigned_user_id and assigned_user_id != user["id"]:
+        brand_name = brand.get("name", "Бренд")
+        status_labels = {
+            BrandStatus.OUTCOME_APPROVED: "Одобрен",
+            BrandStatus.OUTCOME_DECLINED: "Отказ",
+            BrandStatus.OUTCOME_REPLIED: "Ответил"
+        }
+        status_label = status_labels.get(req.outcome, req.outcome)
+        await create_notification(
+            user_id=assigned_user_id,
+            notification_type=NotificationType.STATUS_CHANGED,
+            title="Изменение статуса",
+            message=f'Статус бренда "{brand_name}" изменён на "{status_label}"',
+            brand_id=brand_id,
+            link=f"/brand/{brand_id}",
+            from_user_id=user["id"]
+        )
     
     return {"status": "success"}
 
