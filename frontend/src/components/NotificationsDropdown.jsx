@@ -26,6 +26,28 @@ const NotificationsDropdown = () => {
     }
   }, []);
 
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      // Simple beep sound using Web Audio API
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 800;
+      oscillator.type = "sine";
+      gainNode.gain.value = 0.3;
+      
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.15);
+    } catch (e) {
+      console.log("Sound not supported");
+    }
+  };
+
   // Connect to WebSocket for real-time notifications
   const connectWebSocket = useCallback(() => {
     const token = localStorage.getItem("token");
