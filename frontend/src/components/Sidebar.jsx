@@ -29,6 +29,7 @@ const Sidebar = ({ user }) => {
   const [checkInStatus, setCheckInStatus] = useState(null);
   const [checkingIn, setCheckingIn] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   useEffect(() => {
     if (user?.role === "searcher") {
@@ -49,6 +50,22 @@ const Sidebar = ({ user }) => {
 
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch unread chat messages count
+  useEffect(() => {
+    const fetchUnreadChatCount = async () => {
+      try {
+        const res = await api.get("/chats/unread-count");
+        setUnreadChatCount(res.data.unread_count || 0);
+      } catch (error) {
+        console.log("Failed to fetch unread chat count");
+      }
+    };
+
+    fetchUnreadChatCount();
+    const interval = setInterval(fetchUnreadChatCount, 5000); // Poll every 5 seconds
     return () => clearInterval(interval);
   }, []);
 
