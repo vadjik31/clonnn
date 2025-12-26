@@ -6708,6 +6708,7 @@ async def send_message(chat_id: str, req: MessageCreate, user: dict = Depends(ge
         "sender_role": user.get("role"),
         "text": sanitize_input(req.text),
         "image_url": req.image_url,
+        "reactions": {},  # {emoji: [user_ids]}
         "read_by": [user["id"]],
         "created_at": now
     }
@@ -6747,6 +6748,87 @@ async def send_message(chat_id: str, req: MessageCreate, user: dict = Depends(ge
             )
     
     return message
+
+
+class ReactionRequest(BaseModel):
+    emoji: str
+
+
+@api_router.post("/chats/{chat_id}/messages/{message_id}/reactions")
+async def add_reaction(chat_id: str, message_id: str, req: ReactionRequest, user: dict = Depends(get_current_user)):
+    """Добавить/убрать реакцию на сообщение"""
+    message = await db.chat_messages.find_one({"id": message_id, "chat_id": chat_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Сообщение не найдено")
+    
+    reactions = message.get("reactions", {})
+    emoji = req.emoji
+    
+    if emoji not in reactions:
+        reactions[emoji] = []
+    
+    # Toggle reaction
+    if user["id"] in reactions[emoji]:
+        reactions[emoji].remove(user["id"])
+        if not reactions[emoji]:
+            del reactions[emoji]
+    else:
+        reactions[emoji].append(user["id"])
+    
+    await db.chat_messages.update_one(
+        {"id": message_id},
+        {"$set": {"reactions": reactions}}
+    )
+    
+    # Broadcast reaction update
+    await chat_manager.broadcast_to_chat(chat_id, {
+        "type": "reaction_update",
+        "message_id": message_id,
+        "reactions": reactions
+    })
+    
+    return {"status": "success", "reactions": reactions}
+
+
+@api_router.get("/brands/{brand_id}/chat")
+async def get_or_create_brand_chat(brand_id: str, user: dict = Depends(get_current_user)):
+    """Получить или создать чат для бренда"""
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0, "name_original": 1, "assigned_to_user_id": 1})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    # Check if chat exists
+    chat = await db.chats.find_one({"type": ChatType.BRAND, "brand_id": brand_id}, {"_id": 0})
+    
+    if not chat:
+        # Create brand chat
+        now = datetime.now(timezone.utc).isoformat()
+        participant_ids = [user["id"]]
+        if brand.get("assigned_to_user_id") and brand["assigned_to_user_id"] != user["id"]:
+            participant_ids.append(brand["assigned_to_user_id"])
+        
+        chat = {
+            "id": str(uuid4()),
+            "type": ChatType.BRAND,
+            "name": f"Бренд: {brand.get('name_original', 'Без названия')}",
+            "participant_ids": participant_ids,
+            "brand_id": brand_id,
+            "created_by": user["id"],
+            "created_at": now,
+            "last_message_at": now,
+            "last_message": None
+        }
+        await db.chats.insert_one(chat)
+        chat.pop("_id", None)
+    else:
+        # Add user to participants if not already
+        if user["id"] not in chat.get("participant_ids", []):
+            await db.chats.update_one(
+                {"id": chat["id"]},
+                {"$addToSet": {"participant_ids": user["id"]}}
+            )
+    
+    return chat
 
 
 @api_router.get("/users/available-for-chat")
