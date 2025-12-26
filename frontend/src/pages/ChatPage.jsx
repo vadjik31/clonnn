@@ -581,8 +581,8 @@ const ChatPage = () => {
                     <Settings size={18} />
                   </Button>
                 )}
-                {/* Delete chat button - only for super_admin and non-general chats */}
-                {user?.role === "super_admin" && currentChat.type !== "general" && (
+                {/* Delete chat button - for admin or super_admin, non-general chats */}
+                {["admin", "super_admin"].includes(user?.role) && currentChat.type !== "general" && (
                   <Button
                     variant="ghost"
                     size="sm"
