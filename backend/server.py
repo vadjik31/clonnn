@@ -6041,6 +6041,94 @@ async def delete_supplier(
     
     return {"status": "success", "message": "Поставщик удалён"}
 
+
+# ============== SUPPLIERS ASSIGNMENT API ==============
+
+class SupplierAssignRequest(BaseModel):
+    supplier_ids: List[str]
+    admin_id: str
+    reason: Optional[str] = None
+
+
+@api_router.post("/suppliers/bulk-assign")
+async def bulk_assign_suppliers(req: SupplierAssignRequest, admin: dict = Depends(require_super_admin)):
+    """Назначить поставщиков админу (только супер-админ)"""
+    if not req.supplier_ids:
+        raise HTTPException(status_code=400, detail="Не выбраны поставщики")
+    
+    # Проверяем что админ существует и имеет роль admin
+    target_admin = await db.users.find_one({"id": req.admin_id})
+    if not target_admin:
+        raise HTTPException(status_code=404, detail="Админ не найден")
+    
+    if target_admin.get("role") != "admin":
+        raise HTTPException(status_code=400, detail="Пользователь не является админом")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    assigned_count = 0
+    
+    for supplier_id in req.supplier_ids:
+        result = await db.suppliers.update_one(
+            {"id": supplier_id},
+            {"$set": {
+                "assigned_to_admin_id": req.admin_id,
+                "assigned_to_admin_nickname": target_admin.get("nickname", target_admin.get("email")),
+                "assigned_at": now,
+                "assigned_by": admin["id"],
+                "updated_at": now
+            }}
+        )
+        if result.modified_count > 0:
+            assigned_count += 1
+            await log_event("supplier_assigned", admin["id"], supplier_id, {
+                "admin_id": req.admin_id,
+                "reason": req.reason
+            })
+    
+    # Отправляем уведомление админу
+    if assigned_count > 0:
+        await create_notification(
+            user_id=req.admin_id,
+            notification_type=NotificationType.BRAND_ASSIGNED,
+            title="Назначены поставщики",
+            message=f'Вам назначено {assigned_count} поставщик(ов)',
+            link="/suppliers",
+            from_user_id=admin["id"]
+        )
+    
+    return {
+        "status": "success",
+        "assigned_count": assigned_count,
+        "assigned_to": target_admin.get("nickname", target_admin.get("email"))
+    }
+
+
+@api_router.post("/suppliers/bulk-release")
+async def bulk_release_suppliers(supplier_ids: List[str] = Body(...), admin: dict = Depends(require_super_admin)):
+    """Снять назначение поставщиков (только супер-админ)"""
+    if not supplier_ids:
+        raise HTTPException(status_code=400, detail="Не выбраны поставщики")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    released_count = 0
+    
+    for supplier_id in supplier_ids:
+        result = await db.suppliers.update_one(
+            {"id": supplier_id},
+            {"$set": {
+                "assigned_to_admin_id": None,
+                "assigned_to_admin_nickname": None,
+                "assigned_at": None,
+                "assigned_by": None,
+                "updated_at": now
+            }}
+        )
+        if result.modified_count > 0:
+            released_count += 1
+    
+    return {"status": "success", "released_count": released_count}
+
+
 # ============== TASKS API ==============
 
 class TaskCreate(BaseModel):
