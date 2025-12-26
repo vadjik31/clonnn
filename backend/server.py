@@ -6633,6 +6633,31 @@ async def get_or_create_general_chat(user: dict = Depends(get_current_user)):
     return chat
 
 
+@api_router.get("/chats/unread-count")
+async def get_unread_chat_count(user: dict = Depends(get_current_user)):
+    """Получить количество непрочитанных сообщений в чатах"""
+    user_id = user["id"]
+    
+    # Get all chats where user is participant or general chat
+    chats = await db.chats.find({
+        "$or": [
+            {"type": ChatType.GENERAL},
+            {"participant_ids": user_id}
+        ]
+    }).to_list(1000)
+    
+    chat_ids = [c["id"] for c in chats]
+    
+    # Count unread messages (messages not in read_by for this user)
+    unread_count = await db.chat_messages.count_documents({
+        "chat_id": {"$in": chat_ids},
+        "sender_id": {"$ne": user_id},  # Not sent by user
+        "read_by": {"$nin": [user_id]}  # Not read by user
+    })
+    
+    return {"unread_count": unread_count}
+
+
 @api_router.get("/chats/{chat_id}")
 async def get_chat(chat_id: str, user: dict = Depends(get_current_user)):
     """Получить информацию о чате"""
