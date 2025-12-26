@@ -239,6 +239,18 @@ backend:
         agent: "testing"
         comment: "Access restrictions working correctly - searchers cannot access /api/sub-suppliers/ids (403), admins cannot bulk delete sub-suppliers (403)"
 
+  - task: "Notifications System Backend"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "All notification endpoints working correctly. Tested: GET /api/notifications (with limit and unread_only params), POST /api/notifications/{id}/read, POST /api/notifications/read-all, DELETE /api/notifications/{id}. Notification creation working for note addition and task assignment. Access control properly implemented - users can only access their own notifications. All 24 notification tests passed successfully."
+
 frontend:
   - task: "Super Admin Login & Navigation"
     implemented: true
