@@ -68,8 +68,8 @@ const NotificationsDropdown = () => {
     isConnectingRef.current = true;
 
     // Build WebSocket URL
-    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const apiUrl = new URL(API);
+    const wsProtocol = apiUrl.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${wsProtocol}//${apiUrl.host}/api/ws/notifications?token=${token}`;
 
     try {
