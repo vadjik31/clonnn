@@ -6058,6 +6058,82 @@ async def delete_task(task_id: str, admin: dict = Depends(require_super_admin)):
     await db.tasks.delete_one({"id": task_id})
     return {"status": "success"}
 
+
+# ============== NOTIFICATIONS API ==============
+
+@api_router.get("/notifications")
+async def get_notifications(
+    limit: int = Query(50, ge=1, le=200),
+    unread_only: bool = Query(False),
+    user: dict = Depends(get_current_user)
+):
+    """Получить уведомления текущего пользователя"""
+    query = {"user_id": user["id"]}
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    
+    # Подсчитываем непрочитанные
+    unread_count = await db.notifications.count_documents({
+        "user_id": user["id"],
+        "is_read": False
+    })
+    
+    return {
+        "notifications": notifications,
+        "unread_count": unread_count
+    }
+
+
+@api_router.post("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user: dict = Depends(get_current_user)):
+    """Отметить уведомление как прочитанное"""
+    notification = await db.notifications.find_one({
+        "id": notification_id,
+        "user_id": user["id"]
+    })
+    
+    if not notification:
+        raise HTTPException(status_code=404, detail="Уведомление не найдено")
+    
+    await db.notifications.update_one(
+        {"id": notification_id},
+        {"$set": {"is_read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"status": "success"}
+
+
+@api_router.post("/notifications/read-all")
+async def mark_all_notifications_read(user: dict = Depends(get_current_user)):
+    """Отметить все уведомления как прочитанные"""
+    result = await db.notifications.update_many(
+        {"user_id": user["id"], "is_read": False},
+        {"$set": {"is_read": True, "read_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"status": "success", "updated_count": result.modified_count}
+
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(notification_id: str, user: dict = Depends(get_current_user)):
+    """Удалить уведомление"""
+    notification = await db.notifications.find_one({
+        "id": notification_id,
+        "user_id": user["id"]
+    })
+    
+    if not notification:
+        raise HTTPException(status_code=404, detail="Уведомление не найдено")
+    
+    await db.notifications.delete_one({"id": notification_id})
+    
+    return {"status": "success"}
+
+
 @api_router.get("/")
 async def root():
     return {"message": "PROCTO 13 Brand Management API v5.1 - Suppliers Edition"}
