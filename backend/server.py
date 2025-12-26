@@ -6750,9 +6750,9 @@ async def update_chat_participants(chat_id: str, req: UpdateParticipantsRequest,
     if chat.get("type") == ChatType.GENERAL:
         raise HTTPException(status_code=400, detail="Нельзя изменять общий чат")
     
-    # Only creator or super_admin can modify
-    if chat.get("created_by") != user["id"] and user.get("role") != "super_admin":
-        raise HTTPException(status_code=403, detail="Только создатель или супер-админ может изменять чат")
+    # Only creator, admin or super_admin can modify
+    if chat.get("created_by") != user["id"] and user.get("role") not in ["admin", "super_admin"]:
+        raise HTTPException(status_code=403, detail="Только создатель или админ может изменять чат")
     
     # For direct chats, limit to 2 participants
     if chat.get("type") == ChatType.DIRECT and len(req.participant_ids) > 2:
