@@ -404,3 +404,30 @@ agent_communication:
     message: "Completed comprehensive backend API testing for all three roles (Super Admin, Admin, Searcher). All 23 backend tests passed successfully. Key findings: 1) All new sub-supplier bulk operations working correctly 2) Role-based access control properly implemented 3) All super admin endpoints accessible 4) Admin bulk operations working 5) Searcher endpoints properly filtered. No critical issues found."
   - agent: "testing"
     message: "COMPLETED COMPREHENSIVE FRONTEND AUDIT for all three roles. All 12 frontend tests PASSED successfully. Key findings: 1) All role logins working correctly with proper redirects 2) Role-based sidebar menus implemented correctly (Russian language) 3) Bulk actions working on brands page for Super Admin/Admin 4) Searcher restrictions properly enforced (no bulk actions) 5) Super Admin page tabs all functional 6) Brand detail pages working with action buttons 7) Check-in functionality working for searchers 8) My Brands page functional. Frontend is fully operational and ready for production use."
+  - agent: "main"
+    message: "Implemented Notification System. Backend: Added GET /api/notifications, POST /api/notifications/{id}/read, POST /api/notifications/read-all, DELETE /api/notifications/{id} endpoints. Integrated notification creation into: 1) Adding notes to brands (notifies assigned user) 2) Creating tasks (notifies assigned admin) 3) Changing brand status (notifies assigned user). Frontend: Created NotificationsDropdown component with bell icon in sidebar. Visual verification shows notification badge and dropdown working correctly."
+
+test_requests:
+  - task: "Test Notifications System Backend"
+    endpoints:
+      - "GET /api/notifications - fetch user notifications"
+      - "POST /api/notifications/{id}/read - mark as read"
+      - "POST /api/notifications/read-all - mark all as read"
+      - "DELETE /api/notifications/{id} - delete notification"
+    credentials:
+      - super_admin: "admin@procto13.com / admin123 / PROCTO13"
+      - admin: "azamat@gmail.com / azamat / AZAMAT"
+      - searcher: "searcher@procto13.com / searcher123 / PROCTO13"
+    test_scenarios:
+      - "Create note on brand assigned to searcher as admin -> searcher gets notification"
+      - "Create task for admin -> admin gets notification"
+      - "Change brand status -> assigned user gets notification"
+      - "Mark notification as read"
+      - "Delete notification"
+
+  - task: "Test Notifications UI Frontend"
+    pages:
+      - "Any logged-in page - check sidebar for bell icon with notification count badge"
+      - "Click bell icon - dropdown should open upward showing notifications list"
+      - "Click notification item - should navigate to linked page"
+      - "Mark as read / delete actions in dropdown"
