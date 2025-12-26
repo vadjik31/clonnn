@@ -28,8 +28,9 @@ const ChatPage = () => {
   const [sending, setSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [showEditChatModal, setShowEditChatModal] = useState(false);
   const [availableUsers, setAvailableUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [chatType, setChatType] = useState("direct");
   const [groupName, setGroupName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
