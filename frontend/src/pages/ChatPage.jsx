@@ -695,7 +695,7 @@ const ChatPage = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-[#94A3B8] text-sm">Тип чата</label>
-              <Select value={chatType} onValueChange={setChatType}>
+              <Select value={chatType} onValueChange={(v) => { setChatType(v); setSelectedUserIds([]); }}>
                 <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]">
                   <SelectValue />
                 </SelectTrigger>
@@ -728,37 +728,162 @@ const ChatPage = () => {
 
             <div className="space-y-2">
               <label className="text-[#94A3B8] text-sm">
-                {chatType === "direct" ? "Пользователь" : "Добавить участника"}
+                {chatType === "direct" ? "Пользователь" : `Участники (${selectedUserIds.length})`}
               </label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]">
-                  <SelectValue placeholder="Выберите пользователя" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
-                  {availableUsers.map(u => (
-                    <SelectItem key={u.id} value={u.id}>
-                      <span className="flex items-center gap-2">
+              
+              {/* Selected users badges */}
+              {selectedUserIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedUserIds.map(uid => {
+                    const u = availableUsers.find(x => x.id === uid);
+                    if (!u) return null;
+                    return (
+                      <span 
+                        key={uid}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-[#FF9900]/20 text-[#FF9900] rounded text-sm"
+                      >
                         {u.nickname || u.email}
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          u.role === "super_admin" ? "bg-purple-500/20 text-purple-400" :
-                          u.role === "admin" ? "bg-blue-500/20 text-blue-400" :
-                          "bg-green-500/20 text-green-400"
-                        }`}>
-                          {u.role === "super_admin" ? "СА" : u.role === "admin" ? "Админ" : "Сёрчер"}
-                        </span>
+                        <button 
+                          onClick={() => toggleUserSelection(uid)}
+                          className="hover:text-red-400"
+                        >
+                          <X size={14} />
+                        </button>
                       </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* User list for selection */}
+              <div className="max-h-48 overflow-y-auto border border-[#2A2F3A] rounded bg-[#0F1115]">
+                {availableUsers.filter(u => !selectedUserIds.includes(u.id)).map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => {
+                      if (chatType === "direct") {
+                        setSelectedUserIds([u.id]);
+                      } else {
+                        toggleUserSelection(u.id);
+                      }
+                    }}
+                    className="w-full flex items-center gap-2 p-2 hover:bg-[#2A2F3A] text-left text-sm"
+                  >
+                    <User size={14} className="text-[#94A3B8]" />
+                    <span className="text-[#E6E6E6]">{u.nickname || u.email}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${
+                      u.role === "super_admin" ? "bg-purple-500/20 text-purple-400" :
+                      u.role === "admin" ? "bg-blue-500/20 text-blue-400" :
+                      "bg-green-500/20 text-green-400"
+                    }`}>
+                      {u.role === "super_admin" ? "СА" : u.role === "admin" ? "Админ" : "Сёрчер"}
+                    </span>
+                  </button>
+                ))}
+                {availableUsers.filter(u => !selectedUserIds.includes(u.id)).length === 0 && (
+                  <div className="p-3 text-center text-[#94A3B8] text-sm">
+                    Все пользователи добавлены
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" onClick={() => setShowNewChatModal(false)} className="border-[#2A2F3A]">
+              <Button variant="outline" onClick={() => { setShowNewChatModal(false); setSelectedUserIds([]); }} className="border-[#2A2F3A]">
                 Отмена
               </Button>
               <Button onClick={handleCreateChat} className="bg-[#FF9900] hover:bg-[#E68A00] text-black">
                 Создать
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Chat Modal */}
+      <Dialog open={showEditChatModal} onOpenChange={setShowEditChatModal}>
+        <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+          <DialogHeader>
+            <DialogTitle className="text-[#FF9900] flex items-center gap-2">
+              <Users size={18} /> Редактировать участников
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {currentChat?.type === "group" && (
+              <div className="space-y-2">
+                <label className="text-[#94A3B8] text-sm">Название группы</label>
+                <Input
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Введите название..."
+                  className="bg-[#0F1115] border-[#2A2F3A]"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-[#94A3B8] text-sm">
+                Участники ({selectedUserIds.length})
+              </label>
+              
+              {/* Selected users badges */}
+              {selectedUserIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedUserIds.map(uid => {
+                    const u = availableUsers.find(x => x.id === uid);
+                    const isCreator = currentChat?.created_by === uid;
+                    if (!u) return null;
+                    return (
+                      <span 
+                        key={uid}
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${
+                          isCreator ? "bg-purple-500/20 text-purple-400" : "bg-[#FF9900]/20 text-[#FF9900]"
+                        }`}
+                      >
+                        {u.nickname || u.email}
+                        {isCreator && <span className="text-xs">(создатель)</span>}
+                        {!isCreator && (
+                          <button 
+                            onClick={() => toggleUserSelection(uid)}
+                            className="hover:text-red-400"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {/* User list for selection */}
+              <div className="max-h-48 overflow-y-auto border border-[#2A2F3A] rounded bg-[#0F1115]">
+                {availableUsers.filter(u => !selectedUserIds.includes(u.id)).map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => toggleUserSelection(u.id)}
+                    className="w-full flex items-center gap-2 p-2 hover:bg-[#2A2F3A] text-left text-sm"
+                  >
+                    <Plus size={14} className="text-green-400" />
+                    <span className="text-[#E6E6E6]">{u.nickname || u.email}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${
+                      u.role === "super_admin" ? "bg-purple-500/20 text-purple-400" :
+                      u.role === "admin" ? "bg-blue-500/20 text-blue-400" :
+                      "bg-green-500/20 text-green-400"
+                    }`}>
+                      {u.role === "super_admin" ? "СА" : u.role === "admin" ? "Админ" : "Сёрчер"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setShowEditChatModal(false)} className="border-[#2A2F3A]">
+                Отмена
+              </Button>
+              <Button onClick={handleUpdateParticipants} className="bg-[#FF9900] hover:bg-[#E68A00] text-black">
+                Сохранить
               </Button>
             </div>
           </div>
