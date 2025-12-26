@@ -2128,6 +2128,20 @@ async def add_note(brand_id: str, req: BrandNoteCreate, user: dict = Depends(get
     }
     await db.brand_notes.insert_one(note)
     
+    # Создаем уведомление для назначенного пользователя (если это не он сам добавил заметку)
+    assigned_user_id = brand.get("assigned_to_user_id")
+    if assigned_user_id and assigned_user_id != user["id"]:
+        brand_name = brand.get("name", "Бренд")
+        await create_notification(
+            user_id=assigned_user_id,
+            notification_type=NotificationType.NOTE_ADDED,
+            title="Новая заметка",
+            message=f'{user.get("nickname", "Пользователь")} добавил заметку к бренду "{brand_name}"',
+            brand_id=brand_id,
+            link=f"/brand/{brand_id}",
+            from_user_id=user["id"]
+        )
+    
     return {"status": "success"}
 
 
