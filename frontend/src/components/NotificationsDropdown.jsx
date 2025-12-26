@@ -145,7 +145,7 @@ const NotificationsDropdown = () => {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 bg-[#13161B] border border-[#2A2F3A] rounded-[4px] shadow-xl z-50 overflow-hidden">
+        <div className="absolute left-0 bottom-full mb-2 w-96 bg-[#13161B] border border-[#2A2F3A] rounded-[4px] shadow-xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2F3A]">
             <h3 className="font-semibold text-[#E6E6E6]">Уведомления</h3>
