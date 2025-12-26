@@ -4399,6 +4399,17 @@ async def bulk_assign_sub_suppliers(req: BulkSubSupplierRequest, user_id: str = 
                 "reason": req.reason
             })
     
+    # Отправляем уведомление назначенному пользователю
+    if updated_count > 0:
+        await create_notification(
+            user_id=user_id,
+            notification_type=NotificationType.BRAND_ASSIGNED,
+            title="Назначены под-сапплаеры",
+            message=f'Вам назначено {updated_count} под-сапплаер(ов)',
+            link="/sub-suppliers",
+            from_user_id=user["id"]
+        )
+    
     return {"status": "success", "assigned_count": updated_count}
 
 
