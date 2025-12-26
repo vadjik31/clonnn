@@ -630,17 +630,19 @@ const ChatPage = () => {
                     <Smile size={20} />
                   </Button>
                   {showEmojiPicker && (
-                    <div className="absolute bottom-12 left-0 bg-[#13161B] border border-[#2A2F3A] rounded-lg p-2 grid grid-cols-8 gap-1 z-10">
-                      {EMOJIS.map(emoji => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => addEmoji(emoji)}
-                          className="w-8 h-8 hover:bg-[#2A2F3A] rounded text-lg"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
+                    <div className="absolute bottom-12 left-0 bg-[#13161B] border border-[#2A2F3A] rounded-lg p-3 z-50 shadow-xl">
+                      <div className="grid grid-cols-8 gap-2 min-w-[280px]">
+                        {EMOJIS.map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => addEmoji(emoji)}
+                            className="w-8 h-8 hover:bg-[#2A2F3A] rounded text-xl flex items-center justify-center transition-colors"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
