@@ -6708,6 +6708,51 @@ async def get_messages(
     return {"messages": list(reversed(messages))}
 
 
+class UpdateParticipantsRequest(BaseModel):
+    participant_ids: List[str]
+    name: Optional[str] = None
+
+
+@api_router.put("/chats/{chat_id}/participants")
+async def update_chat_participants(chat_id: str, req: UpdateParticipantsRequest, user: dict = Depends(get_current_user)):
+    """Обновить участников чата (только для создателя или супер-админа)"""
+    chat = await db.chats.find_one({"id": chat_id})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Чат не найден")
+    
+    # Cannot modify general chat
+    if chat.get("type") == ChatType.GENERAL:
+        raise HTTPException(status_code=400, detail="Нельзя изменять общий чат")
+    
+    # Only creator or super_admin can modify
+    if chat.get("created_by") != user["id"] and user.get("role") != "super_admin":
+        raise HTTPException(status_code=403, detail="Только создатель или супер-админ может изменять чат")
+    
+    # For direct chats, limit to 2 participants
+    if chat.get("type") == ChatType.DIRECT and len(req.participant_ids) > 2:
+        raise HTTPException(status_code=400, detail="В личном чате может быть только 2 участника")
+    
+    # Ensure creator is always included
+    participant_ids = list(set(req.participant_ids))
+    if chat.get("created_by") and chat["created_by"] not in participant_ids:
+        participant_ids.append(chat["created_by"])
+    
+    update_data = {
+        "participant_ids": participant_ids,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Update name if provided (only for group chats)
+    if req.name and chat.get("type") == ChatType.GROUP:
+        update_data["name"] = req.name
+    
+    await db.chats.update_one({"id": chat_id}, {"$set": update_data})
+    
+    # Get updated chat
+    updated_chat = await db.chats.find_one({"id": chat_id}, {"_id": 0})
+    return updated_chat
+
+
 @api_router.post("/chats/{chat_id}/messages")
 async def send_message(chat_id: str, req: MessageCreate, user: dict = Depends(get_current_user)):
     """Отправить сообщение в чат"""
