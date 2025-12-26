@@ -491,7 +491,7 @@ class ChatAndClearTester:
             "GET",
             f"brands/{test_brand_id}",
             200,
-            token=self.searcher_token
+            token=self.super_admin_token  # Use super admin since brand is now unassigned
         )
         
         if not success:
