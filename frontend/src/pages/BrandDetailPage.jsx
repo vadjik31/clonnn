@@ -468,7 +468,7 @@ const BrandDetailPage = () => {
               contacts.map((contact) => (
                 <div 
                   key={contact.id} 
-                  className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px]"
+                  className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px] group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -478,7 +478,27 @@ const BrandDetailPage = () => {
                         <span className="px-1.5 py-0.5 text-xs bg-green-900/30 text-green-400 rounded">★</span>
                       )}
                     </div>
-                    <span className="text-xs text-[#94A3B8] capitalize">{contact.contact_type}</span>
+                    <div className="flex items-center gap-2">
+                      {canAct && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setEditContactModal({ open: true, contact })}
+                            className="p-1 text-[#94A3B8] hover:text-blue-400 transition-colors"
+                            title="Редактировать"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteContact(contact.id)}
+                            className="p-1 text-[#94A3B8] hover:text-red-400 transition-colors"
+                            title="Удалить"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                      <span className="text-xs text-[#94A3B8] capitalize">{contact.contact_type}</span>
+                    </div>
                   </div>
                   {contact.notes && (
                     <p className="text-xs text-[#94A3B8] mt-1">{contact.notes}</p>
