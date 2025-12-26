@@ -1539,6 +1539,289 @@ class PROCTO13APITester:
         
         return True
 
+    def test_suppliers_assignment_system(self) -> bool:
+        """Test the new Suppliers Assignment System for PROCTO 13"""
+        self.log("=== TESTING SUPPLIERS ASSIGNMENT SYSTEM ===")
+        
+        if not all([self.super_admin_token, self.admin_token]):
+            self.log("❌ Missing required tokens for suppliers assignment testing")
+            return False
+        
+        # Test 1: GET /api/suppliers as Super Admin (should see ALL suppliers)
+        success, response = self.run_test(
+            "Get All Suppliers (Super Admin)",
+            "GET",
+            "suppliers",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        all_suppliers = response.get('suppliers', [])
+        self.log(f"✅ Super Admin sees {len(all_suppliers)} suppliers")
+        
+        if not all_suppliers:
+            self.log("❌ No suppliers found - cannot test assignment system")
+            return False
+        
+        # Get a supplier ID for testing
+        test_supplier_id = all_suppliers[0]['id']
+        self.log(f"✅ Using supplier ID for testing: {test_supplier_id}")
+        
+        # Test 2: GET /api/suppliers as Admin (should see ONLY assigned suppliers - initially empty)
+        success, response = self.run_test(
+            "Get Admin Suppliers (Initially Empty)",
+            "GET",
+            "suppliers",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        admin_suppliers_before = response.get('suppliers', [])
+        self.log(f"✅ Admin initially sees {len(admin_suppliers_before)} suppliers")
+        
+        # Test 3: POST /api/suppliers/bulk-assign - Assign supplier to admin
+        success, response = self.run_test(
+            "Bulk Assign Supplier to Admin",
+            "POST",
+            "suppliers/bulk-assign",
+            200,
+            data={
+                "supplier_ids": [test_supplier_id],
+                "admin_id": self.admin_user_id,
+                "reason": "Test assignment for suppliers system"
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response shows assigned_count = 1
+        assigned_count = response.get('assigned_count', 0)
+        if assigned_count != 1:
+            self.log(f"❌ Expected assigned_count=1, got {assigned_count}")
+            return False
+        
+        self.log(f"✅ Successfully assigned {assigned_count} supplier to admin")
+        
+        # Test 4: Verify Admin receives notification
+        success, response = self.run_test(
+            "Check Admin Notifications After Assignment",
+            "GET",
+            "notifications",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Look for brand_assigned notification
+        notifications = response.get('notifications', [])
+        assignment_notification = None
+        for notif in notifications:
+            if notif.get('type') == 'brand_assigned':
+                assignment_notification = notif
+                break
+        
+        if not assignment_notification:
+            self.log("❌ Admin did not receive assignment notification")
+            return False
+        
+        self.log("✅ Admin received assignment notification")
+        
+        # Test 5: Verify Admin now sees assigned supplier
+        success, response = self.run_test(
+            "Get Admin Suppliers After Assignment",
+            "GET",
+            "suppliers",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        admin_suppliers_after = response.get('suppliers', [])
+        if len(admin_suppliers_after) != len(admin_suppliers_before) + 1:
+            self.log(f"❌ Admin supplier count should increase by 1. Before: {len(admin_suppliers_before)}, After: {len(admin_suppliers_after)}")
+            return False
+        
+        # Verify the assigned supplier is in the list
+        assigned_supplier_found = False
+        for supplier in admin_suppliers_after:
+            if supplier['id'] == test_supplier_id:
+                assigned_supplier_found = True
+                break
+        
+        if not assigned_supplier_found:
+            self.log("❌ Assigned supplier not found in admin's supplier list")
+            return False
+        
+        self.log(f"✅ Admin now sees {len(admin_suppliers_after)} suppliers (including assigned one)")
+        
+        # Test 6: POST /api/suppliers/bulk-release - Release supplier from admin
+        success, response = self.run_test(
+            "Bulk Release Supplier from Admin",
+            "POST",
+            "suppliers/bulk-release",
+            200,
+            data=[test_supplier_id],
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response shows released_count = 1
+        released_count = response.get('released_count', 0)
+        if released_count != 1:
+            self.log(f"❌ Expected released_count=1, got {released_count}")
+            return False
+        
+        self.log(f"✅ Successfully released {released_count} supplier from admin")
+        
+        # Test 7: Verify Admin no longer sees supplier
+        success, response = self.run_test(
+            "Get Admin Suppliers After Release",
+            "GET",
+            "suppliers",
+            200,
+            token=self.admin_token
+        )
+        
+        if not success:
+            return False
+        
+        admin_suppliers_final = response.get('suppliers', [])
+        if len(admin_suppliers_final) != len(admin_suppliers_before):
+            self.log(f"❌ Admin supplier count should return to original. Expected: {len(admin_suppliers_before)}, Got: {len(admin_suppliers_final)}")
+            return False
+        
+        # Verify the released supplier is no longer in the list
+        released_supplier_found = False
+        for supplier in admin_suppliers_final:
+            if supplier['id'] == test_supplier_id:
+                released_supplier_found = True
+                break
+        
+        if released_supplier_found:
+            self.log("❌ Released supplier still found in admin's supplier list")
+            return False
+        
+        self.log(f"✅ Admin now sees {len(admin_suppliers_final)} suppliers (released supplier removed)")
+        
+        # Test 8: Test role-based access - Searcher should not access suppliers endpoints
+        if self.searcher_token:
+            success, response = self.run_test(
+                "Searcher Access to Suppliers (Should Fail)",
+                "GET",
+                "suppliers",
+                403,  # Should be forbidden
+                token=self.searcher_token
+            )
+            
+            if not success:
+                self.log("❌ Searcher was allowed to access suppliers (security issue)")
+                return False
+            
+            self.log("✅ Searcher correctly forbidden from accessing suppliers")
+        
+        # Test 9: Test bulk assignment with multiple suppliers
+        if len(all_suppliers) >= 2:
+            multiple_supplier_ids = [s['id'] for s in all_suppliers[:2]]
+            
+            success, response = self.run_test(
+                "Bulk Assign Multiple Suppliers",
+                "POST",
+                "suppliers/bulk-assign",
+                200,
+                data={
+                    "supplier_ids": multiple_supplier_ids,
+                    "admin_id": self.admin_user_id,
+                    "reason": "Test multiple supplier assignment"
+                },
+                token=self.super_admin_token
+            )
+            
+            if not success:
+                return False
+            
+            assigned_count = response.get('assigned_count', 0)
+            if assigned_count != 2:
+                self.log(f"❌ Expected assigned_count=2, got {assigned_count}")
+                return False
+            
+            self.log(f"✅ Successfully assigned {assigned_count} suppliers to admin")
+            
+            # Clean up - release the multiple suppliers
+            success, response = self.run_test(
+                "Bulk Release Multiple Suppliers",
+                "POST",
+                "suppliers/bulk-release",
+                200,
+                data=multiple_supplier_ids,
+                token=self.super_admin_token
+            )
+            
+            if not success:
+                return False
+            
+            released_count = response.get('released_count', 0)
+            if released_count != 2:
+                self.log(f"❌ Expected released_count=2, got {released_count}")
+                return False
+            
+            self.log(f"✅ Successfully released {released_count} suppliers from admin")
+        
+        # Test 10: Test invalid assignment scenarios
+        success, response = self.run_test(
+            "Invalid Supplier Assignment (Non-existent Supplier)",
+            "POST",
+            "suppliers/bulk-assign",
+            400,  # Should fail with bad request
+            data={
+                "supplier_ids": ["non-existent-id"],
+                "admin_id": self.admin_user_id,
+                "reason": "Test invalid assignment"
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            self.log("❌ Invalid supplier assignment was allowed")
+            return False
+        
+        self.log("✅ Invalid supplier assignment correctly rejected")
+        
+        # Test 11: Test assignment to non-existent admin
+        success, response = self.run_test(
+            "Invalid Admin Assignment (Non-existent Admin)",
+            "POST",
+            "suppliers/bulk-assign",
+            400,  # Should fail with bad request
+            data={
+                "supplier_ids": [test_supplier_id],
+                "admin_id": "non-existent-admin-id",
+                "reason": "Test invalid admin assignment"
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            self.log("❌ Assignment to non-existent admin was allowed")
+            return False
+        
+        self.log("✅ Assignment to non-existent admin correctly rejected")
+        
+        return True
+
     def run_all_tests(self) -> Dict[str, Any]:
         """Run all tests and return results"""
         self.log("🚀 Starting PROCTO 13 API Testing Suite")
