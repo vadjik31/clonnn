@@ -154,8 +154,9 @@ const ChatPage = () => {
 
       wsRef.current.onclose = (e) => {
         console.log("Chat WebSocket closed:", e.code, e.reason);
+        // Reconnect only if still viewing same chat
         setTimeout(() => {
-          if (chatId === id) {
+          if (currentChatIdRef.current === id && !wsRef.current) {
             connectWebSocket(id);
           }
         }, 3000);
