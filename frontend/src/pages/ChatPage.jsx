@@ -160,7 +160,7 @@ const ChatPage = () => {
         // WebSocket error - polling fallback will handle messages
       };
     } catch (error) {
-      console.log("WebSocket connection error:", error);
+      // WebSocket connection failed - polling fallback will handle messages
     }
   }, []); // No dependencies - function is stable
 
