@@ -733,7 +733,7 @@ const ReassignModal = ({ open, onClose, onSubmit, users }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!userId) {
-      toast.error("Выберите сёрчера");
+      toast.error("Выберите пользователя");
       return;
     }
     if (!reason.trim()) {
@@ -812,7 +812,7 @@ const BulkActionModal = ({ action, count, users, onClose, onSubmit }) => {
       return;
     }
     if (action === "assign" && !userId) {
-      toast.error("Выберите сёрчера");
+      toast.error("Выберите пользователя");
       return;
     }
     setLoading(true);
