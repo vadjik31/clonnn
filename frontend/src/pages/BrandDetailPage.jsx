@@ -574,26 +574,49 @@ const BrandDetailPage = () => {
             {notes.length === 0 ? (
               <p className="text-[#94A3B8] text-center py-4">Нет заметок</p>
             ) : (
-              notes.map((note) => (
-                <div 
-                  key={note.id} 
-                  className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px]"
-                  data-testid={`note-${note.id}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-[#E6E6E6]">{note.user_nickname}</span>
-                    <span className="text-xs text-[#94A3B8]">
-                      {new Date(note.created_at).toLocaleString('ru-RU')}
-                    </span>
+              notes.map((note) => {
+                const canEditNote = note.user_id === user?.id || user?.role === "admin" || user?.role === "super_admin";
+                return (
+                  <div 
+                    key={note.id} 
+                    className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px] group"
+                    data-testid={`note-${note.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-[#E6E6E6]">{note.user_nickname}</span>
+                      <div className="flex items-center gap-2">
+                        {canEditNote && (
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setEditNoteModal({ open: true, note })}
+                              className="p-1 text-[#94A3B8] hover:text-blue-400 transition-colors"
+                              title="Редактировать"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNote(note.id)}
+                              className="p-1 text-[#94A3B8] hover:text-red-400 transition-colors"
+                              title="Удалить"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                        <span className="text-xs text-[#94A3B8]">
+                          {new Date(note.created_at).toLocaleString('ru-RU')}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-[#94A3B8]">{note.note_text}</p>
+                    {note.note_type !== "general" && (
+                      <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-[#1A1D24] text-[#94A3B8] rounded-full">
+                        {getNoteTypeLabel(note.note_type)}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-[#94A3B8]">{note.note_text}</p>
-                  {note.note_type !== "general" && (
-                    <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-[#1A1D24] text-[#94A3B8] rounded-full">
-                      {getNoteTypeLabel(note.note_type)}
-                    </span>
-                  )}
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
