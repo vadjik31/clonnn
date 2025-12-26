@@ -19,11 +19,14 @@ import {
   ListTodo,
   UsersRound,
   Bell,
-  MessageSquare
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  Menu
 } from "lucide-react";
 import NotificationsDropdown from "./NotificationsDropdown";
 
-const Sidebar = ({ user }) => {
+const Sidebar = ({ user, collapsed, setCollapsed }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [checkInStatus, setCheckInStatus] = useState(null);
