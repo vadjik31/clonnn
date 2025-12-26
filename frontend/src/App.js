@@ -92,11 +92,20 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 // Layout with Sidebar
 const Layout = ({ children }) => {
   const { user } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebarCollapsed");
+    return saved === "true";
+  });
+
+  // Save collapsed state
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", sidebarCollapsed);
+  }, [sidebarCollapsed]);
   
   return (
     <div className="min-h-screen bg-[#0F1115] flex">
-      <Sidebar user={user} />
-      <main className="flex-1 ml-64 p-6 overflow-auto">
+      <Sidebar user={user} collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
+      <main className={`flex-1 p-6 overflow-auto transition-all duration-300 ${sidebarCollapsed ? "ml-0" : "ml-64"}`}>
         {children}
       </main>
     </div>
