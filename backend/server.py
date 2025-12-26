@@ -6898,8 +6898,8 @@ async def upload_chat_image(file: UploadFile = File(...), user: dict = Depends(g
     }
     await db.chat_images.insert_one(image_data)
     
-    # Return URL to fetch image
-    return {"url": f"/api/chat/images/{file_id}", "id": file_id}
+    # Return URL to fetch image (without /api prefix since frontend adds it)
+    return {"url": f"/chat/images/{file_id}", "id": file_id}
 
 
 @api_router.get("/chat/images/{image_id}")
