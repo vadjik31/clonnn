@@ -6021,6 +6021,18 @@ async def create_task(task: TaskCreate, admin: dict = Depends(require_super_admi
     await db.tasks.insert_one(new_task)
     new_task.pop("_id", None)
     
+    # Создаем уведомление для назначенного админа
+    if assigned_user.get("role") in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        await create_notification(
+            user_id=task.assigned_to_id,
+            notification_type=NotificationType.TASK_ASSIGNED,
+            title="Новая задача",
+            message=f'Вам назначена задача: "{sanitize_input(task.title)}"',
+            task_id=new_task["id"],
+            link="/tasks",
+            from_user_id=admin["id"]
+        )
+    
     return new_task
 
 @api_router.put("/tasks/{task_id}")
