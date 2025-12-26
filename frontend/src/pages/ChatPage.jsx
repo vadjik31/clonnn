@@ -36,11 +36,20 @@ const ChatPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(null); // message_id
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem("chatSoundEnabled");
+    return saved === null ? true : saved === "true";
+  });
   
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Save sound preference
+  useEffect(() => {
+    localStorage.setItem("chatSoundEnabled", soundEnabled);
+  }, [soundEnabled]);
 
   // Fetch chats list
   const fetchChats = useCallback(async () => {
