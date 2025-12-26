@@ -2090,6 +2090,83 @@ async def add_note(brand_id: str, req: BrandNoteCreate, user: dict = Depends(get
     
     return {"status": "success"}
 
+
+@api_router.put("/brands/{brand_id}/notes/{note_id}")
+async def update_brand_note(brand_id: str, note_id: str, note_text: str = Body(..., embed=True), user: dict = Depends(get_current_user)):
+    """Редактировать заметку"""
+    note = await db.brand_notes.find_one({"id": note_id, "brand_id": brand_id}, {"_id": 0})
+    if not note:
+        raise HTTPException(status_code=404, detail="Заметка не найдена")
+    
+    # Только автор или админ может редактировать
+    if note["user_id"] != user["id"] and user["role"] not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Нет прав на редактирование")
+    
+    await db.brand_notes.update_one(
+        {"id": note_id},
+        {"$set": {
+            "note_text": note_text,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"status": "success"}
+
+
+@api_router.delete("/brands/{brand_id}/notes/{note_id}")
+async def delete_brand_note(brand_id: str, note_id: str, user: dict = Depends(get_current_user)):
+    """Удалить заметку"""
+    note = await db.brand_notes.find_one({"id": note_id, "brand_id": brand_id}, {"_id": 0})
+    if not note:
+        raise HTTPException(status_code=404, detail="Заметка не найдена")
+    
+    # Только автор или админ может удалять
+    if note["user_id"] != user["id"] and user["role"] not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Нет прав на удаление")
+    
+    await db.brand_notes.delete_one({"id": note_id})
+    
+    return {"status": "success"}
+
+
+@api_router.put("/brands/{brand_id}/contacts/{contact_id}")
+async def update_brand_contact(
+    brand_id: str, 
+    contact_id: str, 
+    contact_type: Optional[str] = Body(None),
+    value: Optional[str] = Body(None),
+    notes: Optional[str] = Body(None),
+    is_primary: Optional[bool] = Body(None),
+    user: dict = Depends(get_current_user)
+):
+    """Редактировать контакт"""
+    contact = await db.brand_contacts.find_one({"id": contact_id, "brand_id": brand_id}, {"_id": 0})
+    if not contact:
+        raise HTTPException(status_code=404, detail="Контакт не найден")
+    
+    brand = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    # Проверка прав
+    if user["role"] == UserRole.SEARCHER and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Нет прав на редактирование")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    if contact_type is not None:
+        update_data["contact_type"] = contact_type
+    if value is not None:
+        update_data["value"] = value
+    if notes is not None:
+        update_data["notes"] = notes
+    if is_primary is not None:
+        update_data["is_primary"] = is_primary
+    
+    await db.brand_contacts.update_one({"id": contact_id}, {"$set": update_data})
+    
+    return {"status": "success"}
+
+
 # ============== ADMIN BRAND ACTIONS ==============
 @api_router.post("/admin/brands/{brand_id}/release")
 async def admin_release_brand(brand_id: str, reason: str = Body(..., embed=True), admin: dict = Depends(require_admin)):
