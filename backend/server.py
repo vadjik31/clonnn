@@ -2175,7 +2175,7 @@ async def add_note(brand_id: str, req: BrandNoteCreate, user: dict = Depends(get
     # Создаем уведомление для назначенного пользователя (если это не он сам добавил заметку)
     assigned_user_id = brand.get("assigned_to_user_id")
     if assigned_user_id and assigned_user_id != user["id"]:
-        brand_name = brand.get("name", "Бренд")
+        brand_name = brand.get("name_original") or brand.get("name") or "Без названия"
         await create_notification(
             user_id=assigned_user_id,
             notification_type=NotificationType.NOTE_ADDED,
