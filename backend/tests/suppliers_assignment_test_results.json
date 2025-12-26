@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-12-26T14:30:07.191630",
+  "base_url": "https://notifyflow-6.preview.emergentagent.com",
+  "test_type": "suppliers_assignment_system",
+  "tests": {
+    "super_admin_login": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.279865"
+    },
+    "admin_login": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.331190"
+    },
+    "suppliers_role_based_access": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.413564"
+    },
+    "supplier_assignment": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.466240"
+    },
+    "assignment_notification": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.505010"
+    },
+    "admin_sees_assigned_supplier": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.542600"
+    },
+    "supplier_release": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.581074"
+    },
+    "admin_no_longer_sees_supplier": {
+      "passed": true,
+      "timestamp": "2025-12-26T14:30:07.620148"
+    }
+  },
+  "summary": {
+    "total_tests": 9,
+    "passed_tests": 9,
+    "failed_tests": 0,
+    "success_rate": 100.0
+  },
+  "failed_tests": []
+}
