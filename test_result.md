@@ -426,39 +426,27 @@ agent_communication:
     message: "COMPLETED ADMIN ASSIGNMENT FEATURE. Updated BrandsPage.jsx and SubSuppliersPage.jsx to: 1) Change dropdown label from 'Сёрчер' to 'Пользователь' 2) Change placeholder from 'Выберите сёрчера' to 'Выберите пользователя' 3) Add role labels to dropdown items (Админ), (Супер-админ) for admin/super_admin users. Verified that admin 'azamat' now appears in assignment dropdown with '(Админ)' suffix. Both brands and sub-suppliers can now be assigned to admins."
 
 test_requests:
-  - task: "Test Notifications System Backend"
+  - task: "Test Suppliers Assignment System"
     endpoints:
-      - "GET /api/notifications - fetch user notifications"
-      - "POST /api/notifications/{id}/read - mark as read"
-      - "POST /api/notifications/read-all - mark all as read"
-      - "DELETE /api/notifications/{id} - delete notification"
+      - "GET /api/suppliers - fetch suppliers based on role"
+      - "POST /api/suppliers/bulk-assign - assign suppliers to admin"
+      - "POST /api/suppliers/bulk-release - release suppliers from admin"
     credentials:
       - super_admin: "admin@procto13.com / admin123 / PROCTO13"
       - admin: "azamat@gmail.com / azamat / AZAMAT"
       - searcher: "searcher@procto13.com / searcher123 / PROCTO13"
     test_scenarios:
-      - "Create note on brand assigned to searcher as admin -> searcher gets notification"
-      - "Create task for admin -> admin gets notification"
-      - "Change brand status -> assigned user gets notification"
-      - "Mark notification as read"
-      - "Delete notification"
+      - "Super admin sees ALL suppliers"
+      - "Admin sees ONLY assigned suppliers (initially empty)"
+      - "Super admin assigns supplier to admin → admin gets notification"
+      - "Admin now sees assigned supplier in their list"
+      - "Super admin releases supplier → admin no longer sees it"
 
-frontend:
-  - task: "Notification System UI"
-    implemented: true
-    working: true
-    file: "frontend/src/components/NotificationsDropdown.jsx"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "✅ NOTIFICATION SYSTEM UI FULLY FUNCTIONAL. Tested with Admin (azamat) and Super Admin roles. Key findings: 1) Bell icon visible in sidebar with orange badge showing unread count (2 notifications) 2) Dropdown opens upward above bell icon as expected 3) Header 'Уведомления' and 'Прочитать все' button present 4) Notifications display correctly with type icons (📋 for tasks), titles ('Новая задача'), messages, and timestamps ('5 мин назад') 5) Mark as read functionality working - badge count decreased from 2 to 1 when clicked 6) Check and delete buttons present for each notification 7) Both Admin and Super Admin can access notifications. Minor: Dropdown doesn't close when clicking outside (not critical for core functionality)."
-
-  - task: "Test Notifications UI Frontend"
+  - task: "Test Notifications Page"
     pages:
-      - "Any logged-in page - check sidebar for bell icon with notification count badge"
-      - "Click bell icon - dropdown should open upward showing notifications list"
-      - "Click notification item - should navigate to linked page"
-      - "Mark as read / delete actions in dropdown"
+      - "/notifications - full page with filters and actions"
+    test_scenarios:
+      - "Searcher can access /notifications page"
+      - "Admin can access /notifications page"
+      - "Notifications display with correct filtering"
+      - "Mark as read, delete actions work"
