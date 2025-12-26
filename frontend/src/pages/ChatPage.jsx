@@ -108,11 +108,18 @@ const ChatPage = () => {
           if (data.type === "new_message") {
             setMessages(prev => [...prev, data.message]);
             scrollToBottom();
-            playNotificationSound();
+            // Play sound based on chat type and settings
+            // Direct messages always play sound, group/general respect settings
+            const isDirectMessage = currentChat?.type === "direct";
+            if (isDirectMessage || soundEnabled) {
+              playNotificationSound();
+            }
           } else if (data.type === "reaction_update") {
             setMessages(prev => prev.map(m => 
               m.id === data.message_id ? { ...m, reactions: data.reactions } : m
             ));
+          } else if (data.type === "message_deleted") {
+            setMessages(prev => prev.filter(m => m.id !== data.message_id));
           }
         } catch (e) {
           if (event.data === "ping") {
