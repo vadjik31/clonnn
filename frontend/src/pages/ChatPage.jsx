@@ -539,17 +539,26 @@ const ChatPage = () => {
                             ? "bg-[#FF9900] text-black" 
                             : "bg-[#2A2F3A] text-[#E6E6E6]"
                         }`}>
-                          {msg.image_url && (
-                            <img 
-                              src={msg.image_url.startsWith("http") ? msg.image_url : `${API}${msg.image_url.startsWith("/") ? msg.image_url : "/" + msg.image_url}`} 
-                              alt="Изображение" 
-                              className="max-w-full rounded mb-2 max-h-64 object-contain cursor-pointer"
-                              onClick={() => {
-                                const url = msg.image_url.startsWith("http") ? msg.image_url : `${API}${msg.image_url.startsWith("/") ? msg.image_url : "/" + msg.image_url}`;
-                                window.open(url, "_blank");
-                              }}
-                            />
-                          )}
+                          {msg.image_url && (() => {
+                            // Build correct image URL - handle both old (/api/...) and new (/chat/...) formats
+                            let imgUrl = msg.image_url;
+                            if (imgUrl.startsWith("/api/")) {
+                              // Old format: /api/chat/images/xxx -> use BACKEND_URL directly
+                              imgUrl = `${API.replace('/api', '')}${imgUrl}`;
+                            } else if (imgUrl.startsWith("/")) {
+                              // New format: /chat/images/xxx -> add API prefix
+                              imgUrl = `${API}${imgUrl}`;
+                            }
+                            return (
+                              <img 
+                                src={imgUrl} 
+                                alt="Изображение" 
+                                className="max-w-full rounded mb-2 max-h-64 object-contain cursor-pointer"
+                                onClick={() => window.open(imgUrl, "_blank")}
+                                onError={(e) => { e.target.style.display = 'none'; }}
+                              />
+                            );
+                          })()}
                           <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                           
                           {/* Reaction button (on hover) */}
