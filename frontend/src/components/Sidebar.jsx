@@ -27,12 +27,29 @@ const Sidebar = ({ user }) => {
   const navigate = useNavigate();
   const [checkInStatus, setCheckInStatus] = useState(null);
   const [checkingIn, setCheckingIn] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     if (user?.role === "searcher") {
       checkCheckInStatus();
     }
   }, [user]);
+
+  // Fetch unread notifications count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await api.get("/notifications?limit=1");
+        setUnreadCount(res.data.unread_count || 0);
+      } catch (error) {
+        console.log("Failed to fetch unread count");
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const checkCheckInStatus = async () => {
     try {
