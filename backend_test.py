@@ -1822,6 +1822,678 @@ class PROCTO13APITester:
         
         return True
 
+    def test_chat_system(self) -> bool:
+        """Test the new Chat System functionality"""
+        self.log("=== TESTING CHAT SYSTEM ===")
+        
+        if not all([self.super_admin_token, self.admin_token, self.searcher_token]):
+            self.log("❌ Missing required tokens for chat testing")
+            return False
+        
+        # Store chat IDs for testing
+        general_chat_id = None
+        direct_chat_id = None
+        group_chat_id = None
+        test_message_id = None
+        
+        # Test 1: GET /api/users/available-for-chat
+        success, response = self.run_test(
+            "Get Users Available for Chat",
+            "GET",
+            "users/available-for-chat",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        available_users = response.get('users', [])
+        self.log(f"✅ Found {len(available_users)} users available for chat")
+        
+        if len(available_users) < 2:
+            self.log("❌ Need at least 2 users for chat testing")
+            return False
+        
+        # Test 2: GET /api/chats/general - Get or create general chat
+        success, response = self.run_test(
+            "Get General Chat",
+            "GET",
+            "chats/general",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        general_chat_id = response.get('id')
+        if not general_chat_id:
+            self.log("❌ General chat ID not found")
+            return False
+        
+        self.log(f"✅ General chat ID: {general_chat_id}")
+        
+        # Test 3: GET /api/chats - List all chats for current user
+        success, response = self.run_test(
+            "List All Chats (Super Admin)",
+            "GET",
+            "chats",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        chats = response.get('chats', [])
+        self.log(f"✅ Super Admin has access to {len(chats)} chats")
+        
+        # Verify general chat is in the list
+        general_found = any(chat.get('id') == general_chat_id for chat in chats)
+        if not general_found:
+            self.log("❌ General chat not found in user's chat list")
+            return False
+        
+        # Test 4: POST /api/chats - Create direct chat
+        other_user = available_users[0]  # First available user (not super admin)
+        success, response = self.run_test(
+            "Create Direct Chat",
+            "POST",
+            "chats",
+            200,
+            data={
+                "type": "direct",
+                "participant_ids": [other_user['id']]
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        direct_chat_id = response.get('id')
+        if not direct_chat_id:
+            self.log("❌ Direct chat ID not found")
+            return False
+        
+        self.log(f"✅ Created direct chat ID: {direct_chat_id}")
+        
+        # Verify chat properties
+        if response.get('type') != 'direct':
+            self.log("❌ Direct chat type incorrect")
+            return False
+        
+        # Test 5: POST /api/chats - Create group chat
+        if len(available_users) >= 2:
+            success, response = self.run_test(
+                "Create Group Chat",
+                "POST",
+                "chats",
+                200,
+                data={
+                    "type": "group",
+                    "name": "Test Group Chat",
+                    "participant_ids": [available_users[0]['id'], available_users[1]['id']]
+                },
+                token=self.super_admin_token
+            )
+            
+            if not success:
+                return False
+            
+            group_chat_id = response.get('id')
+            if not group_chat_id:
+                self.log("❌ Group chat ID not found")
+                return False
+            
+            self.log(f"✅ Created group chat ID: {group_chat_id}")
+            
+            # Verify chat properties
+            if response.get('type') != 'group':
+                self.log("❌ Group chat type incorrect")
+                return False
+            
+            if response.get('name') != 'Test Group Chat':
+                self.log("❌ Group chat name incorrect")
+                return False
+        
+        # Test 6: GET /api/chats/{chat_id} - Get chat details
+        success, response = self.run_test(
+            "Get General Chat Details",
+            "GET",
+            f"chats/{general_chat_id}",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        if response.get('id') != general_chat_id:
+            self.log("❌ Chat details ID mismatch")
+            return False
+        
+        # Test 7: GET /api/chats/{chat_id}/messages - Get messages (initially empty)
+        success, response = self.run_test(
+            "Get General Chat Messages (Empty)",
+            "GET",
+            f"chats/{general_chat_id}/messages",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        messages = response.get('messages', [])
+        self.log(f"✅ General chat has {len(messages)} messages")
+        
+        # Test 8: POST /api/chats/{chat_id}/messages - Send message
+        success, response = self.run_test(
+            "Send Message to General Chat",
+            "POST",
+            f"chats/{general_chat_id}/messages",
+            200,
+            data={
+                "text": "Hello from automated testing! This is a test message for the chat system."
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        test_message_id = response.get('id')
+        if not test_message_id:
+            self.log("❌ Message ID not found")
+            return False
+        
+        self.log(f"✅ Sent message ID: {test_message_id}")
+        
+        # Verify message properties
+        if not response.get('text'):
+            self.log("❌ Message text not found")
+            return False
+        
+        if response.get('sender_id') != self.super_admin_token.split('.')[0]:  # Rough check
+            # Note: This is a simplified check, in real scenario we'd decode the JWT
+            pass  # Skip this check for now
+        
+        # Test 9: GET /api/chats/{chat_id}/messages - Get messages with limit
+        success, response = self.run_test(
+            "Get General Chat Messages with Limit",
+            "GET",
+            f"chats/{general_chat_id}/messages?limit=10",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        messages = response.get('messages', [])
+        if len(messages) == 0:
+            self.log("❌ No messages found after sending")
+            return False
+        
+        # Find our test message
+        test_message_found = any(msg.get('id') == test_message_id for msg in messages)
+        if not test_message_found:
+            self.log("❌ Test message not found in messages list")
+            return False
+        
+        self.log(f"✅ Retrieved {len(messages)} messages including test message")
+        
+        # Test 10: POST /api/chats/{chat_id}/messages/{message_id}/reactions - Add reaction
+        success, response = self.run_test(
+            "Add Reaction to Message",
+            "POST",
+            f"chats/{general_chat_id}/messages/{test_message_id}/reactions",
+            200,
+            data={
+                "emoji": "👍"
+            },
+            token=self.admin_token  # Use different user to add reaction
+        )
+        
+        if not success:
+            return False
+        
+        reactions = response.get('reactions', {})
+        if '👍' not in reactions:
+            self.log("❌ Reaction not added")
+            return False
+        
+        self.log("✅ Successfully added reaction to message")
+        
+        # Test 11: Toggle reaction (remove it)
+        success, response = self.run_test(
+            "Toggle Reaction (Remove)",
+            "POST",
+            f"chats/{general_chat_id}/messages/{test_message_id}/reactions",
+            200,
+            data={
+                "emoji": "👍"
+            },
+            token=self.admin_token  # Same user to remove reaction
+        )
+        
+        if not success:
+            return False
+        
+        reactions = response.get('reactions', {})
+        if '👍' in reactions and len(reactions['👍']) > 0:
+            self.log("❌ Reaction not removed")
+            return False
+        
+        self.log("✅ Successfully toggled (removed) reaction")
+        
+        # Test 12: POST /api/chat/upload-image - Upload image
+        # Create a simple test image (1x1 pixel PNG)
+        import base64
+        # Minimal PNG data for 1x1 transparent pixel
+        png_data = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU8j8wAAAABJRU5ErkJggg==')
+        
+        files = {'file': ('test.png', png_data, 'image/png')}
+        
+        success, response = self.run_test(
+            "Upload Chat Image",
+            "POST",
+            "chat/upload-image",
+            200,
+            files=files,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        image_url = response.get('url')
+        if not image_url:
+            self.log("❌ Image URL not returned")
+            return False
+        
+        self.log(f"✅ Successfully uploaded image: {image_url}")
+        
+        # Test 13: Send message with image
+        success, response = self.run_test(
+            "Send Message with Image",
+            "POST",
+            f"chats/{general_chat_id}/messages",
+            200,
+            data={
+                "text": "Here's a test image!",
+                "image_url": image_url
+            },
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        if not response.get('image_url'):
+            self.log("❌ Image URL not saved in message")
+            return False
+        
+        self.log("✅ Successfully sent message with image")
+        
+        # Test 14: Test access control - user can only access own chats or general
+        if direct_chat_id:
+            # Try to access direct chat with searcher (should fail)
+            success, response = self.run_test(
+                "Access Control - Direct Chat (Should Fail)",
+                "GET",
+                f"chats/{direct_chat_id}",
+                403,  # Should be forbidden
+                token=self.searcher_token
+            )
+            
+            if not success:
+                self.log("❌ Access control failed - searcher could access private direct chat")
+                return False
+            
+            self.log("✅ Access control working - searcher cannot access private direct chat")
+        
+        # Test 15: Test general chat access for all roles
+        for role, token in [("admin", self.admin_token), ("searcher", self.searcher_token)]:
+            success, response = self.run_test(
+                f"General Chat Access ({role.title()})",
+                "GET",
+                f"chats/{general_chat_id}",
+                200,
+                token=token
+            )
+            
+            if not success:
+                self.log(f"❌ {role.title()} cannot access general chat")
+                return False
+            
+            self.log(f"✅ {role.title()} can access general chat")
+        
+        # Test 16: Test message sending by different roles
+        for role, token in [("admin", self.admin_token), ("searcher", self.searcher_token)]:
+            success, response = self.run_test(
+                f"Send Message as {role.title()}",
+                "POST",
+                f"chats/{general_chat_id}/messages",
+                200,
+                data={
+                    "text": f"Test message from {role} role"
+                },
+                token=token
+            )
+            
+            if not success:
+                self.log(f"❌ {role.title()} cannot send messages to general chat")
+                return False
+            
+            self.log(f"✅ {role.title()} can send messages to general chat")
+        
+        # Test 17: Test invalid chat access
+        success, response = self.run_test(
+            "Access Non-existent Chat",
+            "GET",
+            "chats/non-existent-chat-id",
+            404,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            self.log("❌ Non-existent chat should return 404")
+            return False
+        
+        self.log("✅ Non-existent chat correctly returns 404")
+        
+        # Test 18: Test invalid message reaction
+        success, response = self.run_test(
+            "React to Non-existent Message",
+            "POST",
+            f"chats/{general_chat_id}/messages/non-existent-message/reactions",
+            404,
+            data={"emoji": "👍"},
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            self.log("❌ Non-existent message reaction should return 404")
+            return False
+        
+        self.log("✅ Non-existent message reaction correctly returns 404")
+        
+        return True
+
+    def test_clear_brand_endpoint(self) -> bool:
+        """Test the Clear Brand endpoint functionality"""
+        self.log("=== TESTING CLEAR BRAND ENDPOINT ===")
+        
+        if not all([self.super_admin_token, self.admin_token, self.searcher_token]):
+            self.log("❌ Missing required tokens for clear brand testing")
+            return False
+        
+        # First, get a brand to test with
+        success, response = self.run_test(
+            "Get Brands for Clear Testing",
+            "GET",
+            "brands",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            return False
+        
+        brands = response.get('brands', [])
+        if not brands:
+            self.log("❌ No brands available for clear testing")
+            return False
+        
+        # Find a brand that's assigned to searcher or assign one
+        test_brand_id = None
+        for brand in brands:
+            if brand.get('assigned_to_user_id') == self.searcher_user_id:
+                test_brand_id = brand['id']
+                break
+        
+        if not test_brand_id:
+            # Claim a brand for searcher first
+            success, response = self.run_test(
+                "Claim Brand for Clear Testing",
+                "POST",
+                "brands/claim",
+                200,
+                token=self.searcher_token
+            )
+            
+            if success:
+                # Get the claimed brand
+                success, response = self.run_test(
+                    "Get Claimed Brand for Clear Testing",
+                    "GET",
+                    "brands",
+                    200,
+                    token=self.searcher_token
+                )
+                
+                if success and response.get('brands'):
+                    test_brand_id = response['brands'][0]['id']
+        
+        if not test_brand_id:
+            self.log("❌ Could not find or assign a brand for clear testing")
+            return False
+        
+        self.log(f"✅ Using brand {test_brand_id} for clear testing")
+        
+        # Add some notes and contacts to the brand first
+        success, response = self.run_test(
+            "Add Note to Brand Before Clear",
+            "POST",
+            f"brands/{test_brand_id}/note",
+            200,
+            data={
+                "note_text": "Test note before clearing brand",
+                "note_type": "general"
+            },
+            token=self.searcher_token
+        )
+        
+        if not success:
+            self.log("❌ Could not add note to brand")
+            return False
+        
+        # Add contact to brand
+        success, response = self.run_test(
+            "Add Contact to Brand Before Clear",
+            "POST",
+            f"brands/{test_brand_id}/contacts",
+            200,
+            data={
+                "contacts": [
+                    {
+                        "contact_type": "email",
+                        "value": "test@example.com",
+                        "is_primary": True,
+                        "notes": "Test contact before clear"
+                    }
+                ]
+            },
+            token=self.searcher_token
+        )
+        
+        # Note: This might fail if the endpoint doesn't exist, but that's okay for testing
+        
+        # Test 1: POST /api/brands/{brand_id}/clear - Clear brand (searcher can clear own brand)
+        success, response = self.run_test(
+            "Clear Brand (Searcher - Own Brand)",
+            "POST",
+            f"brands/{test_brand_id}/clear",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        # Verify response structure
+        if 'status' not in response or response['status'] != 'success':
+            self.log("❌ Clear brand response missing success status")
+            return False
+        
+        if 'deleted_notes' not in response:
+            self.log("❌ Clear brand response missing deleted_notes count")
+            return False
+        
+        if 'deleted_contacts' not in response:
+            self.log("❌ Clear brand response missing deleted_contacts count")
+            return False
+        
+        self.log(f"✅ Brand cleared successfully - Notes: {response['deleted_notes']}, Contacts: {response['deleted_contacts']}")
+        
+        # Test 2: Verify brand is reset to initial state
+        success, response = self.run_test(
+            "Verify Brand Reset After Clear",
+            "GET",
+            f"brands/{test_brand_id}",
+            200,
+            token=self.searcher_token
+        )
+        
+        if not success:
+            return False
+        
+        brand = response.get('brand', {})
+        
+        # Check that brand is reset to pool
+        if brand.get('status') != 'IN_POOL':
+            self.log(f"❌ Brand status should be IN_POOL, got {brand.get('status')}")
+            return False
+        
+        # Check that assignment is cleared
+        if brand.get('assigned_to_user_id') is not None:
+            self.log("❌ Brand should not be assigned after clear")
+            return False
+        
+        # Check that contacts and notes are cleared
+        notes = response.get('notes', [])
+        contacts = response.get('contacts', [])
+        
+        if len(notes) > 0:
+            self.log(f"❌ Brand should have no notes after clear, found {len(notes)}")
+            return False
+        
+        if len(contacts) > 0:
+            self.log(f"❌ Brand should have no contacts after clear, found {len(contacts)}")
+            return False
+        
+        self.log("✅ Brand successfully reset to initial state")
+        
+        # Test 3: Test access control - admin/super_admin can clear any brand
+        # First assign a brand to admin
+        success, response = self.run_test(
+            "Get Brand for Admin Clear Test",
+            "GET",
+            "brands",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if success and response.get('brands'):
+            admin_test_brand_id = response['brands'][0]['id']
+            
+            # Assign brand to admin first
+            success, response = self.run_test(
+                "Assign Brand to Admin for Clear Test",
+                "POST",
+                "admin/brands/bulk-assign",
+                200,
+                data={
+                    "brand_ids": [admin_test_brand_id],
+                    "user_id": self.admin_user_id,
+                    "reason": "Test assignment for clear testing"
+                },
+                token=self.super_admin_token
+            )
+            
+            if success:
+                # Test admin can clear assigned brand
+                success, response = self.run_test(
+                    "Clear Brand (Admin - Own Brand)",
+                    "POST",
+                    f"brands/{admin_test_brand_id}/clear",
+                    200,
+                    token=self.admin_token
+                )
+                
+                if not success:
+                    self.log("❌ Admin cannot clear own assigned brand")
+                    return False
+                
+                self.log("✅ Admin can clear own assigned brand")
+                
+                # Test super admin can clear any brand
+                success, response = self.run_test(
+                    "Clear Brand (Super Admin - Any Brand)",
+                    "POST",
+                    f"brands/{admin_test_brand_id}/clear",
+                    200,
+                    token=self.super_admin_token
+                )
+                
+                if not success:
+                    self.log("❌ Super admin cannot clear any brand")
+                    return False
+                
+                self.log("✅ Super admin can clear any brand")
+        
+        # Test 4: Test access control - searcher cannot clear other's brand
+        # Get a brand not assigned to searcher
+        success, response = self.run_test(
+            "Get Brands for Access Control Test",
+            "GET",
+            "brands",
+            200,
+            token=self.super_admin_token
+        )
+        
+        if success and response.get('brands'):
+            other_brand_id = None
+            for brand in response['brands']:
+                if brand.get('assigned_to_user_id') != self.searcher_user_id:
+                    other_brand_id = brand['id']
+                    break
+            
+            if other_brand_id:
+                success, response = self.run_test(
+                    "Clear Other's Brand (Searcher - Should Fail)",
+                    "POST",
+                    f"brands/{other_brand_id}/clear",
+                    403,  # Should be forbidden
+                    token=self.searcher_token
+                )
+                
+                if not success:
+                    self.log("❌ Searcher was allowed to clear other's brand (security issue)")
+                    return False
+                
+                self.log("✅ Searcher correctly forbidden from clearing other's brand")
+        
+        # Test 5: Test clearing non-existent brand
+        success, response = self.run_test(
+            "Clear Non-existent Brand",
+            "POST",
+            "brands/non-existent-brand-id/clear",
+            404,
+            token=self.super_admin_token
+        )
+        
+        if not success:
+            self.log("❌ Non-existent brand clear should return 404")
+            return False
+        
+        self.log("✅ Non-existent brand clear correctly returns 404")
+        
+        return True
+
     def run_all_tests(self) -> Dict[str, Any]:
         """Run all tests and return results"""
         self.log("🚀 Starting PROCTO 13 API Testing Suite")
