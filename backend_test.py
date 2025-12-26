@@ -1571,6 +1571,7 @@ class PROCTO13APITester:
             ("super_admin_endpoints", self.test_super_admin_endpoints),
             ("admin_bulk_operations", self.test_admin_bulk_operations),
             ("searcher_specific_endpoints", self.test_searcher_specific_endpoints),
+            ("notifications_system", self.test_notifications_system),
             ("authentication_security", self.test_authentication_security)
         ]
         
