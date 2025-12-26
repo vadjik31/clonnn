@@ -257,6 +257,11 @@ function AppContent() {
               <Layout><TasksPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Layout><NotificationsPage /></Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Searcher Routes */}
           <Route path="/my-brands" element={
