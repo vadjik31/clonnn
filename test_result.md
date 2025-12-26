@@ -263,7 +263,7 @@ backend:
         agent: "testing"
         comment: "All suppliers assignment endpoints working correctly. Tested: GET /api/suppliers (role-based access - super admin sees all, admin sees only assigned), POST /api/suppliers/bulk-assign (assigns suppliers to admin with notification), POST /api/suppliers/bulk-release (releases suppliers from admin). Role-based access control working properly. Assignment/release workflow complete with notifications. All test scenarios passed successfully."
 
-  - task: "Notifications Page Backend"
+  - task: "Chat System Backend"
     implemented: true
     working: true
     file: "backend/server.py"
@@ -273,7 +273,19 @@ backend:
     status_history:
       - working: true
         agent: "testing"
-        comment: "All notifications page functionality working correctly. Tested: Searcher and Admin can access /notifications page, notifications display with correct filtering (unread_only, limit), mark as read action works, mark all as read action works, delete action works. Access control properly implemented. All notification page test scenarios passed successfully."
+        comment: "All chat system endpoints working correctly. Tested: GET /api/chats (list user chats), POST /api/chats (create direct/group chats), GET /api/chats/general (get/create general chat), GET /api/chats/{chat_id} (get chat details), GET /api/chats/{chat_id}/messages (get messages with limit), POST /api/chats/{chat_id}/messages (send messages with text/image), POST /api/chats/{chat_id}/messages/{message_id}/reactions (add/remove reactions with toggle behavior), POST /api/chat/upload-image (upload images), GET /api/users/available-for-chat (get users for chat creation). Role-based access working - all roles can access general chat, users can only access own chats. Message sending, reactions, and image uploads all functional. All 14 chat tests passed successfully."
+
+  - task: "Clear Brand Endpoint"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Clear brand endpoint working correctly. Tested: POST /api/brands/{brand_id}/clear successfully clears/resets brand to initial state, deletes notes and contacts, resets status to IN_POOL and removes assignment. Access control working - searchers can only clear own brands, admins/super_admins can clear any brand. Proper error handling for non-existent brands (404) and unauthorized access (403). Fixed PipelineStage.DISCOVERY → PipelineStage.REVIEW issue. All 9 clear brand tests passed successfully."
 
 frontend:
   - task: "Super Admin Login & Navigation"
