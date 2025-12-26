@@ -215,22 +215,30 @@ const ChatPage = () => {
         const res = await api.get(`/chats/${chatId}/messages?limit=50`);
         const newMessages = res.data.messages || [];
         setMessages(prev => {
-          // Only update if there are new messages
-          if (newMessages.length > prev.length) {
-            const lastOldId = prev[prev.length - 1]?.id;
-            const lastNewId = newMessages[newMessages.length - 1]?.id;
-            if (lastOldId !== lastNewId) {
-              // Play sound for new messages (if not from current user)
+          // Get current and new message IDs for comparison
+          const prevIds = new Set(prev.map(m => m.id));
+          const newIds = new Set(newMessages.map(m => m.id));
+          
+          // Check if messages were deleted
+          const hasDeleted = prev.some(m => !newIds.has(m.id));
+          
+          // Check if new messages arrived
+          const hasNew = newMessages.some(m => !prevIds.has(m.id));
+          
+          // Update if there are changes (new or deleted)
+          if (hasDeleted || hasNew) {
+            // Play sound only for new messages (not deletions)
+            if (hasNew) {
               const newestMsg = newMessages[newMessages.length - 1];
-              if (newestMsg && newestMsg.sender_id !== user?.id) {
+              if (newestMsg && newestMsg.sender_id !== user?.id && !prevIds.has(newestMsg.id)) {
                 const isDirectMessage = currentChatRef.current?.type === "direct";
                 if (isDirectMessage || soundEnabledRef.current) {
                   playNotificationSound();
                 }
               }
               scrollToBottom();
-              return newMessages;
             }
+            return newMessages;
           }
           return prev;
         });
