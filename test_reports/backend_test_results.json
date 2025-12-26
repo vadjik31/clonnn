@@ -1,51 +1,75 @@
 {
-  "timestamp": "2025-12-25T17:35:00.083326",
+  "timestamp": "2025-12-26T13:33:47.251084",
   "base_url": "https://notifyflow-6.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:00.161535"
+      "timestamp": "2025-12-26T13:33:47.356939"
     },
     "super_admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:00.209302"
+      "timestamp": "2025-12-26T13:33:47.402090"
     },
     "admin_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:00.251411"
+      "timestamp": "2025-12-26T13:33:47.442713"
     },
     "searcher_login": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:00.292021"
+      "timestamp": "2025-12-26T13:33:47.485240"
     },
     "admin_dashboard": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:00.333293"
+      "timestamp": "2025-12-26T13:33:47.527727"
     },
     "user_management": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:00.411395"
+      "timestamp": "2025-12-26T13:33:47.615972"
     },
     "excel_import": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:00.812952"
+      "timestamp": "2025-12-26T13:33:48.468849"
     },
     "brand_operations": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:01.136726"
+      "timestamp": "2025-12-26T13:33:48.687203"
     },
     "searcher_claiming": {
       "passed": true,
-      "timestamp": "2025-12-25T17:35:01.219934"
+      "timestamp": "2025-12-26T13:33:51.974009"
     },
     "brand_workflow": {
+      "passed": true,
+      "timestamp": "2025-12-26T13:33:52.236175"
+    },
+    "security_fixes": {
+      "passed": true,
+      "timestamp": "2025-12-26T13:33:55.271081"
+    },
+    "references_endpoints": {
+      "passed": true,
+      "timestamp": "2025-12-26T13:33:55.341461"
+    },
+    "dashboard_alerts": {
+      "passed": true,
+      "timestamp": "2025-12-26T13:33:55.388930"
+    },
+    "brands_health_score": {
+      "passed": true,
+      "timestamp": "2025-12-26T13:33:55.520872"
+    },
+    "sub_suppliers_api": {
+      "passed": true,
+      "timestamp": "2025-12-26T13:33:55.946926"
+    },
+    "sub_suppliers_bulk_operations": {
       "passed": false,
-      "timestamp": "2025-12-25T17:35:01.262139"
+      "timestamp": "2025-12-26T13:33:55.987273"
     }
   },
   "summary": {
-    "total_tests": 13,
-    "passed_tests": 13,
+    "total_tests": 39,
+    "passed_tests": 39,
     "failed_tests": 0,
     "success_rate": 100.0
   },
