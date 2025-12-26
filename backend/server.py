@@ -6841,6 +6841,53 @@ async def get_users_for_chat(user: dict = Depends(get_current_user)):
     return {"users": users}
 
 
+@api_router.post("/chat/upload-image")
+async def upload_chat_image(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+    """Загрузить изображение для чата"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Разрешены только изображения (JPEG, PNG, GIF, WebP)")
+    
+    # Limit file size (5MB)
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Файл слишком большой (макс. 5MB)")
+    
+    # Save file
+    import base64
+    file_id = str(uuid4())
+    ext = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    
+    # Store as base64 in database (simple approach for small images)
+    image_data = {
+        "id": file_id,
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "data": base64.b64encode(contents).decode(),
+        "uploaded_by": user["id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.chat_images.insert_one(image_data)
+    
+    # Return URL to fetch image
+    return {"url": f"/api/chat/images/{file_id}", "id": file_id}
+
+
+@api_router.get("/chat/images/{image_id}")
+async def get_chat_image(image_id: str):
+    """Получить изображение чата"""
+    import base64
+    from fastapi.responses import Response
+    
+    image = await db.chat_images.find_one({"id": image_id})
+    if not image:
+        raise HTTPException(status_code=404, detail="Изображение не найдено")
+    
+    contents = base64.b64decode(image["data"])
+    return Response(content=contents, media_type=image["content_type"])
+
+
 @app.websocket("/api/ws/chat/{chat_id}")
 async def websocket_chat(websocket: WebSocket, chat_id: str, token: str = Query(...)):
     """WebSocket endpoint for real-time chat"""
