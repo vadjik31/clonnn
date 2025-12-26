@@ -472,9 +472,9 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "Visual verification completed: 1) Chat page - 'Общий чат' displays correctly without duplication 2) Message sending works - tested sending message with emoji 3) Brand detail page - only ONE 'Очистить' button present (not duplicated). Both reported bugs from handoff summary appear to be already fixed or were incorrectly reported. Now proceeding with comprehensive testing of all chat features."
+    message: "Implementing comprehensive chat features: real-time polling (2sec), message deletion, sound notifications. Need full testing of: 1) Chat real-time updates (new messages + deletions) 2) Sound notifications in chat (direct=always, group=toggle) 3) Notifications sound for all roles 4) Delete message functionality 5) Red dot indicator on Chat sidebar"
   - agent: "testing"
-    message: "Completed comprehensive backend API testing for all three roles (Super Admin, Admin, Searcher). All 23 backend tests passed successfully. Key findings: 1) All new sub-supplier bulk operations working correctly 2) Role-based access control properly implemented 3) All super admin endpoints accessible 4) Admin bulk operations working 5) Searcher endpoints properly filtered. No critical issues found."
+    message: "Pending full test of chat and notification features"
   - agent: "testing"
     message: "COMPLETED COMPREHENSIVE FRONTEND AUDIT for all three roles. All 12 frontend tests PASSED successfully. Key findings: 1) All role logins working correctly with proper redirects 2) Role-based sidebar menus implemented correctly (Russian language) 3) Bulk actions working on brands page for Super Admin/Admin 4) Searcher restrictions properly enforced (no bulk actions) 5) Super Admin page tabs all functional 6) Brand detail pages working with action buttons 7) Check-in functionality working for searchers 8) My Brands page functional. Frontend is fully operational and ready for production use."
   - agent: "main"
