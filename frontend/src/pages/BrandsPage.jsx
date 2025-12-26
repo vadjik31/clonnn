@@ -244,36 +244,81 @@ const BrandsPage = () => {
       return;
     }
 
+    // Разделяем бренды и под-сапплаеры
+    const regularBrandIds = [];
+    const subSupplierIds = [];
+    
+    for (const id of brandIds) {
+      const item = brands.find(b => b.id === id);
+      if (item?.is_sub_supplier) {
+        subSupplierIds.push(id);
+      } else {
+        regularBrandIds.push(id);
+      }
+    }
+
     try {
       switch (action) {
         case "release":
-          await api.post("/admin/brands/bulk-release", {
-            brand_ids: brandIds,
-            reason: params.reason || "Массовый сброс в пул"
-          });
-          toast.success(`${brandIds.length} брендов возвращено в пул`);
+          if (regularBrandIds.length > 0) {
+            await api.post("/admin/brands/bulk-release", {
+              brand_ids: regularBrandIds,
+              reason: params.reason || "Массовый сброс в пул"
+            });
+          }
+          if (subSupplierIds.length > 0) {
+            await api.post("/sub-suppliers/bulk-release", {
+              sub_supplier_ids: subSupplierIds,
+              reason: params.reason || "Массовый сброс в пул"
+            });
+          }
+          toast.success(`${brandIds.length} элементов возвращено в пул`);
           break;
         case "archive":
-          await api.post("/super-admin/brands/bulk-archive", {
-            brand_ids: brandIds,
-            reason: params.reason
-          });
-          toast.success(`${brandIds.length} брендов в архив`);
+          if (regularBrandIds.length > 0) {
+            await api.post("/super-admin/brands/bulk-archive", {
+              brand_ids: regularBrandIds,
+              reason: params.reason
+            });
+          }
+          if (subSupplierIds.length > 0) {
+            await api.post("/sub-suppliers/bulk-archive", {
+              sub_supplier_ids: subSupplierIds,
+              reason: params.reason
+            });
+          }
+          toast.success(`${brandIds.length} элементов в архив`);
           break;
         case "blacklist":
-          await api.post("/super-admin/brands/bulk-blacklist", {
-            brand_ids: brandIds,
-            reason: params.reason
-          });
-          toast.success(`${brandIds.length} брендов в ЧС`);
+          if (regularBrandIds.length > 0) {
+            await api.post("/super-admin/brands/bulk-blacklist", {
+              brand_ids: regularBrandIds,
+              reason: params.reason
+            });
+          }
+          if (subSupplierIds.length > 0) {
+            // Для под-сапплаеров blacklist = удаление
+            await api.delete("/sub-suppliers/bulk-delete", {
+              data: { sub_supplier_ids: subSupplierIds, reason: params.reason }
+            });
+          }
+          toast.success(`${brandIds.length} элементов обработано`);
           break;
         case "assign":
-          await api.post("/super-admin/brands/bulk-assign", {
-            brand_ids: brandIds,
-            user_id: params.userId,
-            reason: params.reason
-          });
-          toast.success(`${brandIds.length} брендов назначено`);
+          if (regularBrandIds.length > 0) {
+            await api.post("/super-admin/brands/bulk-assign", {
+              brand_ids: regularBrandIds,
+              user_id: params.userId,
+              reason: params.reason
+            });
+          }
+          if (subSupplierIds.length > 0) {
+            await api.post(`/sub-suppliers/bulk-assign?user_id=${params.userId}`, {
+              sub_supplier_ids: subSupplierIds,
+              reason: params.reason
+            });
+          }
+          toast.success(`${brandIds.length} элементов назначено`);
           break;
       }
       setBulkModal({ open: false, action: null });
