@@ -3733,6 +3733,75 @@ async def restore_brand_from_archive(
     
     return {"status": "success"}
 
+
+@api_router.post("/brands/{brand_id}/clear")
+async def clear_brand(brand_id: str, user: dict = Depends(get_current_user)):
+    """Очистить бренд - сбросить до дефолтного состояния (удалить заметки, контакты, статусы)"""
+    brand = await db.brands.find_one({"id": brand_id})
+    if not brand:
+        raise HTTPException(status_code=404, detail="Бренд не найден")
+    
+    # Проверка прав: сёрчер может очистить только свой бренд
+    if user["role"] == "searcher" and brand.get("assigned_to_user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Бренд не назначен вам")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Удаляем все заметки
+    deleted_notes = await db.brand_notes.delete_many({"brand_id": brand_id})
+    
+    # Удаляем все контакты
+    deleted_contacts = await db.brand_contacts.delete_many({"brand_id": brand_id})
+    
+    # Сбрасываем бренд до дефолтного состояния
+    await db.brands.update_one(
+        {"id": brand_id},
+        {
+            "$set": {
+                "status": BrandStatus.IN_POOL,
+                "pipeline_stage": PipelineStage.DISCOVERY,
+                "assigned_to_user_id": None,
+                "assigned_to_nickname": None,
+                "assigned_at": None,
+                "contact_made": False,
+                "contact_channel": None,
+                "contact_date": None,
+                "replied_sub_status": None,
+                "last_action_at": None,
+                "next_action_at": None,
+                "health_score": 50,
+                "cleared_at": now,
+                "cleared_by": user["id"],
+                "updated_at": now
+            },
+            "$unset": {
+                "problematic_reason": "",
+                "problematic_details": "",
+                "on_hold_reason": "",
+                "on_hold_details": "",
+                "archived_at": "",
+                "archived_by": "",
+                "archive_reason": "",
+                "blacklisted_at": "",
+                "blacklisted_by": "",
+                "blacklist_reason": ""
+            }
+        }
+    )
+    
+    await log_event("brand_cleared", user["id"], brand_id, {
+        "deleted_notes": deleted_notes.deleted_count,
+        "deleted_contacts": deleted_contacts.deleted_count
+    })
+    
+    return {
+        "status": "success",
+        "message": "Бренд очищен",
+        "deleted_notes": deleted_notes.deleted_count,
+        "deleted_contacts": deleted_contacts.deleted_count
+    }
+
+
 @api_router.post("/super-admin/brands/{brand_id}/unblacklist")
 async def remove_brand_from_blacklist(
     brand_id: str,
