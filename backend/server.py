@@ -6887,8 +6887,8 @@ async def delete_message(chat_id: str, message_id: str, user: dict = Depends(get
     if not message:
         raise HTTPException(status_code=404, detail="Сообщение не найдено")
     
-    # Only sender or super_admin can delete
-    if message.get("sender_id") != user["id"] and user.get("role") != "super_admin":
+    # Only sender, admin or super_admin can delete
+    if message.get("sender_id") != user["id"] and user.get("role") not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="Вы можете удалять только свои сообщения")
     
     await db.chat_messages.delete_one({"id": message_id})
