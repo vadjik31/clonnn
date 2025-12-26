@@ -45,6 +45,17 @@ const ChatPage = () => {
   const wsRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const currentChatRef = useRef(null);
+  const soundEnabledRef = useRef(soundEnabled);
+
+  // Keep refs in sync
+  useEffect(() => {
+    currentChatRef.current = currentChat;
+  }, [currentChat]);
+  
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   // Save sound preference
   useEffect(() => {
