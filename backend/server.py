@@ -306,6 +306,15 @@ class NotificationType:
     TASK_UPDATED = "task_updated"
     STAGE_COMPLETED = "stage_completed"
     STATUS_CHANGED = "status_changed"
+    CHAT_MESSAGE = "chat_message"
+
+
+# ============== CHAT TYPES ==============
+class ChatType:
+    GENERAL = "general"      # Общий чат для всех
+    DIRECT = "direct"        # Личные сообщения 1 на 1
+    GROUP = "group"          # Групповой чат
+    BRAND = "brand"          # Чат по конкретному бренду
 
 
 # ============== PYDANTIC MODELS ==============
