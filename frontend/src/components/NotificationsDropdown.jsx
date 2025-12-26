@@ -31,6 +31,8 @@ const NotificationsDropdown = () => {
 
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (!isOpen) return;
+    
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -38,7 +40,7 @@ const NotificationsDropdown = () => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   // Mark single notification as read
   const markAsRead = async (notificationId, e) => {
