@@ -6647,6 +6647,34 @@ async def get_chat(chat_id: str, user: dict = Depends(get_current_user)):
     return chat
 
 
+@api_router.delete("/chats/{chat_id}")
+async def delete_chat(chat_id: str, user: dict = Depends(get_current_user)):
+    """Удалить чат (только для супер-админа)"""
+    # Only super_admin can delete chats
+    if user.get("role") != "super_admin":
+        raise HTTPException(status_code=403, detail="Только супер-админ может удалять чаты")
+    
+    chat = await db.chats.find_one({"id": chat_id})
+    if not chat:
+        raise HTTPException(status_code=404, detail="Чат не найден")
+    
+    # Cannot delete general chat
+    if chat.get("type") == ChatType.GENERAL:
+        raise HTTPException(status_code=400, detail="Нельзя удалить общий чат")
+    
+    # Delete all messages in this chat
+    deleted_messages = await db.chat_messages.delete_many({"chat_id": chat_id})
+    
+    # Delete the chat
+    await db.chats.delete_one({"id": chat_id})
+    
+    return {
+        "success": True, 
+        "message": "Чат удалён",
+        "deleted_messages": deleted_messages.deleted_count
+    }
+
+
 @api_router.get("/chats/{chat_id}/messages")
 async def get_messages(
     chat_id: str, 
