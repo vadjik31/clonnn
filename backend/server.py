@@ -6863,6 +6863,28 @@ async def add_reaction(chat_id: str, message_id: str, req: ReactionRequest, user
     return {"status": "success", "reactions": reactions}
 
 
+@api_router.delete("/chats/{chat_id}/messages/{message_id}")
+async def delete_message(chat_id: str, message_id: str, user: dict = Depends(get_current_user)):
+    """Удалить сообщение (только автор или супер-админ)"""
+    message = await db.chat_messages.find_one({"id": message_id, "chat_id": chat_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Сообщение не найдено")
+    
+    # Only sender or super_admin can delete
+    if message.get("sender_id") != user["id"] and user.get("role") != "super_admin":
+        raise HTTPException(status_code=403, detail="Вы можете удалять только свои сообщения")
+    
+    await db.chat_messages.delete_one({"id": message_id})
+    
+    # Broadcast deletion to all in chat
+    await chat_manager.broadcast_to_chat(chat_id, {
+        "type": "message_deleted",
+        "message_id": message_id
+    })
+    
+    return {"status": "success", "message": "Сообщение удалено"}
+
+
 @api_router.get("/brands/{brand_id}/chat")
 async def get_or_create_brand_chat(brand_id: str, user: dict = Depends(get_current_user)):
     """Получить или создать чат для бренда"""
