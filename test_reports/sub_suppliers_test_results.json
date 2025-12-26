@@ -1,6 +1,6 @@
 {
   "timestamp": "2025-12-25T17:20:03.200607",
-  "base_url": "https://brand-pipeline-2.preview.emergentagent.com",
+  "base_url": "https://notifyflow-6.preview.emergentagent.com",
   "tests": {
     "admin_login": {
       "passed": true,

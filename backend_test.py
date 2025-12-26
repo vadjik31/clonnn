@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class PROCTO13APITester:
-    def __init__(self, base_url: str = "https://brand-pipeline-2.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://notifyflow-6.preview.emergentagent.com"):
         self.base_url = base_url
         self.super_admin_token = None
         self.admin_token = None
