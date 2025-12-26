@@ -597,6 +597,35 @@ async def log_event(event_type: str, user_id: str, brand_id: Optional[str] = Non
     }
     await db.brand_events.insert_one(event)
 
+
+async def create_notification(
+    user_id: str,
+    notification_type: str,
+    title: str,
+    message: str,
+    brand_id: Optional[str] = None,
+    task_id: Optional[str] = None,
+    link: Optional[str] = None,
+    from_user_id: Optional[str] = None
+):
+    """Создать уведомление для пользователя"""
+    notification = {
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "type": notification_type,
+        "title": title,
+        "message": message,
+        "brand_id": brand_id,
+        "task_id": task_id,
+        "link": link,
+        "from_user_id": from_user_id,
+        "is_read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.notifications.insert_one(notification)
+    return notification
+
+
 def sanitize_input(text: str) -> str:
     """Санитизация ввода от XSS (закрывает дыру #30)"""
     if not text:
