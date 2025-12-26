@@ -2528,6 +2528,8 @@ class PROCTO13APITester:
             ("searcher_specific_endpoints", self.test_searcher_specific_endpoints),
             ("notifications_system", self.test_notifications_system),
             ("suppliers_assignment_system", self.test_suppliers_assignment_system),
+            ("chat_system", self.test_chat_system),
+            ("clear_brand_endpoint", self.test_clear_brand_endpoint),
             ("authentication_security", self.test_authentication_security)
         ]
         
