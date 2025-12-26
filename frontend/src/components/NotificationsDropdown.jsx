@@ -68,6 +68,9 @@ const NotificationsDropdown = () => {
             // New notification arrived - fetch fresh data from server
             fetchNotifications();
             
+            // Play notification sound
+            playNotificationSound();
+            
             // Show toast notification
             toast.info(data.notification.title, {
               description: data.notification.message,
