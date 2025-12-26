@@ -6498,13 +6498,16 @@ class ChatConnectionManager:
         if chat_id not in self.active_connections:
             self.active_connections[chat_id] = {}
         self.active_connections[chat_id][user_id] = websocket
+        print(f"[CHAT WS] Connected: user {user_id[:8]} to chat {chat_id[:8]}. Total in chat: {len(self.active_connections[chat_id])}")
     
     def disconnect(self, chat_id: str, user_id: str):
         if chat_id in self.active_connections:
             if user_id in self.active_connections[chat_id]:
                 del self.active_connections[chat_id][user_id]
+                print(f"[CHAT WS] Disconnected: user {user_id[:8]} from chat {chat_id[:8]}")
             if not self.active_connections[chat_id]:
                 del self.active_connections[chat_id]
+                print(f"[CHAT WS] Chat {chat_id[:8]} removed - no more connections")
     
     async def broadcast_to_chat(self, chat_id: str, message: dict, exclude_user: str = None):
         """Broadcast message to all users in chat except sender"""
