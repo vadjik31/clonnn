@@ -95,12 +95,12 @@ const NotificationsDropdown = () => {
     fetchNotifications();
     connectWebSocket();
 
-    // Fallback polling every 60 seconds if WebSocket fails
+    // Fallback polling every 10 seconds if WebSocket fails
     const pollInterval = setInterval(() => {
       if (!wsConnected) {
         fetchNotifications();
       }
-    }, 60000);
+    }, 10000);
 
     return () => {
       clearInterval(pollInterval);
