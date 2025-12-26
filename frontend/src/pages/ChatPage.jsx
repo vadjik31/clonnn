@@ -487,11 +487,11 @@ const ChatPage = () => {
                         }`}>
                           {msg.image_url && (
                             <img 
-                              src={msg.image_url.startsWith("/api/") ? `${API.replace('/api', '')}${msg.image_url}` : msg.image_url.startsWith("/") ? `${API}${msg.image_url}` : msg.image_url} 
+                              src={msg.image_url.startsWith("http") ? msg.image_url : `${API}${msg.image_url.startsWith("/") ? msg.image_url : "/" + msg.image_url}`} 
                               alt="Изображение" 
                               className="max-w-full rounded mb-2 max-h-64 object-contain cursor-pointer"
                               onClick={() => {
-                                const url = msg.image_url.startsWith("/api/") ? `${API.replace('/api', '')}${msg.image_url}` : msg.image_url.startsWith("/") ? `${API}${msg.image_url}` : msg.image_url;
+                                const url = msg.image_url.startsWith("http") ? msg.image_url : `${API}${msg.image_url.startsWith("/") ? msg.image_url : "/" + msg.image_url}`;
                                 window.open(url, "_blank");
                               }}
                             />
