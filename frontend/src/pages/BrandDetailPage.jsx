@@ -1841,4 +1841,156 @@ const SubSupplierModal = ({ open, onClose, brandId, onSuccess }) => {
   );
 };
 
+// Edit Note Modal
+const EditNoteModal = ({ open, note, onClose, onSave }) => {
+  const [text, setText] = useState(note?.note_text || "");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (note) setText(note.note_text);
+  }, [note]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) {
+      toast.error("Введите текст заметки");
+      return;
+    }
+    setLoading(true);
+    await onSave(note.id, text);
+    setLoading(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider text-blue-400">
+            Редактировать заметку
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Текст заметки</Label>
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A] min-h-[120px]"
+              placeholder="Текст заметки..."
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+              {loading ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Edit Contact Modal
+const EditContactModal = ({ open, contact, onClose, onSave }) => {
+  const [contactType, setContactType] = useState(contact?.contact_type || "email");
+  const [value, setValue] = useState(contact?.value || "");
+  const [notes, setNotes] = useState(contact?.notes || "");
+  const [isPrimary, setIsPrimary] = useState(contact?.is_primary || false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (contact) {
+      setContactType(contact.contact_type);
+      setValue(contact.value);
+      setNotes(contact.notes || "");
+      setIsPrimary(contact.is_primary || false);
+    }
+  }, [contact]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!value.trim()) {
+      toast.error("Введите значение контакта");
+      return;
+    }
+    setLoading(true);
+    await onSave(contact.id, { contact_type: contactType, value, notes, is_primary: isPrimary });
+    setLoading(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-[#13161B] border-[#2A2F3A] text-[#E6E6E6]">
+        <DialogHeader>
+          <DialogTitle className="font-mono uppercase tracking-wider text-green-400">
+            Редактировать контакт
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Тип контакта</Label>
+            <Select value={contactType} onValueChange={setContactType}>
+              <SelectTrigger className="bg-[#0F1115] border-[#2A2F3A]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#13161B] border-[#2A2F3A]">
+                <SelectItem value="email">Email</SelectItem>
+                <SelectItem value="phone">Телефон</SelectItem>
+                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                <SelectItem value="telegram">Telegram</SelectItem>
+                <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="linkedin">LinkedIn</SelectItem>
+                <SelectItem value="website">Веб-сайт</SelectItem>
+                <SelectItem value="other">Другое</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Значение</Label>
+            <Input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="email@example.com или +1234567890"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[#94A3B8]">Заметка</Label>
+            <Input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="bg-[#0F1115] border-[#2A2F3A]"
+              placeholder="Дополнительная информация..."
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="is_primary"
+              checked={isPrimary}
+              onCheckedChange={setIsPrimary}
+            />
+            <label htmlFor="is_primary" className="text-sm text-[#94A3B8]">
+              Основной контакт
+            </label>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onClose} className="border-[#2A2F3A] text-[#94A3B8]">
+              Отмена
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
+              {loading ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default BrandDetailPage;
