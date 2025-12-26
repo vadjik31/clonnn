@@ -18,7 +18,8 @@ import {
   Building2,
   ListTodo,
   UsersRound,
-  Bell
+  Bell,
+  MessageSquare
 } from "lucide-react";
 import NotificationsDropdown from "./NotificationsDropdown";
 
