@@ -31,6 +31,16 @@ const NotificationsDropdown = () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
+    // Close existing connection if any
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN || 
+          wsRef.current.readyState === WebSocket.CONNECTING) {
+        return; // Already connected or connecting
+      }
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
     // Build WebSocket URL
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const apiUrl = new URL(API);
@@ -64,7 +74,11 @@ const NotificationsDropdown = () => {
         } catch (e) {
           // Handle ping/pong - check readyState before sending
           if (event.data === "ping" && wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send("pong");
+            try {
+              wsRef.current.send("pong");
+            } catch (sendError) {
+              console.log("WebSocket send error (ignored):", sendError);
+            }
           }
         }
       };
@@ -72,6 +86,7 @@ const NotificationsDropdown = () => {
       wsRef.current.onclose = (event) => {
         console.log("WebSocket disconnected:", event.code);
         setWsConnected(false);
+        wsRef.current = null;
         
         // Reconnect after 5 seconds (unless intentionally closed)
         if (event.code !== 1000) {
@@ -82,11 +97,12 @@ const NotificationsDropdown = () => {
       };
 
       wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
+        console.log("WebSocket error (will reconnect)");
         setWsConnected(false);
       };
     } catch (error) {
-      console.error("Failed to connect WebSocket:", error);
+      console.log("Failed to connect WebSocket:", error);
+      setWsConnected(false);
     }
   }, []);
 
