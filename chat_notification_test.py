@@ -458,9 +458,15 @@ class ChatNotificationTester:
         heart_found = False
         thumbs_found = False
         for reaction in reactions:
-            if reaction.get('emoji') == '❤️':
+            # Handle both dict and string formats
+            if isinstance(reaction, dict):
+                emoji = reaction.get('emoji')
+            else:
+                emoji = str(reaction)
+            
+            if emoji == '❤️':
                 heart_found = True
-            if reaction.get('emoji') == '👍':
+            if emoji == '👍':
                 thumbs_found = True
         
         if not heart_found:
