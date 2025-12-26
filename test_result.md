@@ -464,8 +464,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Chat System Testing - COMPLETED"
-    - "Clear Brand Endpoint Testing - COMPLETED"
+    - "Chat System Frontend Testing - COMPLETED"
+    - "Clear Brand Button Testing - COMPLETED"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
