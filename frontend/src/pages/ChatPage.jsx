@@ -143,15 +143,20 @@ const ChatPage = () => {
         }
       };
 
-      wsRef.current.onclose = () => {
+      wsRef.current.onclose = (e) => {
+        console.log("Chat WebSocket closed:", e.code, e.reason);
         setTimeout(() => {
           if (chatId === id) {
             connectWebSocket(id);
           }
         }, 3000);
       };
+      
+      wsRef.current.onerror = (e) => {
+        console.log("Chat WebSocket error:", e);
+      };
     } catch (error) {
-      console.log("WebSocket error");
+      console.log("WebSocket connection error:", error);
     }
   }, [chatId]);
 
