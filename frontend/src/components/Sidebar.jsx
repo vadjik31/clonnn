@@ -19,6 +19,7 @@ import {
   ListTodo,
   UsersRound
 } from "lucide-react";
+import NotificationsDropdown from "./NotificationsDropdown";
 
 const Sidebar = ({ user }) => {
   const { logout } = useAuth();
