@@ -155,6 +155,12 @@ const Sidebar = ({ user }) => {
           >
             <link.icon size={20} />
             <span className="font-medium">{link.label}</span>
+            {/* Red badge for notifications */}
+            {link.to === "/notifications" && unreadCount > 0 && (
+              <span className="ml-auto min-w-[20px] h-[20px] flex items-center justify-center text-xs font-bold bg-red-500 text-white rounded-full px-1">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
