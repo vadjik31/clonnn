@@ -1,6 +1,6 @@
 {
   "timestamp": "2025-12-26T14:26:40.907800",
-  "base_url": "https://notifyflow-6.preview.emergentagent.com",
+  "base_url": "https://notifybrands.preview.emergentagent.com",
   "tests": {
     "init_admin": {
       "passed": true,

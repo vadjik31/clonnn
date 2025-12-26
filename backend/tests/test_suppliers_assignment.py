@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class SuppliersAssignmentTester:
-    def __init__(self, base_url: str = "https://notifyflow-6.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://notifybrands.preview.emergentagent.com"):
         self.base_url = base_url
         self.super_admin_token = None
         self.admin_token = None
