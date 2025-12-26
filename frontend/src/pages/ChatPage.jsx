@@ -470,27 +470,41 @@ const ChatPage = () => {
                   </p>
                 </div>
               </div>
-              {/* Delete chat button - only for super_admin and non-general chats */}
-              {user?.role === "super_admin" && currentChat.type !== "general" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={async () => {
-                    if (!window.confirm("Удалить этот чат и все сообщения?")) return;
-                    try {
-                      await api.delete(`/chats/${currentChat.id}`);
-                      toast.success("Чат удалён");
-                      fetchChats();
-                      navigate("/chat");
-                    } catch (error) {
-                      toast.error(error.response?.data?.detail || "Ошибка удаления");
-                    }
-                  }}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                >
-                  <Trash2 size={18} />
-                </Button>
-              )}
+              {/* Chat action buttons */}
+              <div className="flex items-center gap-2">
+                {/* Edit participants button - for creator or super_admin, non-general chats */}
+                {currentChat.type !== "general" && (currentChat.created_by === user?.id || user?.role === "super_admin") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={openEditChatModal}
+                    className="text-[#94A3B8] hover:text-[#FF9900] hover:bg-[#FF9900]/10"
+                  >
+                    <Settings size={18} />
+                  </Button>
+                )}
+                {/* Delete chat button - only for super_admin and non-general chats */}
+                {user?.role === "super_admin" && currentChat.type !== "general" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      if (!window.confirm("Удалить этот чат и все сообщения?")) return;
+                      try {
+                        await api.delete(`/chats/${currentChat.id}`);
+                        toast.success("Чат удалён");
+                        fetchChats();
+                        navigate("/chat");
+                      } catch (error) {
+                        toast.error(error.response?.data?.detail || "Ошибка удаления");
+                      }
+                    }}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                  >
+                    <Trash2 size={18} />
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Messages */}
