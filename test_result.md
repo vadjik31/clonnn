@@ -436,6 +436,8 @@ test_plan:
   test_priority: "high_first"
 
 agent_communication:
+  - agent: "main"
+    message: "Visual verification completed: 1) Chat page - 'Общий чат' displays correctly without duplication 2) Message sending works - tested sending message with emoji 3) Brand detail page - only ONE 'Очистить' button present (not duplicated). Both reported bugs from handoff summary appear to be already fixed or were incorrectly reported. Now proceeding with comprehensive testing of all chat features."
   - agent: "testing"
     message: "Completed comprehensive backend API testing for all three roles (Super Admin, Admin, Searcher). All 23 backend tests passed successfully. Key findings: 1) All new sub-supplier bulk operations working correctly 2) Role-based access control properly implemented 3) All super admin endpoints accessible 4) Admin bulk operations working 5) Searcher endpoints properly filtered. No critical issues found."
   - agent: "testing"
