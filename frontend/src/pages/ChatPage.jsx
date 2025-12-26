@@ -4,15 +4,16 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { 
   MessageSquare, Send, Plus, Users, User, Hash, Search, X, 
-  Image as ImageIcon, Smile, ArrowLeft, Settings, Bell
+  Image as ImageIcon, Smile, Upload, Loader2
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 
-// Simple emoji picker
+// Emojis for picker and reactions
 const EMOJIS = ["👍", "❤️", "😊", "😂", "🔥", "👏", "🎉", "💪", "✅", "❌", "⭐", "💡", "📌", "🚀", "💬", "👀"];
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🔥"];
 
 const ChatPage = () => {
   const { user } = useAuth();
@@ -32,10 +33,13 @@ const ChatPage = () => {
   const [chatType, setChatType] = useState("direct");
   const [groupName, setGroupName] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(null); // message_id
   
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Fetch chats list
   const fetchChats = useCallback(async () => {
@@ -94,8 +98,11 @@ const ChatPage = () => {
           if (data.type === "new_message") {
             setMessages(prev => [...prev, data.message]);
             scrollToBottom();
-            // Play sound
             playNotificationSound();
+          } else if (data.type === "reaction_update") {
+            setMessages(prev => prev.map(m => 
+              m.id === data.message_id ? { ...m, reactions: data.reactions } : m
+            ));
           }
         } catch (e) {
           if (event.data === "ping") {
@@ -105,7 +112,6 @@ const ChatPage = () => {
       };
 
       wsRef.current.onclose = () => {
-        // Reconnect after 3 seconds
         setTimeout(() => {
           if (chatId === id) {
             connectWebSocket(id);
@@ -120,9 +126,16 @@ const ChatPage = () => {
   // Play notification sound
   const playNotificationSound = () => {
     try {
-      const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU" + "A".repeat(100));
-      audio.volume = 0.3;
-      audio.play().catch(() => {});
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.frequency.value = 800;
+      oscillator.type = "sine";
+      gainNode.gain.value = 0.2;
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.1);
     } catch (e) {}
   };
 
@@ -158,17 +171,21 @@ const ChatPage = () => {
   };
 
   // Send message
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = async (e, imageUrl = null) => {
     e?.preventDefault();
-    if (!newMessage.trim() || !chatId || sending) return;
+    if ((!newMessage.trim() && !imageUrl) || !chatId || sending) return;
 
     setSending(true);
     try {
-      const res = await api.post(`/chats/${chatId}/messages`, { text: newMessage });
+      const res = await api.post(`/chats/${chatId}/messages`, { 
+        text: newMessage || (imageUrl ? "📷 Изображение" : ""),
+        image_url: imageUrl
+      });
       setMessages(prev => [...prev, res.data]);
       setNewMessage("");
       scrollToBottom();
       inputRef.current?.focus();
+      fetchChats(); // Update last message in chat list
     } catch (error) {
       toast.error("Ошибка отправки");
     } finally {
@@ -181,6 +198,49 @@ const ChatPage = () => {
     setNewMessage(prev => prev + emoji);
     setShowEmojiPicker(false);
     inputRef.current?.focus();
+  };
+
+  // Add reaction
+  const addReaction = async (messageId, emoji) => {
+    try {
+      await api.post(`/chats/${chatId}/messages/${messageId}/reactions`, { emoji });
+      setShowReactionPicker(null);
+    } catch (error) {
+      toast.error("Ошибка");
+    }
+  };
+
+  // Upload image
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Выберите изображение");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Файл слишком большой (макс. 5MB)");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await api.post("/chat/upload-image", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      await handleSendMessage(null, res.data.url);
+    } catch (error) {
+      toast.error("Ошибка загрузки");
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   // Create new chat
@@ -313,12 +373,12 @@ const ChatPage = () => {
 
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredChats.length === 0 ? (
+          {filteredChats.filter(c => c.type !== "general").length === 0 ? (
             <div className="p-4 text-center text-[#94A3B8] text-sm">
-              Нет чатов
+              Нет личных чатов
             </div>
           ) : (
-            filteredChats.map(chat => (
+            filteredChats.filter(c => c.type !== "general").map(chat => (
               <button
                 key={chat.id}
                 onClick={() => navigate(`/chat/${chat.id}`)}
@@ -366,7 +426,7 @@ const ChatPage = () => {
                   <h3 className="font-bold text-[#E6E6E6]">{currentChat.name || "Чат"}</h3>
                   <p className="text-xs text-[#94A3B8]">
                     {currentChat.type === "general" ? "Все участники" : 
-                     currentChat.participants?.length + " участник(ов)"}
+                     (currentChat.participants?.length || 0) + " участник(ов)"}
                   </p>
                 </div>
               </div>
@@ -385,7 +445,7 @@ const ChatPage = () => {
                 messages.map((msg) => {
                   const isOwn = msg.sender_id === user?.id;
                   return (
-                    <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+                    <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"} group`}>
                       <div className={`max-w-[70%] ${isOwn ? "order-1" : ""}`}>
                         {!isOwn && (
                           <span className="text-xs text-[#94A3B8] mb-1 block">
@@ -399,20 +459,64 @@ const ChatPage = () => {
                             </span>
                           </span>
                         )}
-                        <div className={`rounded-lg px-4 py-2 ${
+                        <div className={`relative rounded-lg px-4 py-2 ${
                           isOwn 
                             ? "bg-[#FF9900] text-black" 
                             : "bg-[#2A2F3A] text-[#E6E6E6]"
                         }`}>
                           {msg.image_url && (
                             <img 
-                              src={msg.image_url} 
+                              src={msg.image_url.startsWith("/") ? `${API}${msg.image_url}` : msg.image_url} 
                               alt="Изображение" 
-                              className="max-w-full rounded mb-2 max-h-64 object-contain"
+                              className="max-w-full rounded mb-2 max-h-64 object-contain cursor-pointer"
+                              onClick={() => window.open(msg.image_url.startsWith("/") ? `${API}${msg.image_url}` : msg.image_url, "_blank")}
                             />
                           )}
                           <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                          
+                          {/* Reaction button (on hover) */}
+                          <button
+                            onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
+                            className={`absolute -bottom-2 ${isOwn ? "left-0" : "right-0"} opacity-0 group-hover:opacity-100 transition-opacity bg-[#2A2F3A] rounded-full p-1 text-xs`}
+                          >
+                            😊
+                          </button>
+                          
+                          {/* Reaction picker */}
+                          {showReactionPicker === msg.id && (
+                            <div className={`absolute -bottom-10 ${isOwn ? "left-0" : "right-0"} bg-[#13161B] border border-[#2A2F3A] rounded-lg p-1 flex gap-1 z-10`}>
+                              {REACTION_EMOJIS.map(emoji => (
+                                <button
+                                  key={emoji}
+                                  onClick={() => addReaction(msg.id, emoji)}
+                                  className="w-7 h-7 hover:bg-[#2A2F3A] rounded text-sm"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
+                        
+                        {/* Display reactions */}
+                        {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                          <div className={`flex gap-1 mt-1 flex-wrap ${isOwn ? "justify-end" : ""}`}>
+                            {Object.entries(msg.reactions).map(([emoji, users]) => (
+                              <button
+                                key={emoji}
+                                onClick={() => addReaction(msg.id, emoji)}
+                                className={`text-xs px-1.5 py-0.5 rounded-full border ${
+                                  users.includes(user?.id) 
+                                    ? "bg-[#FF9900]/20 border-[#FF9900]" 
+                                    : "bg-[#2A2F3A] border-[#2A2F3A]"
+                                }`}
+                              >
+                                {emoji} {users.length}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        
                         <span className={`text-[10px] text-[#94A3B8] mt-1 block ${isOwn ? "text-right" : ""}`}>
                           {formatTime(msg.created_at)}
                         </span>
@@ -453,6 +557,25 @@ const ChatPage = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Image Upload Button */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="text-[#94A3B8] hover:text-[#FF9900] h-10 w-10 p-0"
+                >
+                  {uploadingImage ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
+                </Button>
 
                 {/* Text Input */}
                 <Input
