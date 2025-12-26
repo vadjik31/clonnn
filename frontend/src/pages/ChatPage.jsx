@@ -162,7 +162,7 @@ const ChatPage = () => {
     } catch (error) {
       console.log("WebSocket connection error:", error);
     }
-  }, [chatId]);
+  }, []); // No dependencies - function is stable
 
   // Play notification sound
   const playNotificationSound = () => {
