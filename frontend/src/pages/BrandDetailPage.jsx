@@ -731,6 +731,20 @@ const BrandDetailPage = () => {
         brandId={brandId}
         onSuccess={() => { fetchSubSuppliers(); }}
       />
+      
+      {/* Edit Modals */}
+      <EditNoteModal
+        open={editNoteModal.open}
+        note={editNoteModal.note}
+        onClose={() => setEditNoteModal({ open: false, note: null })}
+        onSave={handleEditNote}
+      />
+      <EditContactModal
+        open={editContactModal.open}
+        contact={editContactModal.contact}
+        onClose={() => setEditContactModal({ open: false, contact: null })}
+        onSave={handleEditContact}
+      />
     </div>
   );
 };
