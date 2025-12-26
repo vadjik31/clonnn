@@ -618,7 +618,7 @@ const ChatPage = () => {
                 messages.map((msg) => {
                   const isOwn = msg.sender_id === user?.id;
                   return (
-                    <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"} group`}>
+                    <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"} group relative`}>
                       <div className={`max-w-[70%] ${isOwn ? "order-1" : ""}`}>
                         {!isOwn && (
                           <span className="text-xs text-[#94A3B8] mb-1 block">
