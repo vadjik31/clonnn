@@ -61,9 +61,19 @@ const NotificationsDropdown = () => {
           if (data.type === "init") {
             setUnreadCount(data.unread_count || 0);
           } else if (data.type === "new_notification") {
-            // Add new notification to the top of the list
-            setNotifications(prev => [data.notification, ...prev.slice(0, 19)]);
-            setUnreadCount(prev => prev + 1);
+            // Check if notification already exists to avoid duplicates
+            setNotifications(prev => {
+              const exists = prev.some(n => n.id === data.notification.id);
+              if (exists) return prev;
+              return [data.notification, ...prev.slice(0, 19)];
+            });
+            
+            // Increment unread count only if notification is new
+            setUnreadCount(prev => {
+              // Fetch fresh count from server to stay in sync
+              fetchNotifications();
+              return prev + 1;
+            });
             
             // Show toast notification
             toast.info(data.notification.title, {
