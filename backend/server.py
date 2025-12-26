@@ -2129,7 +2129,7 @@ async def set_replied_status(brand_id: str, req: RepliedStatusRequest, user: dic
     # Создаем уведомление для назначенного пользователя при изменении статуса
     assigned_user_id = brand.get("assigned_to_user_id")
     if assigned_user_id and assigned_user_id != user["id"]:
-        brand_name = brand.get("name", "Бренд")
+        brand_name = brand.get("name_original") or brand.get("name") or "Без названия"
         sub_status_labels = {
             "need_action": "Нужно действие",
             "need_searcher_attention": "Нужно внимание сёрчера",
