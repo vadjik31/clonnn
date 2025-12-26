@@ -146,6 +146,52 @@ const BrandDetailPage = () => {
     }
   };
 
+  // Note handlers
+  const handleDeleteNote = async (noteId) => {
+    if (!window.confirm("Удалить эту заметку?")) return;
+    try {
+      await api.delete(`/brands/${brandId}/notes/${noteId}`);
+      toast.success("Заметка удалена");
+      fetchBrand();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка удаления");
+    }
+  };
+
+  const handleEditNote = async (noteId, newText) => {
+    try {
+      await api.put(`/brands/${brandId}/notes/${noteId}`, { note_text: newText });
+      toast.success("Заметка обновлена");
+      setEditNoteModal({ open: false, note: null });
+      fetchBrand();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка редактирования");
+    }
+  };
+
+  // Contact handlers
+  const handleDeleteContact = async (contactId) => {
+    if (!window.confirm("Удалить этот контакт?")) return;
+    try {
+      await api.delete(`/brands/${brandId}/contacts/${contactId}`);
+      toast.success("Контакт удалён");
+      fetchBrand();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка удаления");
+    }
+  };
+
+  const handleEditContact = async (contactId, data) => {
+    try {
+      await api.put(`/brands/${brandId}/contacts/${contactId}`, data);
+      toast.success("Контакт обновлён");
+      setEditContactModal({ open: false, contact: null });
+      fetchBrand();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка редактирования");
+    }
+  };
+
   const handleBlacklist = async () => {
     const reason = window.prompt("Причина добавления в ЧС:");
     if (reason === null) return;
