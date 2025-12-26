@@ -3690,6 +3690,17 @@ async def bulk_assign_brands(
         }
     )
     
+    # Отправляем уведомление назначенному пользователю
+    if assigned_count > 0:
+        await create_notification(
+            user_id=target_user["id"],
+            notification_type=NotificationType.BRAND_ASSIGNED,
+            title="Назначены бренды",
+            message=f'Вам назначено {assigned_count} бренд(ов)' + (f': {request.reason}' if request.reason else ''),
+            link="/my-brands" if target_user.get("role") == "searcher" else "/brands",
+            from_user_id=admin["id"]
+        )
+    
     return {"status": "success", "assigned_count": assigned_count, "assigned_to": target_user["nickname"]}
 
 @api_router.post("/super-admin/brands/{brand_id}/restore")
