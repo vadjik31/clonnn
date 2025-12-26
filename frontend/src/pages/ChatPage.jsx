@@ -561,13 +561,34 @@ const ChatPage = () => {
                           })()}
                           <p className="whitespace-pre-wrap break-words">{msg.text}</p>
                           
-                          {/* Reaction button (on hover) */}
-                          <button
-                            onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
-                            className={`absolute -bottom-2 ${isOwn ? "left-0" : "right-0"} opacity-0 group-hover:opacity-100 transition-opacity bg-[#2A2F3A] rounded-full p-1 text-xs`}
-                          >
-                            😊
-                          </button>
+                          {/* Action buttons (on hover) */}
+                          <div className={`absolute -bottom-2 ${isOwn ? "left-0" : "right-0"} opacity-0 group-hover:opacity-100 transition-opacity flex gap-1`}>
+                            {/* Reaction button */}
+                            <button
+                              onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
+                              className="bg-[#2A2F3A] hover:bg-[#3A3F4A] rounded-full p-1 text-xs"
+                            >
+                              😊
+                            </button>
+                            {/* Delete button - only for own messages or super_admin */}
+                            {(msg.sender_id === user?.id || user?.role === "super_admin") && (
+                              <button
+                                onClick={async () => {
+                                  if (!window.confirm("Удалить сообщение?")) return;
+                                  try {
+                                    await api.delete(`/chats/${currentChat.id}/messages/${msg.id}`);
+                                    setMessages(prev => prev.filter(m => m.id !== msg.id));
+                                    toast.success("Сообщение удалено");
+                                  } catch (error) {
+                                    toast.error("Ошибка удаления");
+                                  }
+                                }}
+                                className="bg-[#2A2F3A] hover:bg-red-500/30 text-red-400 rounded-full p-1 text-xs"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
                           
                           {/* Reaction picker */}
                           {showReactionPicker === msg.id && (
