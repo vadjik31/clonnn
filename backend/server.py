@@ -636,7 +636,7 @@ async def create_notification(
     link: Optional[str] = None,
     from_user_id: Optional[str] = None
 ):
-    """Создать уведомление для пользователя"""
+    """Создать уведомление для пользователя и отправить через WebSocket"""
     notification = {
         "id": str(uuid.uuid4()),
         "user_id": user_id,
@@ -651,6 +651,14 @@ async def create_notification(
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.notifications.insert_one(notification)
+    
+    # Send real-time notification via WebSocket
+    notification_copy = {k: v for k, v in notification.items() if k != "_id"}
+    await notification_manager.send_notification(user_id, {
+        "type": "new_notification",
+        "notification": notification_copy
+    })
+    
     return notification
 
 
