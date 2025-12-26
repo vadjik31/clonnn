@@ -251,6 +251,18 @@ backend:
         agent: "testing"
         comment: "All notification endpoints working correctly. Tested: GET /api/notifications (with limit and unread_only params), POST /api/notifications/{id}/read, POST /api/notifications/read-all, DELETE /api/notifications/{id}. Notification creation working for note addition and task assignment. Access control properly implemented - users can only access their own notifications. All 24 notification tests passed successfully."
 
+  - task: "Suppliers Assignment System"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "All suppliers assignment endpoints working correctly. Tested: GET /api/suppliers (role-based access - super admin sees all, admin sees only assigned), POST /api/suppliers/bulk-assign (assigns suppliers to admin with notification), POST /api/suppliers/bulk-release (releases suppliers from admin). Role-based access control working properly. Assignment/release workflow complete with notifications. All test scenarios passed successfully."
+
 frontend:
   - task: "Super Admin Login & Navigation"
     implemented: true
