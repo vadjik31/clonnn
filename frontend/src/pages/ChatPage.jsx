@@ -212,6 +212,42 @@ const ChatPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]); // Only reconnect when chatId changes
 
+  // Polling fallback for real-time messages (WebSocket may be unstable in k8s)
+  useEffect(() => {
+    if (!chatId) return;
+    
+    const pollMessages = async () => {
+      try {
+        const res = await api.get(`/chats/${chatId}/messages?limit=50`);
+        const newMessages = res.data.messages || [];
+        setMessages(prev => {
+          // Only update if there are new messages
+          if (newMessages.length > prev.length) {
+            const lastOldId = prev[prev.length - 1]?.id;
+            const lastNewId = newMessages[newMessages.length - 1]?.id;
+            if (lastOldId !== lastNewId) {
+              // Play sound for new messages (if not from current user)
+              const newestMsg = newMessages[newMessages.length - 1];
+              if (newestMsg && newestMsg.sender_id !== user?.id) {
+                const isDirectMessage = currentChatRef.current?.type === "direct";
+                if (isDirectMessage || soundEnabledRef.current) {
+                  playNotificationSound();
+                }
+              }
+              scrollToBottom();
+              return newMessages;
+            }
+          }
+          return prev;
+        });
+      } catch (e) {}
+    };
+    
+    const interval = setInterval(pollMessages, 2000); // Poll every 2 seconds
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, user?.id]);
+
   // Scroll to bottom
   const scrollToBottom = () => {
     setTimeout(() => {
