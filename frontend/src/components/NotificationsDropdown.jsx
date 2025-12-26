@@ -1,18 +1,22 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Check, CheckCheck, X, ExternalLink } from "lucide-react";
-import { api } from "../App";
+import { api, API } from "../App";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const NotificationsDropdown = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const dropdownRef = useRef(null);
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
   const navigate = useNavigate();
 
   // Fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await api.get("/notifications?limit=20");
       setNotifications(res.data.notifications || []);
@@ -20,14 +24,94 @@ const NotificationsDropdown = () => {
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     }
-  };
+  }, []);
 
-  // Initial fetch and polling
+  // Connect to WebSocket for real-time notifications
+  const connectWebSocket = useCallback(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // Build WebSocket URL
+    const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const apiUrl = new URL(API);
+    const wsUrl = `${wsProtocol}//${apiUrl.host}/api/ws/notifications?token=${token}`;
+
+    try {
+      wsRef.current = new WebSocket(wsUrl);
+
+      wsRef.current.onopen = () => {
+        console.log("WebSocket connected for notifications");
+        setWsConnected(true);
+      };
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === "init") {
+            setUnreadCount(data.unread_count || 0);
+          } else if (data.type === "new_notification") {
+            // Add new notification to the top of the list
+            setNotifications(prev => [data.notification, ...prev.slice(0, 19)]);
+            setUnreadCount(prev => prev + 1);
+            
+            // Show toast notification
+            toast.info(data.notification.title, {
+              description: data.notification.message,
+              duration: 5000,
+            });
+          }
+        } catch (e) {
+          // Handle ping/pong
+          if (event.data === "ping") {
+            wsRef.current?.send("pong");
+          }
+        }
+      };
+
+      wsRef.current.onclose = (event) => {
+        console.log("WebSocket disconnected:", event.code);
+        setWsConnected(false);
+        
+        // Reconnect after 5 seconds (unless intentionally closed)
+        if (event.code !== 1000) {
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectWebSocket();
+          }, 5000);
+        }
+      };
+
+      wsRef.current.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setWsConnected(false);
+      };
+    } catch (error) {
+      console.error("Failed to connect WebSocket:", error);
+    }
+  }, []);
+
+  // Initial setup
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30 seconds
-    return () => clearInterval(interval);
-  }, []);
+    connectWebSocket();
+
+    // Fallback polling every 60 seconds if WebSocket fails
+    const pollInterval = setInterval(() => {
+      if (!wsConnected) {
+        fetchNotifications();
+      }
+    }, 60000);
+
+    return () => {
+      clearInterval(pollInterval);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close(1000);
+      }
+    };
+  }, [fetchNotifications, connectWebSocket, wsConnected]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -143,6 +227,11 @@ const NotificationsDropdown = () => {
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
+        {/* WebSocket connection indicator */}
+        <span 
+          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${wsConnected ? 'bg-green-500' : 'bg-red-500'}`}
+          title={wsConnected ? 'Подключено' : 'Переподключение...'}
+        />
       </button>
 
       {/* Dropdown */}
