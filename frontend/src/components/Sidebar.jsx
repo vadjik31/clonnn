@@ -65,6 +65,7 @@ const Sidebar = ({ user }) => {
     { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
     { to: "/analytics", icon: BarChart3, label: "Аналитика" },
     { to: "/tasks", icon: ListTodo, label: "Задачи" },
+    { to: "/notifications", icon: Bell, label: "Уведомления" },
     { to: "/users", icon: Users, label: "Пользователи" },
     { to: "/staff", icon: UserCheck, label: "Сотрудники" },
     { to: "/import", icon: Upload, label: "Импорт" },
@@ -95,6 +96,7 @@ const Sidebar = ({ user }) => {
     { to: "/my-brands", icon: Briefcase, label: "Мои бренды" },
     { to: "/sub-suppliers", icon: UsersRound, label: "Под-сапплаеры" },
     { to: "/problematic", icon: AlertTriangle, label: "Проблемные" },
+    { to: "/notifications", icon: Bell, label: "Уведомления" },
     { to: "/suppliers", icon: Building2, label: "Поставщики" },
   ];
 
