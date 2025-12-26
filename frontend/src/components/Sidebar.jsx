@@ -182,6 +182,10 @@ const Sidebar = ({ user }) => {
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
+            {/* Red dot for chat */}
+            {link.to === "/chat" && unreadChatCount > 0 && (
+              <span className="ml-auto w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+            )}
           </NavLink>
         ))}
       </nav>
