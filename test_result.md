@@ -439,6 +439,19 @@ test_requests:
       - "Mark notification as read"
       - "Delete notification"
 
+frontend:
+  - task: "Notification System UI"
+    implemented: true
+    working: true
+    file: "frontend/src/components/NotificationsDropdown.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "✅ NOTIFICATION SYSTEM UI FULLY FUNCTIONAL. Tested with Admin (azamat) and Super Admin roles. Key findings: 1) Bell icon visible in sidebar with orange badge showing unread count (2 notifications) 2) Dropdown opens upward above bell icon as expected 3) Header 'Уведомления' and 'Прочитать все' button present 4) Notifications display correctly with type icons (📋 for tasks), titles ('Новая задача'), messages, and timestamps ('5 мин назад') 5) Mark as read functionality working - badge count decreased from 2 to 1 when clicked 6) Check and delete buttons present for each notification 7) Both Admin and Super Admin can access notifications. Minor: Dropdown doesn't close when clicking outside (not critical for core functionality)."
+
   - task: "Test Notifications UI Frontend"
     pages:
       - "Any logged-in page - check sidebar for bell icon with notification count badge"
