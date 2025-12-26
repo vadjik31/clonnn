@@ -263,6 +263,16 @@ function AppContent() {
               <Layout><NotificationsPage /></Layout>
             </ProtectedRoute>
           } />
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <Layout><ChatPage /></Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/chat/:chatId" element={
+            <ProtectedRoute>
+              <Layout><ChatPage /></Layout>
+            </ProtectedRoute>
+          } />
           
           {/* Searcher Routes */}
           <Route path="/my-brands" element={
