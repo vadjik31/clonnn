@@ -193,6 +193,18 @@ const BrandDetailPage = () => {
     }
   };
 
+  // Clear brand handler
+  const handleClearBrand = async () => {
+    if (!window.confirm("⚠️ ВНИМАНИЕ!\n\nЭто действие удалит ВСЕ заметки, контакты и сбросит бренд до начального состояния.\n\nВы уверены?")) return;
+    try {
+      const res = await api.post(`/brands/${brandId}/clear`);
+      toast.success(`Бренд очищен! Удалено: ${res.data.deleted_notes} заметок, ${res.data.deleted_contacts} контактов`);
+      fetchBrand();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка очистки");
+    }
+  };
+
   const handleBlacklist = async () => {
     const reason = window.prompt("Причина добавления в ЧС:");
     if (reason === null) return;
