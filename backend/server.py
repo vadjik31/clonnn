@@ -6833,17 +6833,8 @@ async def send_message(chat_id: str, req: MessageCreate, user: dict = Depends(ge
         "message": message
     }, exclude_user=user["id"])
     
-    # Send notifications to participants (except sender and those in chat)
-    for participant_id in chat.get("participant_ids", []):
-        if participant_id != user["id"] and participant_id not in chat_manager.active_connections.get(chat_id, {}):
-            await create_notification(
-                user_id=participant_id,
-                notification_type=NotificationType.CHAT_MESSAGE,
-                title=f"Сообщение от {user.get('nickname')}",
-                message=message["text"][:100],
-                link=f"/chat/{chat_id}",
-                from_user_id=user["id"]
-            )
+    # Note: Chat messages don't create notifications - they use real-time WebSocket only
+    # The red dot indicator in sidebar uses unread-count endpoint instead
     
     return message
 
