@@ -37,12 +37,12 @@ const NotificationsDropdown = () => {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
-      oscillator.frequency.value = 800;
+      oscillator.frequency.value = 880; // Higher pitch for notifications
       oscillator.type = "sine";
-      gainNode.gain.value = 0.3;
+      gainNode.gain.value = 0.5; // Louder
       
       oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.15);
+      oscillator.stop(audioContext.currentTime + 0.2); // Longer duration
     } catch (e) {
       console.log("Sound not supported");
     }
