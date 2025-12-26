@@ -121,8 +121,8 @@ const ChatPage = () => {
             scrollToBottom();
             // Play sound based on chat type and settings
             // Direct messages always play sound, group/general respect settings
-            const isDirectMessage = currentChat?.type === "direct";
-            if (isDirectMessage || soundEnabled) {
+            const isDirectMessage = currentChatRef.current?.type === "direct";
+            if (isDirectMessage || soundEnabledRef.current) {
               playNotificationSound();
             }
           } else if (data.type === "reaction_update") {
