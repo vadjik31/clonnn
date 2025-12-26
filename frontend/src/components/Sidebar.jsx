@@ -141,6 +141,13 @@ const Sidebar = ({ user }) => {
 
       {/* User Info */}
       <div className="p-4 border-t border-[#2A2F3A]">
+        {/* Notifications for Admin/Searcher */}
+        {user?.role && (
+          <div className="mb-4 flex justify-center">
+            <NotificationsDropdown />
+          </div>
+        )}
+
         {/* Check-In Button for Searchers */}
         {user?.role === "searcher" && (
           <div className="mb-4">
