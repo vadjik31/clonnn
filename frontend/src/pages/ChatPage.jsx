@@ -668,8 +668,8 @@ const ChatPage = () => {
                             >
                               😊
                             </button>
-                            {/* Delete button - only for own messages or super_admin */}
-                            {(msg.sender_id === user?.id || user?.role === "super_admin") && (
+                            {/* Delete button - for own messages, admin or super_admin */}
+                            {(msg.sender_id === user?.id || ["admin", "super_admin"].includes(user?.role)) && (
                               <button
                                 onClick={async () => {
                                   if (!window.confirm("Удалить сообщение?")) return;
