@@ -1829,7 +1829,7 @@ async def set_outcome(brand_id: str, req: OutcomeRequest, user: dict = Depends(g
             title="Изменение статуса",
             message=f'Статус бренда "{brand_name}" изменён на "{status_label}"',
             brand_id=brand_id,
-            link=f"/brand/{brand_id}",
+            link=f"/brands/{brand_id}",
             from_user_id=user["id"]
         )
     
@@ -2180,7 +2180,7 @@ async def set_replied_status(brand_id: str, req: RepliedStatusRequest, user: dic
             title="Изменение статуса",
             message=f'Статус бренда "{brand_name}" изменён: "{status_label}"',
             brand_id=brand_id,
-            link=f"/brand/{brand_id}",
+            link=f"/brands/{brand_id}",
             from_user_id=user["id"]
         )
     
@@ -2218,7 +2218,7 @@ async def add_note(brand_id: str, req: BrandNoteCreate, user: dict = Depends(get
             title="Новая заметка",
             message=f'{user.get("nickname", "Пользователь")} добавил заметку к бренду "{brand_name}"',
             brand_id=brand_id,
-            link=f"/brand/{brand_id}",
+            link=f"/brands/{brand_id}",
             from_user_id=user["id"]
         )
     
