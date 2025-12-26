@@ -6165,6 +6165,57 @@ async def delete_task(task_id: str, admin: dict = Depends(require_super_admin)):
     return {"status": "success"}
 
 
+# ============== WEBSOCKET FOR REAL-TIME NOTIFICATIONS ==============
+
+@app.websocket("/api/ws/notifications")
+async def websocket_notifications(websocket: WebSocket, token: str = Query(...)):
+    """WebSocket endpoint for real-time notifications"""
+    # Verify token
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("user_id")
+        if not user_id:
+            await websocket.close(code=4001)
+            return
+    except jwt.ExpiredSignatureError:
+        await websocket.close(code=4002)
+        return
+    except jwt.InvalidTokenError:
+        await websocket.close(code=4003)
+        return
+    
+    await notification_manager.connect(websocket, user_id)
+    
+    try:
+        # Send initial unread count
+        unread_count = await db.notifications.count_documents({
+            "user_id": user_id,
+            "is_read": False
+        })
+        await websocket.send_json({
+            "type": "init",
+            "unread_count": unread_count
+        })
+        
+        # Keep connection alive and handle incoming messages
+        while True:
+            try:
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30)
+                # Handle ping/pong for keep-alive
+                if data == "ping":
+                    await websocket.send_text("pong")
+            except asyncio.TimeoutError:
+                # Send ping to keep connection alive
+                try:
+                    await websocket.send_text("ping")
+                except Exception:
+                    break
+    except WebSocketDisconnect:
+        pass
+    finally:
+        notification_manager.disconnect(websocket, user_id)
+
+
 # ============== NOTIFICATIONS API ==============
 
 @api_router.get("/notifications")
