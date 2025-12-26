@@ -9,37 +9,41 @@ const NotificationsDropdown = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
   const dropdownRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
+  const isConnectingRef = useRef(false);
   const navigate = useNavigate();
 
-  // Fetch notifications
+  // Fetch notifications from server - single source of truth
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await api.get("/notifications?limit=20");
       setNotifications(res.data.notifications || []);
       setUnreadCount(res.data.unread_count || 0);
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+      console.log("Failed to fetch notifications:", error);
     }
   }, []);
 
   // Connect to WebSocket for real-time notifications
   const connectWebSocket = useCallback(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token || isConnectingRef.current) return;
 
     // Close existing connection if any
     if (wsRef.current) {
-      if (wsRef.current.readyState === WebSocket.OPEN || 
-          wsRef.current.readyState === WebSocket.CONNECTING) {
+      const state = wsRef.current.readyState;
+      if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) {
         return; // Already connected or connecting
       }
-      wsRef.current.close();
+      try {
+        wsRef.current.close();
+      } catch (e) {}
       wsRef.current = null;
     }
+
+    isConnectingRef.current = true;
 
     // Build WebSocket URL
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -50,8 +54,7 @@ const NotificationsDropdown = () => {
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log("WebSocket connected for notifications");
-        setWsConnected(true);
+        isConnectingRef.current = false;
       };
 
       wsRef.current.onmessage = (event) => {
@@ -59,21 +62,11 @@ const NotificationsDropdown = () => {
           const data = JSON.parse(event.data);
           
           if (data.type === "init") {
+            // Server sends initial unread count - use it
             setUnreadCount(data.unread_count || 0);
           } else if (data.type === "new_notification") {
-            // Check if notification already exists to avoid duplicates
-            setNotifications(prev => {
-              const exists = prev.some(n => n.id === data.notification.id);
-              if (exists) return prev;
-              return [data.notification, ...prev.slice(0, 19)];
-            });
-            
-            // Increment unread count only if notification is new
-            setUnreadCount(prev => {
-              // Fetch fresh count from server to stay in sync
-              fetchNotifications();
-              return prev + 1;
-            });
+            // New notification arrived - fetch fresh data from server
+            fetchNotifications();
             
             // Show toast notification
             toast.info(data.notification.title, {
@@ -82,20 +75,19 @@ const NotificationsDropdown = () => {
             });
           }
         } catch (e) {
-          // Handle ping/pong - check readyState before sending
-          if (event.data === "ping" && wsRef.current?.readyState === WebSocket.OPEN) {
-            try {
-              wsRef.current.send("pong");
-            } catch (sendError) {
-              console.log("WebSocket send error (ignored):", sendError);
+          // Handle ping/pong
+          if (event.data === "ping") {
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+              try {
+                wsRef.current.send("pong");
+              } catch (err) {}
             }
           }
         }
       };
 
       wsRef.current.onclose = (event) => {
-        console.log("WebSocket disconnected:", event.code);
-        setWsConnected(false);
+        isConnectingRef.current = false;
         wsRef.current = null;
         
         // Reconnect after 5 seconds (unless intentionally closed)
@@ -106,27 +98,21 @@ const NotificationsDropdown = () => {
         }
       };
 
-      wsRef.current.onerror = (error) => {
-        console.log("WebSocket error (will reconnect)");
-        setWsConnected(false);
+      wsRef.current.onerror = () => {
+        isConnectingRef.current = false;
       };
     } catch (error) {
-      console.log("Failed to connect WebSocket:", error);
-      setWsConnected(false);
+      isConnectingRef.current = false;
     }
-  }, []);
+  }, [fetchNotifications]);
 
   // Initial setup
   useEffect(() => {
     fetchNotifications();
     connectWebSocket();
 
-    // Fallback polling every 10 seconds if WebSocket fails
-    const pollInterval = setInterval(() => {
-      if (!wsConnected) {
-        fetchNotifications();
-      }
-    }, 10000);
+    // Fallback polling every 15 seconds
+    const pollInterval = setInterval(fetchNotifications, 15000);
 
     return () => {
       clearInterval(pollInterval);
@@ -134,10 +120,12 @@ const NotificationsDropdown = () => {
         clearTimeout(reconnectTimeoutRef.current);
       }
       if (wsRef.current) {
-        wsRef.current.close(1000);
+        try {
+          wsRef.current.close(1000);
+        } catch (e) {}
       }
     };
-  }, [fetchNotifications, connectWebSocket, wsConnected]);
+  }, [fetchNotifications, connectWebSocket]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -162,7 +150,7 @@ const NotificationsDropdown = () => {
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error("Failed to mark as read:", error);
+      console.log("Failed to mark as read:", error);
     }
   };
 
@@ -174,7 +162,7 @@ const NotificationsDropdown = () => {
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error("Failed to mark all as read:", error);
+      console.log("Failed to mark all as read:", error);
     } finally {
       setLoading(false);
     }
@@ -191,7 +179,7 @@ const NotificationsDropdown = () => {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error("Failed to delete notification:", error);
+      console.log("Failed to delete notification:", error);
     }
   };
 
