@@ -314,7 +314,7 @@ const BrandDetailPage = () => {
               data-testid="return-btn"
             >
               <RotateCcw size={16} className="mr-2" />
-              Очистить
+              Вернуть
             </Button>
             {/* Admin actions */}
             {(user?.role === "admin" || user?.role === "super_admin") && (
