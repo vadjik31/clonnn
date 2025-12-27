@@ -41,6 +41,7 @@
 
 .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
@@ -54,4 +55,9 @@
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background-color: #3A3F4A;
+}
+
+/* Horizontal scrollbar corner */
+.scrollbar-thin::-webkit-scrollbar-corner {
+    background: transparent;
 }
