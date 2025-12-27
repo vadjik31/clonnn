@@ -532,6 +532,7 @@ const BrandsPage = () => {
                 <th className="py-3 px-4 text-left">Статус</th>
                 <th className="py-3 px-4 text-left">Этап</th>
                 <th className="py-3 px-4 text-left">Сёрчер</th>
+                <th className="py-3 px-4 text-left max-w-[200px]">Заметка</th>
                 <th className="py-3 px-4 text-left">След. действие</th>
                 <th className="py-3 px-4 text-center">Действия</th>
               </tr>
