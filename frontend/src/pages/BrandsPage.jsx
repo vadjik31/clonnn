@@ -590,6 +590,18 @@ const BrandsPage = () => {
                       <td className="table-cell text-[#94A3B8]">
                         {brand.assigned_to_nickname || "—"}
                       </td>
+                      <td className="table-cell max-w-[200px]">
+                        {brand.last_note ? (
+                          <div className="flex items-start gap-1">
+                            <MessageSquare size={12} className="text-[#FF9900] flex-shrink-0 mt-0.5" />
+                            <span className="text-xs text-[#94A3B8] truncate" title={brand.last_note}>
+                              {brand.last_note}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[#475569] text-xs">—</span>
+                        )}
+                      </td>
                       <td className="table-cell">
                         {brand.next_action_at ? (
                           <span className={isOverdue ? "text-red-400" : "text-[#94A3B8]"}>
