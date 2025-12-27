@@ -540,13 +540,13 @@ const BrandsPage = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={isAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={isAdmin ? 10 : 9} className="py-8 text-center text-[#94A3B8]">
                     Загрузка...
                   </td>
                 </tr>
               ) : brands.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 9 : 8} className="py-8 text-center text-[#94A3B8]">
+                  <td colSpan={isAdmin ? 10 : 9} className="py-8 text-center text-[#94A3B8]">
                     Нет брендов
                   </td>
                 </tr>
