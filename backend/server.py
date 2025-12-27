@@ -1391,7 +1391,8 @@ async def get_brands(
         # Добавляем последнюю заметку и количество контактов
         last_note = await db.brand_notes.find_one(
             {"brand_id": brand["id"]},
-            {"_id": 0, "note_text": 1, "created_at": 1, "note_type": 1}
+            {"_id": 0, "note_text": 1, "created_at": 1, "note_type": 1},
+            sort=[("created_at", -1)]  # Сортируем по дате, последняя первой
         )
         if last_note:
             brand["last_note"] = last_note.get("note_text", "")[:100]  # Первые 100 символов
