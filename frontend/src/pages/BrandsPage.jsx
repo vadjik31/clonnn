@@ -511,8 +511,8 @@ const BrandsPage = () => {
 
       {/* Table */}
       <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full" data-testid="brands-table">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-[#2A2F3A] scrollbar-track-transparent">
+          <table className="w-full min-w-[1200px]" data-testid="brands-table">
             <thead>
               <tr className="table-header">
                 {isAdmin && (
