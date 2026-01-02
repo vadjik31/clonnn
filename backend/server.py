@@ -6650,11 +6650,15 @@ async def get_unread_chat_count(user: dict = Depends(get_current_user)):
     
     chat_ids = [c["id"] for c in chats]
     
-    # Count unread messages (messages not in read_by for this user)
+    # Count unread messages (messages where user is NOT in read_by array)
+    # Handle both cases: read_by doesn't exist OR user not in read_by
     unread_count = await db.chat_messages.count_documents({
         "chat_id": {"$in": chat_ids},
         "sender_id": {"$ne": user_id},  # Not sent by user
-        "read_by": {"$nin": [user_id]}  # Not read by user
+        "$or": [
+            {"read_by": {"$exists": False}},  # No read_by field
+            {"read_by": {"$nin": [user_id]}}  # User not in read_by
+        ]
     })
     
     return {"unread_count": unread_count}
