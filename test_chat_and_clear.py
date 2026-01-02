@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class ChatAndClearTester:
-    def __init__(self, base_url: str = "https://notifybrands.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "https://brandsync-2.preview.emergentagent.com"):
         self.base_url = base_url
         self.super_admin_token = None
         self.admin_token = None

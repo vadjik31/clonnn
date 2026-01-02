@@ -1,6 +1,6 @@
 {
   "timestamp": "2025-12-26T14:30:07.191630",
-  "base_url": "https://notifybrands.preview.emergentagent.com",
+  "base_url": "https://brandsync-2.preview.emergentagent.com",
   "test_type": "suppliers_assignment_system",
   "tests": {
     "super_admin_login": {
