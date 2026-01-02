@@ -46,17 +46,23 @@ const DashboardPage = () => {
   useEffect(() => {
     fetchDashboard();
     
+    // Polling every 10 seconds for real-time updates
+    const interval = setInterval(() => {
+      fetchDashboard(true); // force refresh, ignore cache
+    }, 10000);
+    
     return () => {
+      clearInterval(interval);
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
   }, []);
 
-  const fetchDashboard = async () => {
-    // Check cache first
+  const fetchDashboard = async (forceRefresh = false) => {
+    // Check cache first (skip if force refresh)
     const now = Date.now();
-    if (cacheRef.current.data && (now - cacheRef.current.timestamp) < CACHE_TTL) {
+    if (!forceRefresh && cacheRef.current.data && (now - cacheRef.current.timestamp) < CACHE_TTL) {
       setData(cacheRef.current.data);
       setLoading(false);
       return;
@@ -76,7 +82,10 @@ const DashboardPage = () => {
       setData(response.data);
     } catch (error) {
       if (error.name === 'AbortError' || error.name === 'CanceledError') return;
-      toast.error("Ошибка загрузки дашборда");
+      // Don't show error on polling failures
+      if (!forceRefresh) {
+        toast.error("Ошибка загрузки дашборда");
+      }
     } finally {
       setLoading(false);
     }
