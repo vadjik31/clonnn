@@ -6730,9 +6730,16 @@ async def get_messages(
         query, {"_id": 0}
     ).sort("created_at", -1).to_list(limit)
     
-    # Mark messages as read
+    # Mark messages as read (initialize read_by if doesn't exist)
     await db.chat_messages.update_many(
-        {"chat_id": chat_id, "sender_id": {"$ne": user["id"]}},
+        {
+            "chat_id": chat_id, 
+            "sender_id": {"$ne": user["id"]},
+            "$or": [
+                {"read_by": {"$exists": False}},
+                {"read_by": {"$nin": [user["id"]]}}
+            ]
+        },
         {"$addToSet": {"read_by": user["id"]}}
     )
     
