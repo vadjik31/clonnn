@@ -2005,6 +2005,11 @@ async def update_brand_info(brand_id: str, req: UpdateBrandInfoRequest, user: di
         raise HTTPException(status_code=403, detail="Бренд не закреплён за вами")
     
     update_data = {k: v for k, v in req.model_dump().items() if v is not None}
+    
+    # Приоритет может менять только admin/super_admin
+    if "priority_score" in update_data and user["role"] == UserRole.SEARCHER:
+        del update_data["priority_score"]
+    
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     # Обновляем health score
