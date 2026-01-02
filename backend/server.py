@@ -1058,9 +1058,11 @@ async def get_users(admin: dict = Depends(require_admin)):
     is_super_admin = admin.get("role") == UserRole.SUPER_ADMIN
     
     for u in users:
+        # Активные = на этапе REVIEW
         active_count = await db.brands.count_documents({
             "assigned_to_user_id": u["id"],
-            "status": {"$nin": [BrandStatus.IN_POOL]}
+            "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+            "pipeline_stage": PipelineStage.REVIEW
         })
         u["active_brands_count"] = active_count
         u["return_rate"] = 0.0
