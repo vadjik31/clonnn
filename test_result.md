@@ -571,3 +571,14 @@ test_requests:
       - "Only admin/super_admin should have access to clear any brand"
       - "Searcher can only clear own assigned brands"
       - "Proper error handling for non-existent brands and unauthorized access"
+  - task: "Manual Priority Update"
+    implemented: true
+    working: true
+    file: "backend/server.py, frontend/src/pages/BrandDetailPage.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Manual priority update feature implemented. Admin/Super-Admin can edit priority via quick inline editor or InfoModal. Searcher cannot edit priority (field is ignored on backend). Tested via API and UI screenshots."
