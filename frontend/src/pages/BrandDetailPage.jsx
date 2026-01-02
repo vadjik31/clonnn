@@ -73,6 +73,10 @@ const BrandDetailPage = () => {
   // Edit modals
   const [editNoteModal, setEditNoteModal] = useState({ open: false, note: null });
   const [editContactModal, setEditContactModal] = useState({ open: false, contact: null });
+  
+  // Quick priority edit
+  const [editingPriority, setEditingPriority] = useState(false);
+  const [tempPriority, setTempPriority] = useState(0);
 
   useEffect(() => {
     fetchBrand();
