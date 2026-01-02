@@ -271,9 +271,57 @@ const BrandDetailPage = () => {
             </h1>
             <div className="flex items-center gap-3 mt-2">
               <StatusBadge status={brand.status} />
-              <span className="text-[#94A3B8] text-sm">
-                Приоритет: <span className="text-[#FF9900] font-mono">{brand.priority_score}</span>
-              </span>
+              {/* Приоритет с возможностью редактирования для Admin/Super-Admin */}
+              {(user?.role === "admin" || user?.role === "super_admin") ? (
+                editingPriority ? (
+                  <span className="flex items-center gap-1">
+                    <span className="text-[#94A3B8] text-sm">Приоритет:</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={tempPriority}
+                      onChange={(e) => setTempPriority(e.target.value)}
+                      className="w-20 h-7 bg-[#0F1115] border-[#FF9900] text-[#FF9900] font-mono text-sm px-2"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleQuickPriorityUpdate();
+                        if (e.key === 'Escape') setEditingPriority(false);
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={handleQuickPriorityUpdate}
+                      className="h-7 px-2 btn-primary"
+                    >
+                      ✓
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingPriority(false)}
+                      className="h-7 px-2 text-[#94A3B8]"
+                    >
+                      ✕
+                    </Button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setTempPriority(brand.priority_score || 0);
+                      setEditingPriority(true);
+                    }}
+                    className="text-[#94A3B8] text-sm hover:text-[#FF9900] transition-colors flex items-center gap-1"
+                    title="Нажмите для редактирования приоритета"
+                  >
+                    Приоритет: <span className="text-[#FF9900] font-mono">{brand.priority_score}</span>
+                    <Pencil size={12} className="opacity-50" />
+                  </button>
+                )
+              ) : (
+                <span className="text-[#94A3B8] text-sm">
+                  Приоритет: <span className="text-[#FF9900] font-mono">{brand.priority_score}</span>
+                </span>
+              )}
               {brand.assigned_to_nickname && (
                 <span className="text-[#94A3B8] text-sm">
                   Сёрчер: <span className="text-[#E6E6E6]">{brand.assigned_to_nickname}</span>
