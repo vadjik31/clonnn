@@ -290,9 +290,7 @@ const SubSuppliersPage = () => {
     { value: "IN_WORK", label: "В работе" },
     { value: "WAITING", label: "Ожидание" },
     { value: "ON_HOLD", label: "Приостановлен" },
-    { value: "OUTCOME_APPROVED", label: "Одобрен" },
-    { value: "OUTCOME_DECLINED", label: "Отклонён" },
-    { value: "OUTCOME_REPLIED", label: "Ответил" },
+    { value: "NO_RESPONSE", label: "Не ответил" },
     { value: "REPLIED_NEED_ACTION", label: "Нужно действие" },
     { value: "REPLIED_NEED_SEARCHER", label: "Внимание сёрчера!" },
     { value: "REPLIED_WAITING", label: "Ожидаем от них" },
@@ -300,6 +298,7 @@ const SubSuppliersPage = () => {
     { value: "REPLIED_DECLINED", label: "Отказали" },
     { value: "PROBLEMATIC", label: "Проблемный" },
     { value: "ARCHIVED", label: "📦 В архиве" },
+    { value: "BLACKLISTED", label: "⛔ Чёрный список" },
   ];
 
   const stageOptions = [
