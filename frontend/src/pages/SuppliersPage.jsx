@@ -42,16 +42,18 @@ const SuppliersPage = () => {
   const [assignAdminId, setAssignAdminId] = useState("");
   const [assignReason, setAssignReason] = useState("");
 
-  // Check permissions
+  // Check permissions - admin has same rights as super_admin for suppliers
+  const isAdmin = user?.role === "admin";
   const isSuperAdmin = user?.role === "super_admin";
+  const hasFullAccess = isAdmin || isSuperAdmin;
   const canEdit = ["searcher", "admin", "super_admin"].includes(user?.role);
 
   useEffect(() => {
     fetchSuppliers();
-    if (isSuperAdmin) {
+    if (hasFullAccess) {
       fetchAdmins();
     }
-  }, [isSuperAdmin]);
+  }, [hasFullAccess]);
 
   const fetchSuppliers = async () => {
     try {
