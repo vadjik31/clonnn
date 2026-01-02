@@ -1019,10 +1019,11 @@ async def login(req: LoginRequest, request: Request):
     await log_event(EventType.USER_LOGIN, user["id"], ip_address=ip)
     await db.users.update_one({"id": user["id"]}, {"$set": {"last_seen_at": datetime.now(timezone.utc).isoformat()}})
     
-    # Добавляем статистику
+    # Добавляем статистику - активные = на этапе REVIEW
     active_count = await db.brands.count_documents({
         "assigned_to_user_id": user["id"],
-        "status": {"$nin": [BrandStatus.IN_POOL]}
+        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+        "pipeline_stage": PipelineStage.REVIEW
     })
     user["active_brands_count"] = active_count
     user["return_rate"] = 0.0
@@ -1031,9 +1032,11 @@ async def login(req: LoginRequest, request: Request):
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
+    # Активные = на этапе REVIEW
     active_count = await db.brands.count_documents({
         "assigned_to_user_id": user["id"],
-        "status": {"$nin": [BrandStatus.IN_POOL]}
+        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+        "pipeline_stage": PipelineStage.REVIEW
     })
     user["active_brands_count"] = active_count
     user["return_rate"] = 0.0
