@@ -442,6 +442,7 @@ class UpdateBrandInfoRequest(BaseModel):
     contact_made: Optional[bool] = None
     contact_channel: Optional[str] = None
     contact_date: Optional[str] = None
+    priority_score: Optional[int] = None  # Ручной приоритет (только для admin/super_admin)
 
 class ReassignBrandRequest(BaseModel):
     new_user_id: str
