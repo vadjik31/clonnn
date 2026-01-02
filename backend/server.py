@@ -1605,15 +1605,17 @@ async def claim_brands(
         max_active = settings.get("max_active_brands", MAX_ACTIVE_BRANDS_PER_SEARCHER)
         
         # Проверка лимита активных брендов (закрывает дыру #9)
+        # Активный = назначен + этап REVIEW (ещё не начали работать)
         current_active = await db.brands.count_documents({
             "assigned_to_user_id": user["id"],
-            "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]}
+            "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+            "pipeline_stage": PipelineStage.REVIEW  # Только бренды на этапе изучения занимают слоты
         })
         
         if current_active >= max_active:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Достигнут лимит активных брендов ({max_active}). Завершите работу с текущими."
+                detail=f"Достигнут лимит активных брендов на этапе изучения ({max_active}). Продвиньте текущие бренды по воронке."
             )
         
         available_slots = max_active - current_active
