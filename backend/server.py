@@ -6152,8 +6152,8 @@ class SupplierAssignRequest(BaseModel):
 
 
 @api_router.post("/suppliers/bulk-assign")
-async def bulk_assign_suppliers(req: SupplierAssignRequest, admin: dict = Depends(require_super_admin)):
-    """Назначить поставщиков админу (только супер-админ)"""
+async def bulk_assign_suppliers(req: SupplierAssignRequest, admin: dict = Depends(require_admin)):
+    """Назначить поставщиков админу (админ или супер-админ)"""
     if not req.supplier_ids:
         raise HTTPException(status_code=400, detail="Не выбраны поставщики")
     
