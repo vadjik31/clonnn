@@ -728,6 +728,7 @@ const BrandDetailPage = () => {
         onClose={() => setInfoModal(false)} 
         brand={brand}
         onSuccess={fetchBrand}
+        user={user}
       />
       <NoResponseModal
         open={noResponseModal}
