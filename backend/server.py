@@ -1110,9 +1110,11 @@ async def update_user(user_id: str, user_data: UserUpdate, admin: dict = Depends
         raise HTTPException(status_code=404, detail="Пользователь не найден")
     
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    # Активные = на этапе REVIEW
     user["active_brands_count"] = await db.brands.count_documents({
         "assigned_to_user_id": user_id,
-        "status": {"$nin": [BrandStatus.IN_POOL]}
+        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+        "pipeline_stage": PipelineStage.REVIEW
     })
     user["return_rate"] = 0.0
     return UserResponse(**user)
