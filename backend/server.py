@@ -6205,8 +6205,8 @@ async def bulk_assign_suppliers(req: SupplierAssignRequest, admin: dict = Depend
 
 
 @api_router.post("/suppliers/bulk-release")
-async def bulk_release_suppliers(supplier_ids: List[str] = Body(...), admin: dict = Depends(require_super_admin)):
-    """Снять назначение поставщиков (только супер-админ)"""
+async def bulk_release_suppliers(supplier_ids: List[str] = Body(...), admin: dict = Depends(require_admin)):
+    """Снять назначение поставщиков (админ или супер-админ)"""
     if not supplier_ids:
         raise HTTPException(status_code=400, detail="Не выбраны поставщики")
     
