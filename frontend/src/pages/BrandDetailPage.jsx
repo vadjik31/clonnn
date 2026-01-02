@@ -208,6 +208,20 @@ const BrandDetailPage = () => {
       toast.error(error.response?.data?.detail || "Ошибка очистки");
     }
   };
+  
+  // Quick priority update
+  const handleQuickPriorityUpdate = async () => {
+    try {
+      await api.put(`/brands/${brandId}/info`, {
+        priority_score: parseInt(tempPriority) || 0
+      });
+      toast.success("Приоритет обновлён");
+      fetchBrand();
+      setEditingPriority(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Ошибка");
+    }
+  };
 
   const handleBlacklist = async () => {
     const reason = window.prompt("Причина добавления в ЧС:");
