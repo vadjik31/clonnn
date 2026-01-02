@@ -1386,17 +1386,21 @@ const NoteModal = ({ open, onClose, brandId, onSuccess }) => {
   );
 };
 
-const InfoModal = ({ open, onClose, brand, onSuccess }) => {
+const InfoModal = ({ open, onClose, brand, onSuccess, user }) => {
   const [websiteUrl, setWebsiteUrl] = useState(brand?.website_url || "");
   const [websiteFound, setWebsiteFound] = useState(brand?.website_found || false);
   const [contactsFound, setContactsFound] = useState(brand?.contacts_found || false);
+  const [priorityScore, setPriorityScore] = useState(brand?.priority_score || 0);
   const [loading, setLoading] = useState(false);
+  
+  const canEditPriority = user?.role === "admin" || user?.role === "super_admin";
 
   useEffect(() => {
     if (brand) {
       setWebsiteUrl(brand.website_url || "");
       setWebsiteFound(brand.website_found || false);
       setContactsFound(brand.contacts_found || false);
+      setPriorityScore(brand.priority_score || 0);
     }
   }, [brand]);
 
@@ -1404,11 +1408,18 @@ const InfoModal = ({ open, onClose, brand, onSuccess }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.put(`/brands/${brand.id}/info`, {
+      const payload = {
         website_url: websiteUrl || null,
         website_found: websiteFound,
         contacts_found: contactsFound
-      });
+      };
+      
+      // Добавляем приоритет только для админов
+      if (canEditPriority) {
+        payload.priority_score = parseInt(priorityScore) || 0;
+      }
+      
+      await api.put(`/brands/${brand.id}/info`, payload);
       toast.success("Информация обновлена");
       onSuccess();
       onClose();
@@ -1426,6 +1437,21 @@ const InfoModal = ({ open, onClose, brand, onSuccess }) => {
           <DialogTitle className="font-mono uppercase tracking-wider">Редактировать информацию</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {canEditPriority && (
+            <div className="space-y-2">
+              <Label className="text-[#94A3B8]">Приоритет</Label>
+              <Input
+                type="number"
+                min="0"
+                value={priorityScore}
+                onChange={(e) => setPriorityScore(e.target.value)}
+                className="bg-[#0F1115] border-[#2A2F3A] text-[#FF9900] font-mono"
+                placeholder="0"
+                data-testid="priority-score"
+              />
+              <p className="text-xs text-[#94A3B8]">Чем выше число, тем выше приоритет бренда в очереди</p>
+            </div>
+          )}
           <div className="space-y-2">
             <Label className="text-[#94A3B8]">URL сайта</Label>
             <Input
