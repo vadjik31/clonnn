@@ -582,3 +582,6 @@ test_requests:
       - working: true
         agent: "main"
         comment: "Manual priority update feature implemented. Admin/Super-Admin can edit priority via quick inline editor or InfoModal. Searcher cannot edit priority (field is ignored on backend). Tested via API and UI screenshots."
+      - working: true
+        agent: "testing"
+        comment: "COMPREHENSIVE MANUAL PRIORITY UPDATE TESTING COMPLETED. All core functionality WORKING correctly: 1) Super Admin can update brand priority (tested: 999 → 1000) ✅ 2) Admin can update brand priority (tested: 1000 → 2000) ✅ 3) Searcher priority updates correctly IGNORED on backend (tested: attempted 95 → 99999, remained 95) ✅ 4) Frontend UI correctly shows edit icon (pencil) for Admin/Super-Admin roles only ✅ 5) Frontend InfoModal includes priority field with role-based access control ✅ 6) Quick inline priority editor working for Admin/Super-Admin ✅ 7) API endpoints PUT /api/brands/{id}/info working correctly with role-based filtering ✅ Minor: Priority field validation could be improved (negative values accepted but not critical). Feature is production-ready and meets all requirements from review request."
