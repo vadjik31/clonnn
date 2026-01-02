@@ -227,7 +227,7 @@ const SuppliersPage = () => {
             <Building2 className="text-[#FF9900]" /> Поставщики
           </h1>
           <p className="text-[#94A3B8] mt-1">
-            {isSuperAdmin ? "Все поставщики системы" : 
+            {hasFullAccess ? "Все поставщики системы" : 
              user?.role === "admin" ? "Назначенные вам поставщики" : 
              "Ваши поставщики"}
           </p>
@@ -240,7 +240,7 @@ const SuppliersPage = () => {
       </div>
 
       {/* Bulk Actions Bar */}
-      {isSuperAdmin && selectedIds.length > 0 && (
+      {hasFullAccess && selectedIds.length > 0 && (
         <div className="bg-[#FF9900]/10 border border-[#FF9900]/30 rounded p-3 flex items-center justify-between">
           <span className="text-[#FF9900] font-medium">
             Выбрано: {selectedIds.length} поставщик(ов)
@@ -312,7 +312,7 @@ const SuppliersPage = () => {
           <table className="w-full">
             <thead>
               <tr className="bg-[#0F1115] text-[#94A3B8] text-xs uppercase">
-                {isSuperAdmin && (
+                {hasFullAccess && (
                   <th className="py-3 px-4 w-10">
                     <Checkbox
                       checked={selectedIds.length === filteredSuppliers.length && filteredSuppliers.length > 0}
@@ -326,7 +326,7 @@ const SuppliersPage = () => {
                 <th className="py-3 px-4 text-left">Логин</th>
                 <th className="py-3 px-4 text-left">Пароль</th>
                 <th className="py-3 px-4 text-left">Заметки</th>
-                {isSuperAdmin && <th className="py-3 px-4 text-left">Назначен</th>}
+                {hasFullAccess && <th className="py-3 px-4 text-left">Назначен</th>}
                 <th className="py-3 px-4 text-center">Создан</th>
                 {canEdit && <th className="py-3 px-4 w-24"></th>}
               </tr>
@@ -334,7 +334,7 @@ const SuppliersPage = () => {
             <tbody>
               {filteredSuppliers.map(supplier => (
                 <tr key={supplier.id} className="border-t border-[#2A2F3A] hover:bg-[#1A1D24]">
-                  {isSuperAdmin && (
+                  {hasFullAccess && (
                     <td className="py-3 px-4">
                       <Checkbox
                         checked={selectedIds.includes(supplier.id)}
@@ -412,7 +412,7 @@ const SuppliersPage = () => {
                       <span className="text-[#94A3B8]">—</span>
                     )}
                   </td>
-                  {isSuperAdmin && (
+                  {hasFullAccess && (
                     <td className="py-3 px-4">
                       {supplier.assigned_to_admin_nickname ? (
                         <span className="text-[#22C55E] text-sm flex items-center gap-1">
