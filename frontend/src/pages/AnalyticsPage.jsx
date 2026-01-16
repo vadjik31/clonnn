@@ -112,28 +112,6 @@ const AnalyticsPage = () => {
   const handleRefresh = () => {
     fetchAllData(true);
   };
-      const res = await api.get("/analytics/inactive-brands/all-ids");
-      const allIds = res.data.ids || [];
-      
-      if (allIds.length === 0) {
-        toast.info("Нет неактивных брендов для удаления");
-        return;
-      }
-      
-      if (!window.confirm(`Удалить ВСЕ ${allIds.length} неактивных брендов? Это действие нельзя отменить!`)) return;
-      
-      setDeletingInactive(true);
-      await api.delete("/super-admin/brands/bulk-delete", { data: allIds });
-      toast.success(`Удалено ${allIds.length} брендов`);
-      // Invalidate cache and refresh
-      cacheRef.current.inactive = null;
-      fetchAllData(true);
-    } catch (error) {
-      toast.error("Ошибка удаления");
-    } finally {
-      setDeletingInactive(false);
-    }
-  };
 
   // Skeleton loader
   if (loading) {
