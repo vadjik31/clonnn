@@ -2756,10 +2756,25 @@ async def get_inactive_brands(admin: dict = Depends(require_admin)):
     cutoff = (datetime.now(timezone.utc) - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
     
     # Запрос для подсчёта общего количества
+    # Исключаем ВСЕ завершённые/рабочие статусы из списка "без активности"
+    excluded_statuses = [
+        BrandStatus.IN_POOL, 
+        BrandStatus.ON_HOLD,
+        BrandStatus.OUTCOME_APPROVED, 
+        BrandStatus.OUTCOME_DECLINED,
+        BrandStatus.OUTCOME_REPLIED, 
+        BrandStatus.ARCHIVED, 
+        BrandStatus.BLACKLISTED,
+        # Подстатусы "Ответил" - бренды с которыми ведётся работа
+        BrandStatus.REPLIED_APPROVED,
+        BrandStatus.REPLIED_DECLINED,
+        BrandStatus.REPLIED_WAITING,
+        BrandStatus.REPLIED_NEED_ACTION,
+        BrandStatus.REPLIED_NEED_SEARCHER,
+    ]
+    
     count_query = {
-        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
-                           BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
-                           BrandStatus.OUTCOME_REPLIED, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+        "status": {"$nin": excluded_statuses},
         "$or": [
             {"last_action_at": {"$lt": cutoff}},
             {"last_action_at": None}
