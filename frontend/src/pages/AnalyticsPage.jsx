@@ -311,40 +311,6 @@ const AnalyticsPage = () => {
           </table>
         </div>
       </div>
-
-      {/* Inactive Brands with Delete Option */}
-      <div className="bg-[#13161B] border border-[#2A2F3A] rounded-[2px] p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[#E6E6E6] flex items-center gap-2">
-            <AlertTriangle size={18} className="text-orange-400" />
-            Без активности ({inactiveBrands?.count || 0})
-          </h3>
-          {/* Кнопка удаления убрана - слишком опасная операция */}
-        </div>
-        <p className="text-sm text-[#94A3B8] mb-4">
-          Бренды без действий более {inactiveBrands?.threshold_days} дней (показаны первые 100)
-        </p>
-        
-        <div className="space-y-2 max-h-[300px] overflow-y-auto">
-          {inactiveBrands?.brands?.length === 0 ? (
-            <p className="text-[#94A3B8] text-center py-4">Нет неактивных брендов</p>
-          ) : (
-            inactiveBrands?.brands?.slice(0, 20).map((brand) => (
-              <div key={brand.id} className="flex items-center justify-between p-3 bg-[#0F1115] rounded-[2px] group">
-                <div className="flex-1">
-                  <p className="text-sm text-[#E6E6E6]">{brand.name_original}</p>
-                  <p className="text-xs text-[#94A3B8]">{brand.assigned_to_nickname || "Не назначен"}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 bg-orange-900/20 text-orange-400 rounded text-xs font-mono">
-                    {brand.days_inactive} дней
-                  </span>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
     </div>
   );
 };
