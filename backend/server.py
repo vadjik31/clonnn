@@ -3423,33 +3423,7 @@ async def check_timeouts(admin: dict = Depends(require_admin)):
             )
             alerts_created += 1
     
-    # 2. Неактивные бренды (дыра #7)
-    inactive_cutoff = (now - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
-    inactive_brands = await db.brands.find({
-        "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD,
-                           BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
-                           BrandStatus.OUTCOME_REPLIED]},
-        "$or": [
-            {"last_action_at": {"$lt": inactive_cutoff}},
-            {"last_action_at": None}
-        ]
-    }).to_list(100)
-    
-    for brand in inactive_brands:
-        existing = await db.alerts.find_one({
-            "brand_id": brand["id"],
-            "alert_type": "inactivity_timeout",
-            "resolved": False
-        })
-        if not existing:
-            await create_alert(
-                "inactivity_timeout",
-                f"Бренд '{brand['name_original']}' без активности {INACTIVITY_TIMEOUT_DAYS}+ дней",
-                "warning",
-                brand.get("assigned_to_user_id"),
-                brand["id"]
-            )
-            alerts_created += 1
+    # Автоматические алерты о неактивности отключены - бренды не должны удаляться автоматически
     
     return {"alerts_created": alerts_created, "checked_at": now.isoformat()}
 
