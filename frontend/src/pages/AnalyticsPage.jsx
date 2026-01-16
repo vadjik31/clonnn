@@ -319,18 +319,7 @@ const AnalyticsPage = () => {
             <AlertTriangle size={18} className="text-orange-400" />
             Без активности ({inactiveBrands?.count || 0})
           </h3>
-          {user?.role === "super_admin" && inactiveBrands?.count > 0 && (
-            <Button
-              onClick={handleDeleteAllInactive}
-              disabled={deletingInactive}
-              variant="outline"
-              size="sm"
-              className="text-red-400 border-red-400/30 hover:bg-red-900/20"
-            >
-              <Trash2 size={14} className="mr-1" />
-              {deletingInactive ? "Удаление..." : `Удалить все (${inactiveBrands?.count || 0})`}
-            </Button>
-          )}
+          {/* Кнопка удаления убрана - слишком опасная операция */}
         </div>
         <p className="text-sm text-[#94A3B8] mb-4">
           Бренды без действий более {inactiveBrands?.threshold_days} дней (показаны первые 100)
