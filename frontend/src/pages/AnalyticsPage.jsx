@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { 
   BarChart3, 
   Clock, 
-  AlertTriangle, 
   TrendingUp, 
   Users,
   Trophy,
@@ -13,7 +12,6 @@ import {
   Phone,
   Target,
   Skull,
-  Trash2,
   HelpCircle,
   RefreshCw
 } from "lucide-react";
@@ -50,14 +48,12 @@ const Tooltip = ({ text, children }) => (
 const AnalyticsPage = () => {
   const { user } = useAuth();
   const [kpiData, setKpiData] = useState(null);
-  const [inactiveBrands, setInactiveBrands] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState("7");
-  const [deletingInactive, setDeletingInactive] = useState(false);
   
   // Cache ref to prevent duplicate fetches
-  const cacheRef = useRef({ kpi: {}, inactive: null, lastFetch: 0 });
+  const cacheRef = useRef({ kpi: {}, lastFetch: 0 });
   const abortControllerRef = useRef(null);
   const CACHE_TTL = 60000; // 1 minute cache
 
@@ -66,9 +62,8 @@ const AnalyticsPage = () => {
     const cache = cacheRef.current;
     
     // Check cache first - instant return if valid
-    if (!forceRefresh && cache.kpi[period] && cache.inactive && (now - cache.lastFetch) < CACHE_TTL) {
+    if (!forceRefresh && cache.kpi[period] && (now - cache.lastFetch) < CACHE_TTL) {
       setKpiData(cache.kpi[period]);
-      setInactiveBrands(cache.inactive);
       setLoading(false);
       return;
     }
@@ -82,22 +77,15 @@ const AnalyticsPage = () => {
     if (!loading) setRefreshing(true);
     
     try {
-      const [kpi, inactive] = await Promise.all([
-        api.get(`/analytics/kpi?period_days=${period}`, { 
-          signal: abortControllerRef.current.signal 
-        }),
-        api.get("/analytics/inactive-brands", { 
-          signal: abortControllerRef.current.signal 
-        })
-      ]);
+      const kpi = await api.get(`/analytics/kpi?period_days=${period}`, { 
+        signal: abortControllerRef.current.signal 
+      });
       
       // Update cache
       cache.kpi[period] = kpi.data;
-      cache.inactive = inactive.data;
       cache.lastFetch = Date.now();
       
       setKpiData(kpi.data);
-      setInactiveBrands(inactive.data);
     } catch (error) {
       // Ignore abort errors
       if (error.name === 'AbortError' || error.name === 'CanceledError') {
@@ -124,10 +112,6 @@ const AnalyticsPage = () => {
   const handleRefresh = () => {
     fetchAllData(true);
   };
-
-  const handleDeleteAllInactive = async () => {
-    try {
-      // Сначала загружаем все ID неактивных брендов
       const res = await api.get("/analytics/inactive-brands/all-ids");
       const allIds = res.data.ids || [];
       
