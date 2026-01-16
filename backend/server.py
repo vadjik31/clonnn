@@ -2831,11 +2831,25 @@ async def get_all_inactive_brand_ids(admin: dict = Depends(require_admin)):
     """Получить все ID неактивных брендов для массового удаления"""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=INACTIVITY_TIMEOUT_DAYS)).isoformat()
     
+    # Исключаем ВСЕ завершённые/рабочие статусы
+    excluded_statuses = [
+        BrandStatus.IN_POOL, 
+        BrandStatus.ON_HOLD,
+        BrandStatus.OUTCOME_APPROVED, 
+        BrandStatus.OUTCOME_DECLINED,
+        BrandStatus.OUTCOME_REPLIED, 
+        BrandStatus.ARCHIVED, 
+        BrandStatus.BLACKLISTED,
+        BrandStatus.REPLIED_APPROVED,
+        BrandStatus.REPLIED_DECLINED,
+        BrandStatus.REPLIED_WAITING,
+        BrandStatus.REPLIED_NEED_ACTION,
+        BrandStatus.REPLIED_NEED_SEARCHER,
+    ]
+    
     brands = await db.brands.find(
         {
-            "status": {"$nin": [BrandStatus.IN_POOL, BrandStatus.ON_HOLD, 
-                               BrandStatus.OUTCOME_APPROVED, BrandStatus.OUTCOME_DECLINED,
-                               BrandStatus.OUTCOME_REPLIED, BrandStatus.ARCHIVED, BrandStatus.BLACKLISTED]},
+            "status": {"$nin": excluded_statuses},
             "$or": [
                 {"last_action_at": {"$lt": cutoff}},
                 {"last_action_at": None}
