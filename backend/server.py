@@ -4324,6 +4324,10 @@ async def create_sub_supplier(brand_id: str, req: SubSupplierCreate, user: dict 
     if not brand:
         raise HTTPException(status_code=404, detail="Бренд не найден")
     
+    # Под-сапплаер привязывается к тому же сёрчеру, что и родительский бренд
+    # Если бренд не назначен - привязываем к создателю
+    assigned_to = brand.get("assigned_to_user_id") or user["id"]
+    
     now = datetime.now(timezone.utc).isoformat()
     sub_supplier = {
         "id": str(uuid.uuid4()),
@@ -4334,7 +4338,7 @@ async def create_sub_supplier(brand_id: str, req: SubSupplierCreate, user: dict 
         "contact_phone": req.contact_phone.strip() if req.contact_phone else None,
         "status": BrandStatus.ASSIGNED,
         "pipeline_stage": PipelineStage.REVIEW,
-        "assigned_to_user_id": user["id"],
+        "assigned_to_user_id": assigned_to,  # Привязываем к сёрчеру бренда
         "assigned_at": now,
         "funnel_started_at": None,
         "last_action_at": now,
@@ -4342,7 +4346,7 @@ async def create_sub_supplier(brand_id: str, req: SubSupplierCreate, user: dict 
         "on_hold_reason": None,
         "on_hold_review_date": None,
         "created_at": now,
-        "created_by_user_id": user["id"],
+        "created_by_user_id": user["id"],  # Кто создал
         "updated_at": now
     }
     
