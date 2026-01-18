@@ -451,10 +451,10 @@ const BrandDetailPage = () => {
                     href={brand.website_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-[#FF9900] hover:underline flex items-center gap-1"
+                    className="text-[#FF9900] hover:underline flex items-center gap-1 break-all"
                   >
-                    {brand.website_url}
-                    <ExternalLink size={12} />
+                    <span className="break-all">{brand.website_url}</span>
+                    <ExternalLink size={12} className="flex-shrink-0" />
                   </a>
                 ) : "Не указан"
               }
