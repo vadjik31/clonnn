@@ -715,7 +715,7 @@ const BrandDetailPage = () => {
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-[#94A3B8]">{note.note_text}</p>
+                    <p className="text-sm text-[#94A3B8] whitespace-pre-wrap break-words">{note.note_text}</p>
                     {note.note_type !== "general" && (
                       <span className="inline-block mt-2 px-2 py-0.5 text-xs bg-[#1A1D24] text-[#94A3B8] rounded-full">
                         {getNoteTypeLabel(note.note_type)}
