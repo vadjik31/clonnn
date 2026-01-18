@@ -282,7 +282,7 @@ const SubSupplierDetailPage = () => {
                       {new Date(note.created_at).toLocaleString('ru-RU')}
                     </span>
                   </div>
-                  <p className="text-sm text-[#94A3B8]">{note.note_text}</p>
+                  <p className="text-sm text-[#94A3B8] whitespace-pre-wrap break-words">{note.note_text}</p>
                 </div>
               ))
             )}
