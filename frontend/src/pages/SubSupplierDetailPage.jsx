@@ -212,8 +212,19 @@ const SubSupplierDetailPage = () => {
               label="Этап воронки" 
               value={<StageBadge stage={ss.pipeline_stage} />} 
             />
-            <InfoRow icon={Globe} label="Сайт" value={ss.website_url || "Не указан"} />
-            <InfoRow icon={Mail} label="Email" value={ss.contact_email || "—"} />
+            <InfoRow icon={Globe} label="Сайт" value={
+              ss.website_url ? (
+                <a 
+                  href={ss.website_url.startsWith('http') ? ss.website_url : `https://${ss.website_url}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[#FF9900] hover:underline break-all"
+                >
+                  {ss.website_url}
+                </a>
+              ) : "Не указан"
+            } />
+            <InfoRow icon={Mail} label="Email" value={<span className="break-all">{ss.contact_email || "—"}</span>} />
             <InfoRow icon={Phone} label="Телефон" value={ss.contact_phone || "—"} />
             <InfoRow icon={Package} label="Товаров" value={ss.items_count} />
             <InfoRow icon={Clock} label="Приоритет" value={ss.priority_score} valueColor="text-[#FF9900]" />
