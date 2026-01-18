@@ -625,14 +625,14 @@ const BrandDetailPage = () => {
                   className="p-3 bg-[#0F1115] border border-[#2A2F3A] rounded-[2px] cursor-pointer hover:border-[#FF9900] transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <span className="text-sm font-medium text-[#E6E6E6]">{ss.name}</span>
                       {ss.website_url && (
                         <a 
                           href={ss.website_url.startsWith('http') ? ss.website_url : `https://${ss.website_url}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="ml-2 text-xs text-[#FF9900] hover:underline"
+                          className="ml-2 text-xs text-[#FF9900] hover:underline break-all"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {ss.website_url}
@@ -641,9 +641,9 @@ const BrandDetailPage = () => {
                     </div>
                     <StatusBadge status={ss.status} />
                   </div>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-[#94A3B8]">
+                  <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-[#94A3B8]">
                     <span>Этап: {ss.pipeline_stage}</span>
-                    {ss.contact_email && <span>📧 {ss.contact_email}</span>}
+                    {ss.contact_email && <span className="break-all">📧 {ss.contact_email}</span>}
                     {ss.next_action_at && (
                       <span className={new Date(ss.next_action_at) <= new Date() ? "text-amber-400" : ""}>
                         📅 {new Date(ss.next_action_at).toLocaleDateString('ru-RU')}
