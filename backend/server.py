@@ -1419,6 +1419,9 @@ async def get_brands(
     ss_query = {}
     if user["role"] == UserRole.SEARCHER:
         ss_query["assigned_to_user_id"] = user["id"]
+    elif assigned_to:
+        # Фильтр по сёрчеру применяется и к под-сапплаерам
+        ss_query["assigned_to_user_id"] = assigned_to
     
     if search:
         search_lower = search.lower()
