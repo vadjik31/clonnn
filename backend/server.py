@@ -1434,6 +1434,9 @@ async def get_brands(
     if status:
         ss_query["status"] = status
     
+    if pipeline_stage:
+        ss_query["pipeline_stage"] = pipeline_stage
+    
     sub_suppliers = await db.sub_suppliers.find(ss_query, {"_id": 0}).to_list(100)
     
     # Обогащаем данные под-сапплаеров
