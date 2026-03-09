@@ -1121,8 +1121,20 @@ async def update_user(user_id: str, user_data: UserUpdate, admin: dict = Depends
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
-    # Сначала освобождаем бренды (закрывает дыру #6)
+    # Сначала освобождаем бренды (возвращаем в пул, НЕ удаляем!)
     await db.brands.update_many(
+        {"assigned_to_user_id": user_id},
+        {"$set": {
+            "status": BrandStatus.IN_POOL,
+            "assigned_to_user_id": None,
+            "assigned_at": None,
+            "pipeline_stage": PipelineStage.REVIEW,
+            "next_action_at": None
+        }}
+    )
+    
+    # Освобождаем под-сапплаеров (возвращаем в пул, НЕ удаляем!)
+    await db.sub_suppliers.update_many(
         {"assigned_to_user_id": user_id},
         {"$set": {
             "status": BrandStatus.IN_POOL,
