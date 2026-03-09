@@ -154,7 +154,7 @@ const SuperAdminPage = () => {
 
   const fetchUserActivity = async (userId) => {
     try {
-      const res = await api.get(`/super-admin/user/${userId}/activity?days=7`);
+      const res = await api.get(`/super-admin/user/${userId}/activity?days=14`);
       setUserActivity(res.data);
       setSelectedUser(userId);
     } catch (error) {

@@ -85,7 +85,7 @@ const StaffPage = () => {
       return;
     }
     try {
-      const res = await api.get(`/admin/user/${userId}/activity?days=7`);
+      const res = await api.get(`/admin/user/${userId}/activity?days=14`);
       setUserActivity(res.data);
     } catch (error) {
       toast.error("Ошибка загрузки активности");
