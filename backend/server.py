@@ -1121,9 +1121,37 @@ async def update_user(user_id: str, user_data: UserUpdate, admin: dict = Depends
 
 @api_router.delete("/users/{user_id}")
 async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
-    # Сначала освобождаем бренды (возвращаем в пул, НЕ удаляем!)
+    # Завершённые статусы - НЕ сбрасываем, только отвязываем от пользователя
+    completed_statuses = [
+        BrandStatus.OUTCOME_APPROVED,
+        BrandStatus.OUTCOME_DECLINED,
+        BrandStatus.OUTCOME_REPLIED,
+        BrandStatus.REPLIED_APPROVED,
+        BrandStatus.REPLIED_DECLINED,
+        BrandStatus.REPLIED_WAITING,
+        BrandStatus.REPLIED_NEED_ACTION,
+        BrandStatus.ARCHIVED,
+        BrandStatus.BLACKLISTED
+    ]
+    
+    # Завершённые бренды - только отвязываем от пользователя, статус НЕ меняем
     await db.brands.update_many(
-        {"assigned_to_user_id": user_id},
+        {
+            "assigned_to_user_id": user_id,
+            "status": {"$in": completed_statuses}
+        },
+        {"$set": {
+            "assigned_to_user_id": None,
+            "assigned_at": None
+        }}
+    )
+    
+    # Незавершённые бренды - возвращаем в пул
+    await db.brands.update_many(
+        {
+            "assigned_to_user_id": user_id,
+            "status": {"$nin": completed_statuses}
+        },
         {"$set": {
             "status": BrandStatus.IN_POOL,
             "assigned_to_user_id": None,
@@ -1133,9 +1161,23 @@ async def delete_user(user_id: str, admin: dict = Depends(require_admin)):
         }}
     )
     
-    # Освобождаем под-сапплаеров (возвращаем в пул, НЕ удаляем!)
+    # Под-сапплаеры - аналогичная логика
     await db.sub_suppliers.update_many(
-        {"assigned_to_user_id": user_id},
+        {
+            "assigned_to_user_id": user_id,
+            "status": {"$in": completed_statuses}
+        },
+        {"$set": {
+            "assigned_to_user_id": None,
+            "assigned_at": None
+        }}
+    )
+    
+    await db.sub_suppliers.update_many(
+        {
+            "assigned_to_user_id": user_id,
+            "status": {"$nin": completed_statuses}
+        },
         {"$set": {
             "status": BrandStatus.IN_POOL,
             "assigned_to_user_id": None,
