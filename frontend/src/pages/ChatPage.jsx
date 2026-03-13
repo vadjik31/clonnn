@@ -245,7 +245,7 @@ const ChatPage = () => {
       } catch (e) {}
     };
     
-    const interval = setInterval(pollMessages, 2000); // Poll every 2 seconds
+    const interval = setInterval(pollMessages, 5000); // Poll every 5 seconds (reduced from 2)
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId, user?.id]);
