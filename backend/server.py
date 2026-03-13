@@ -65,6 +65,11 @@ app = FastAPI(title="PROCTO 13 Brand Management System")
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
 
+# Health check endpoint for deployment
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy"}
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
