@@ -52,7 +52,7 @@ const Sidebar = ({ user, collapsed, setCollapsed }) => {
     };
 
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 10000); // Poll every 10 seconds
+    const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -68,7 +68,7 @@ const Sidebar = ({ user, collapsed, setCollapsed }) => {
     };
 
     fetchUnreadChatCount();
-    const interval = setInterval(fetchUnreadChatCount, 5000); // Poll every 5 seconds
+    const interval = setInterval(fetchUnreadChatCount, 15000); // Poll every 15 seconds
     return () => clearInterval(interval);
   }, []);
 
